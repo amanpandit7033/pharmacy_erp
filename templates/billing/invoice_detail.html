@@ -1,0 +1,167 @@
+{% extends role_base_layout %}
+
+{% block title %}Invoice #{{ invoice.invoice_number }} - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Breadcrumb & Actions Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2 text-xs">
+                <a href="{% url 'billing:invoice_list' %}" class="inline-flex items-center text-slate-400 hover:text-[#283891] font-bold transition">
+                    &larr; All Invoices
+                </a>
+                <span class="text-slate-300">/</span>
+                <span class="text-slate-700 font-mono font-bold">{{ invoice.invoice_number }}</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">Invoice Details</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Audited retail transaction and dispensing breakdown.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+            <a href="{% url 'billing:invoice_thermal' invoice.pk %}" target="_blank" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-2xs transition space-x-1.5" title="Print 80mm / 58mm Thermal POS Slip">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                <span>Thermal Slip (80mm)</span>
+            </a>
+            <a href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" class="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition space-x-1.5" title="Standard A4 Paper Invoice">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span>A4 Tax Invoice</span>
+            </a>
+            {% if can_cancel %}
+            <form action="{% url 'billing:invoice_cancel' invoice.pk %}" method="post" class="inline" onsubmit="return confirm('Are you sure you want to cancel this bill? Stock will be atomically refunded back to batches.')">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2.5 bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-xl transition">
+                    Cancel Bill &amp; Refund Stock
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Store Branding & Header -->
+    <div class="bg-white rounded-2xl p-6 shadow-card border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="flex items-center space-x-4">
+            {% if invoice.store.logo %}
+            <img src="{{ invoice.store.logo.url }}" alt="{{ invoice.store.name }}" class="h-16 max-w-[150px] object-contain rounded-xl border border-slate-200/80 p-1.5 bg-white shadow-2xs">
+            {% else %}
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#182260] to-[#283891] text-white font-extrabold text-2xl flex items-center justify-center shadow-md shadow-[#283891]/20">
+                {{ invoice.store.name|slice:":1"|upper }}
+            </div>
+            {% endif %}
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 leading-tight">{{ invoice.store.name }}</h2>
+                <p class="text-xs text-slate-500 mt-0.5">{{ invoice.store.full_address }}</p>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400 mt-1">
+                    <span>Phone: <strong class="text-slate-700 font-semibold">{{ invoice.store.phone }}</strong></span>
+                    {% if invoice.store.license_number %}<span>DL: <strong class="text-slate-700 font-semibold">{{ invoice.store.license_number }}</strong></span>{% endif %}
+                    {% if invoice.store.gst_number %}<span>GSTIN: <strong class="text-slate-700 font-semibold">{{ invoice.store.gst_number }}</strong></span>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-center min-w-[220px]">
+            <div class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Total Invoice Amount</div>
+            <div class="text-3xl font-black font-mono text-[#283891] mt-0.5">{{ invoice.store.currency }}{{ invoice.total_amount|floatformat:2 }}</div>
+        </div>
+    </div>
+
+    <!-- Invoice Header Info -->
+    <div class="bg-white rounded-2xl p-6 shadow-card border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+        <div>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Invoice Number</span>
+            <span class="font-mono font-extrabold text-slate-900 text-sm mt-1 block">{{ invoice.invoice_number }}</span>
+        </div>
+        <div>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Date &amp; Time</span>
+            <span class="font-semibold text-slate-800 text-xs mt-1 block">{{ invoice.created_at|date:"d M Y, h:i A" }}</span>
+        </div>
+        <div>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Payment Mode</span>
+            <span class="font-semibold text-slate-800 text-xs mt-1 block">{{ invoice.get_payment_method_display }}</span>
+        </div>
+        <div>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Invoice Status</span>
+            <span class="inline-flex items-center px-2.5 py-0.5 mt-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide
+                {% if invoice.status == 'PAID' %}bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs{% else %}bg-rose-50 text-rose-700 border border-rose-200/60 shadow-2xs{% endif %}">
+                {{ invoice.get_status_display }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Customer & Prescriber Info -->
+    <div class="bg-white rounded-2xl p-6 shadow-card border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs">
+        <div>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Customer Name</span>
+            <span class="font-extrabold text-slate-900 text-sm mt-1 block">{{ invoice.customer_name }}</span>
+        </div>
+        <div>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Contact Phone</span>
+            <span class="font-medium text-slate-600 text-xs mt-1 block font-mono">{{ invoice.customer_phone|default:"Walk-in Customer" }}</span>
+        </div>
+        <div>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Doctor / Prescriber</span>
+            <span class="font-medium text-slate-600 text-xs mt-1 block">{{ invoice.doctor_name|default:"Self / OTC" }}</span>
+        </div>
+    </div>
+
+    <!-- Line Items Table -->
+    <div class="bg-white rounded-2xl shadow-card border border-slate-200/80 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Itemized Medicines</h2>
+            <span class="text-xs text-slate-400 font-mono">{{ items|length }} item{{ items|length|pluralize }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-100 text-left text-xs min-w-[620px]">
+                <thead class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                        <th class="px-5 py-3.5">Item / Medicine</th>
+                        <th class="px-5 py-3.5 font-mono">Batch</th>
+                        <th class="px-5 py-3.5">Expiry</th>
+                        <th class="px-5 py-3.5 text-right">Unit Price</th>
+                        <th class="px-5 py-3.5 text-center">Qty</th>
+                        <th class="px-5 py-3.5 text-right">Tax</th>
+                        <th class="px-5 py-3.5 text-right">Line Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for item in items %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="px-5 py-3.5 font-bold text-slate-900 text-xs">{{ item.medicine_name }}</td>
+                        <td class="px-5 py-3.5 font-mono text-slate-600 text-xs">{{ item.batch_number }}</td>
+                        <td class="px-5 py-3.5 text-slate-500 text-xs">{{ item.expiry_date|date:"M Y" }}</td>
+                        <td class="px-5 py-3.5 text-right font-mono text-slate-700 text-xs">{{ request.user.store.currency }}{{ item.unit_price|floatformat:2 }}</td>
+                        <td class="px-5 py-3.5 text-center font-bold text-slate-900 text-xs">{{ item.quantity }}</td>
+                        <td class="px-5 py-3.5 text-right font-mono text-slate-500 text-xs">{{ request.user.store.currency }}{{ item.tax_amount|floatformat:2 }} <span class="text-[10px] text-slate-400">({{ item.tax_percentage }}%)</span></td>
+                        <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-900 text-xs">{{ request.user.store.currency }}{{ item.total_price|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bill Totals Section -->
+        <div class="bg-slate-50/80 p-6 border-t border-slate-200/80 flex justify-end">
+            <div class="w-full sm:w-72 space-y-2.5 text-xs">
+                <div class="flex justify-between text-slate-500 font-medium">
+                    <span>Subtotal:</span>
+                    <span class="font-mono font-bold text-slate-800">{{ request.user.store.currency }}{{ invoice.subtotal|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-between text-slate-500 font-medium">
+                    <span>Total Tax / GST:</span>
+                    <span class="font-mono font-bold text-slate-800">{{ request.user.store.currency }}{{ invoice.tax_amount|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-between text-rose-600 font-medium">
+                    <span>Discount Applied:</span>
+                    <span class="font-mono font-bold">-{{ request.user.store.currency }}{{ invoice.discount_amount|floatformat:2 }}</span>
+                </div>
+                <div class="border-t border-slate-200 pt-2.5 flex justify-between items-center text-slate-900 font-bold">
+                    <span class="text-xs">Final Amount:</span>
+                    <span class="font-mono text-[#283891] text-xl font-black">{{ request.user.store.currency }}{{ invoice.total_amount|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

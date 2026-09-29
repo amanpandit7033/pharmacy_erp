@@ -1,0 +1,204 @@
+{% extends role_base_layout %}
+
+{% block title %}Store Medicine Contributions - Azmed Super Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-50 text-amber-800 border border-amber-200/60 shadow-2xs">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                    Community Contributions
+                </span>
+                {% if pending_count > 0 %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200/60 shadow-2xs animate-pulse">
+                    {{ pending_count }} Pending Review
+                </span>
+                {% endif %}
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                Store-Contributed Medicines Review
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Review and verify new medicine formulations submitted by individual pharmacy stores before publishing them nationwide to all branches.
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'inventory:master_catalog' %}" class="inline-flex items-center px-3.5 py-2 bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition space-x-2">
+                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                <span>National Master Catalog (254k+)</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Tabs -->
+    <div class="flex flex-wrap items-center gap-2 border-b border-slate-200/80 pb-3">
+        <a href="?status=pending" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 {% if current_status == 'pending' %}bg-[#283891] text-white shadow-xs{% else %}bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90{% endif %}">
+            <span>Pending Review</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold {% if current_status == 'pending' %}bg-white/20 text-white{% else %}bg-amber-100 text-amber-800{% endif %}">
+                {{ pending_count }}
+            </span>
+        </a>
+        <a href="?status=approved" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 {% if current_status == 'approved' %}bg-emerald-600 text-white shadow-xs{% else %}bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90{% endif %}">
+            <span>Approved &amp; Published</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold {% if current_status == 'approved' %}bg-white/20 text-white{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                {{ approved_count }}
+            </span>
+        </a>
+        <a href="?status=rejected" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 {% if current_status == 'rejected' %}bg-rose-600 text-white shadow-xs{% else %}bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90{% endif %}">
+            <span>Rejected</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold {% if current_status == 'rejected' %}bg-white/20 text-white{% else %}bg-rose-100 text-rose-800{% endif %}">
+                {{ rejected_count }}
+            </span>
+        </a>
+        <a href="?status=all" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 {% if current_status == 'all' %}bg-slate-800 text-white shadow-xs{% else %}bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90{% endif %}">
+            <span>All Store Submissions</span>
+        </a>
+    </div>
+
+    <!-- Contributions Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-200/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th class="py-3.5 px-4">Medicine Details</th>
+                        <th class="py-3.5 px-4">Manufacturer</th>
+                        <th class="py-3.5 px-4">Generic Composition / Salt</th>
+                        <th class="py-3.5 px-4">Submitting Branch</th>
+                        <th class="py-3.5 px-4 text-center">Status</th>
+                        <th class="py-3.5 px-4 text-right">Moderation Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for c in contributions %}
+                    <tr class="hover:bg-[#edf0fc]/30 transition-colors">
+                        <td class="py-3.5 px-4">
+                            <div class="font-bold text-slate-900 text-xs">{{ c.name }}</div>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200/60 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                                    {{ c.category_name|default:"Allopathy" }}
+                                </span>
+                                <span class="text-[11px] text-slate-500 font-medium">
+                                    {{ c.pack_size_label|default:"Strip" }}
+                                </span>
+                            </div>
+                            {% if c.medicine_desc %}
+                            <p class="text-[11px] text-slate-400 mt-1 max-w-sm line-clamp-2" title="{{ c.medicine_desc }}">
+                                {{ c.medicine_desc }}
+                            </p>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 font-semibold text-slate-800">
+                            {{ c.manufacturer_name|default:"—" }}
+                        </td>
+                        <td class="py-3.5 px-4 max-w-[240px]">
+                            <div class="text-[11px] text-[#283891] font-semibold break-words">
+                                {{ c.salt_composition|default:"—" }}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            {% if c.submitted_by_store %}
+                            <div class="font-bold text-slate-900 text-xs">{{ c.submitted_by_store.name }}</div>
+                            <div class="text-[10px] text-slate-400 mt-0.5">{{ c.submitted_by_store.city }}, {{ c.submitted_by_store.state }}</div>
+                            {% else %}
+                            <span class="text-slate-400">System Catalog</span>
+                            {% endif %}
+                            <div class="text-[10px] text-slate-400 mt-0.5 font-mono">{{ c.created_at|date:"d M Y, h:i A" }}</div>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            {% if c.submission_status == 'pending' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200/60 rounded-full text-[10px] font-bold shadow-2xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>
+                                Pending Review
+                            </span>
+                            {% elif c.submission_status == 'approved' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full text-[10px] font-bold shadow-2xs">
+                                <svg class="w-3 h-3 mr-1 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                Published to Master
+                            </span>
+                            {% elif c.submission_status == 'rejected' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200/60 rounded-full text-[10px] font-bold shadow-2xs">
+                                Rejected
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            {% if c.submission_status == 'pending' %}
+                            <div class="inline-flex items-center gap-1.5">
+                                <form method="POST" action="{% url 'inventory:master_contribution_approve' c.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-[#39b54a] hover:bg-[#2e943c] text-white font-bold rounded-lg shadow-xs transition space-x-1 cursor-pointer" onclick="return confirm('Approve and publish \'{{ c.name|escapejs }}\' to the National Master Catalog for all branches?');">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        <span>Approve &amp; Publish</span>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'inventory:master_contribution_reject' c.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="inline-flex items-center px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-700 text-slate-600 font-bold rounded-lg transition shadow-2xs cursor-pointer" onclick="return confirm('Reject this contribution? (The submitting store will still keep their local copy).');">
+                                        <span>Reject</span>
+                                    </button>
+                                </form>
+                            </div>
+                            {% elif c.submission_status == 'approved' %}
+                            <span class="text-[11px] text-slate-400 font-medium">Visible to all stores</span>
+                            {% else %}
+                            <form method="POST" action="{% url 'inventory:master_contribution_approve' c.id %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="text-xs text-[#283891] hover:underline font-bold cursor-pointer">
+                                    Re-approve
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-12 text-center">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-800">No contributions in this view</h3>
+                                <p class="text-xs text-slate-400 mt-1 max-w-sm">
+                                    When pharmacy stores add new unlisted medicines and choose to contribute, they will appear here for review.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="py-3 px-4 bg-slate-50/70 border-t border-slate-200/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div>
+                Showing page <span class="font-bold text-slate-800">{{ page_obj.number }}</span> of <span class="font-bold text-slate-800">{{ page_obj.paginator.num_pages }}</span> ({{ page_obj.paginator.count }} total contributions)
+            </div>
+            <div class="flex items-center space-x-1">
+                {% if page_obj.has_previous %}
+                <a href="?status={{ current_status }}&page={{ page_obj.previous_page_number }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700">Prev</a>
+                {% endif %}
+                <span class="px-3 py-1.5 rounded-lg bg-[#283891] text-white font-bold text-xs">{{ page_obj.number }}</span>
+                {% if page_obj.has_next %}
+                <a href="?status={{ current_status }}&page={{ page_obj.next_page_number }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

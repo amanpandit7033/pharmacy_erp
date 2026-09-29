@@ -1,0 +1,532 @@
+{% extends role_base_layout %}
+
+{% block title %}Near-Expiry Watchlist & Quarantine - Azmed{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center justify-center p-1.5 bg-rose-50 text-rose-600 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </span>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Near-Expiry Watchlist & Quarantine
+                </h1>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+                Monitor medicines approaching expiration, isolate unsafe batches from POS billing, and track disposal or supplier returns.
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'inventory:expiry_watch_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="inline-flex items-center px-3.5 py-2 bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-card transition space-x-1.5" title="Export Watchlist to CSV">
+                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span>Export CSV</span>
+            </a>
+            <a href="{% url 'inventory:medicine_list' %}" class="px-3.5 py-2 bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-card transition">
+                All Products
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stat KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Expired Batches -->
+        <a href="?timeframe=expired" class="group bg-white p-4 rounded-2xl border transition-all hover:shadow-md {% if current_timeframe == 'expired' %}border-rose-400 ring-2 ring-rose-400/20 bg-rose-50/20{% else %}border-slate-100 shadow-card hover:border-rose-200{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-500">Expired Batches</span>
+                <span class="w-8 h-8 rounded-xl bg-rose-100/80 text-rose-600 flex items-center justify-center font-bold text-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-rose-600 tracking-tight">{{ expired_count }}</span>
+                <span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md">
+                    Loss: {{ request.user.store.currency }}{{ expired_loss_value|floatformat:2 }}
+                </span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Requires immediate quarantine / return</p>
+        </a>
+
+        <!-- Critical: < 30 Days -->
+        <a href="?timeframe=30" class="group bg-white p-4 rounded-2xl border transition-all hover:shadow-md {% if current_timeframe == '30' %}border-amber-400 ring-2 ring-amber-400/20 bg-amber-50/20{% else %}border-slate-100 shadow-card hover:border-amber-200{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-500">Expiring in &le; 30 Days</span>
+                <span class="w-8 h-8 rounded-xl bg-amber-100/80 text-amber-600 flex items-center justify-center font-bold text-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-amber-600 tracking-tight">{{ days_30_count }}</span>
+                <span class="text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md">
+                    {{ days_30_qty }} units
+                </span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Prioritize sales or request vendor swap</p>
+        </a>
+
+        <!-- Warning: 31 - 90 Days -->
+        <a href="?timeframe=90" class="group bg-white p-4 rounded-2xl border transition-all hover:shadow-md {% if current_timeframe == '90' %}border-blue-400 ring-2 ring-blue-400/20 bg-blue-50/20{% else %}border-slate-100 shadow-card hover:border-blue-200{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-500">Expiring in 31 &ndash; 90 Days</span>
+                <span class="w-8 h-8 rounded-xl bg-blue-100/80 text-[#283891] flex items-center justify-center font-bold text-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-slate-800 tracking-tight">{{ days_90_count }}</span>
+                <span class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                    {{ days_90_qty }} units
+                </span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Upcoming watchlist for stock rotation</p>
+        </a>
+
+        <!-- Quarantined (Isolated) -->
+        <a href="?timeframe=quarantined" class="group bg-white p-4 rounded-2xl border transition-all hover:shadow-md {% if current_timeframe == 'quarantined' %}border-purple-400 ring-2 ring-purple-400/20 bg-purple-50/20{% else %}border-slate-100 shadow-card hover:border-purple-200{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-500">Quarantined Stock</span>
+                <span class="w-8 h-8 rounded-xl bg-purple-100/80 text-purple-700 flex items-center justify-center font-bold text-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-purple-700 tracking-tight">{{ quarantined_count }}</span>
+                <span class="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">
+                    Blocked from POS
+                </span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">{{ quarantined_qty }} units isolated from customer sales</p>
+        </a>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card">
+        <form method="GET" class="flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
+            <!-- Search Input -->
+            <div class="flex-1 min-w-[220px] relative">
+                <input type="text" name="q" value="{{ current_q }}" placeholder="Search medicine, salt, batch number, SKU..." class="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-medium placeholder:text-slate-400 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 outline-none transition">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+
+            <!-- Timeframe Filter -->
+            <div class="w-full sm:w-auto min-w-[150px]">
+                <select name="timeframe" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="all_risk" {% if current_timeframe == 'all_risk' %}selected{% endif %}>Status: All At Risk (Default)</option>
+                    <option value="expired" {% if current_timeframe == 'expired' %}selected{% endif %}>Status: Already Expired</option>
+                    <option value="30" {% if current_timeframe == '30' %}selected{% endif %}>Status: Expiring &le; 30 Days</option>
+                    <option value="60" {% if current_timeframe == '60' %}selected{% endif %}>Status: Expiring &le; 60 Days</option>
+                    <option value="90" {% if current_timeframe == '90' %}selected{% endif %}>Status: Expiring &le; 90 Days</option>
+                    <option value="quarantined" {% if current_timeframe == 'quarantined' %}selected{% endif %}>Status: Quarantined Only</option>
+                    <option value="disposed" {% if current_timeframe == 'disposed' %}selected{% endif %}>Status: Disposed / Written Off</option>
+                    <option value="returned" {% if current_timeframe == 'returned' %}selected{% endif %}>Status: Returned to Supplier</option>
+                    <option value="all" {% if current_timeframe == 'all' %}selected{% endif %}>Status: All Batches</option>
+                </select>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="w-full sm:w-auto min-w-[130px]">
+                <select name="category" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="">Category: All</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if current_category == cat.id|stringformat:"i" %}selected{% endif %}>Category: {{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Sort Filter -->
+            <div class="w-full sm:w-auto min-w-[130px]">
+                <select name="sort" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="expiry_asc" {% if current_sort == 'expiry_asc' %}selected{% endif %}>Sort: Earliest Expiry</option>
+                    <option value="expiry_desc" {% if current_sort == 'expiry_desc' %}selected{% endif %}>Sort: Latest Expiry</option>
+                    <option value="qty_desc" {% if current_sort == 'qty_desc' %}selected{% endif %}>Sort: Highest Stock</option>
+                    <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Sort: Medicine Name</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button type="submit" class="px-4 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center space-x-1 whitespace-nowrap">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span>Filter</span>
+                </button>
+                <a href="{% url 'inventory:expiry_watch' %}" class="px-3.5 py-2.5 border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-semibold rounded-xl hover:bg-slate-50 transition flex items-center justify-center whitespace-nowrap" title="Reset all filters">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Watchlist Table Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-slate-200/80 bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                        <th class="py-3 px-4">Medicine & Formulation</th>
+                        <th class="py-3 px-4">Batch & Rack</th>
+                        <th class="py-3 px-4">Expiry & Risk Window</th>
+                        <th class="py-3 px-4 text-center">Available Stock</th>
+                        {% if can_manage_stock %}
+                        <th class="py-3 px-4 text-right">Cost Value</th>
+                        {% endif %}
+                        <th class="py-3 px-4 text-center">POS Status</th>
+                        <th class="py-3 px-4 text-right">Quarantine Controls</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for batch in batches %}
+                    <tr class="hover:bg-slate-50/75 transition {% if batch.is_quarantined %}bg-purple-50/20{% elif batch.is_expired %}bg-rose-50/20{% endif %}">
+                        <!-- Medicine Name -->
+                        <td class="py-3 px-4 font-semibold text-slate-900">
+                            <a href="{% url 'inventory:medicine_detail' batch.medicine.pk %}" class="hover:text-[#283891] transition font-bold">
+                                {{ batch.medicine.name }}
+                            </a>
+                            <div class="text-[11px] text-slate-400 font-normal">
+                                {% if batch.medicine.generic_name %}{{ batch.medicine.generic_name|truncatechars:35 }}{% else %}No salt listed{% endif %}
+                                {% if batch.medicine.category %} &bull; {{ batch.medicine.category.name }}{% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Batch Number -->
+                        <td class="py-3 px-4">
+                            <div class="font-mono font-bold text-slate-900">{{ batch.batch_number }}</div>
+                            <div class="text-[11px] text-slate-400">
+                                {% if batch.medicine.rack_location %}Rack: {{ batch.medicine.rack_location }}{% else %}Rack: &mdash;{% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Expiry Countdown Badge -->
+                        <td class="py-3 px-4">
+                            <div class="font-semibold text-slate-800">{{ batch.expiry_date|date:"d M Y" }}</div>
+                            <div class="mt-1">
+                                {% if batch.is_expired %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200">
+                                        Expired {{ batch.days_until_expiry|stringformat:"d"|slice:"1:" }} days ago
+                                    </span>
+                                {% elif batch.days_until_expiry <= 30 %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                                        Expires in {{ batch.days_until_expiry }} days
+                                    </span>
+                                {% elif batch.days_until_expiry <= 60 %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                        Expires in {{ batch.days_until_expiry }} days
+                                    </span>
+                                {% elif batch.days_until_expiry <= 90 %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-[#283891] border border-blue-100">
+                                        Expires in {{ batch.days_until_expiry }} days
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
+                                        {{ batch.days_until_expiry }} days left
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Available Stock -->
+                        <td class="py-3 px-4 text-center">
+                            <span class="font-extrabold {% if batch.quantity == 0 %}text-slate-400{% elif batch.is_expired %}text-rose-600{% else %}text-slate-900{% endif %} text-sm">
+                                {{ batch.quantity }}
+                            </span>
+                            <span class="text-slate-400 text-[11px]">{{ batch.medicine.unit.short_name }}</span>
+                        </td>
+
+                        <!-- Cost Value (Store Admin only) -->
+                        {% if can_manage_stock %}
+                        <td class="py-3 px-4 text-right">
+                            <div class="font-semibold text-slate-800">
+                                {{ request.user.store.currency }}{{ batch.cost_price }}
+                            </div>
+                            <div class="text-[11px] text-slate-400">
+                                Total: {{ request.user.store.currency }}{% widthratio batch.quantity 1 batch.cost_price %}
+                            </div>
+                        </td>
+                        {% endif %}
+
+                        <!-- POS Status -->
+                        <td class="py-3 px-4 text-center">
+                            {% if batch.status == 'QUARANTINED' %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016zM12 9v2m0 4h.01"></path>
+                                    </svg>
+                                    Quarantined
+                                </span>
+                            {% elif batch.status == 'DISPOSED' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600">
+                                    Disposed
+                                </span>
+                            {% elif batch.status == 'RETURNED' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700">
+                                    Returned
+                                </span>
+                            {% elif batch.is_expired %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-rose-100 text-rose-700">
+                                    Expired / Unsellable
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700">
+                                    Active / Sellable
+                                </span>
+                            {% endif %}
+                            {% if batch.quarantine_reason %}
+                            <div class="text-[10px] text-slate-400 mt-0.5 max-w-[160px] truncate mx-auto" title="{{ batch.quarantine_reason }}">
+                                {{ batch.quarantine_reason }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Quarantine Actions -->
+                        <td class="py-3 px-4 text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                {% if batch.status == 'ACTIVE' %}
+                                    <button type="button" onclick="openQuarantineModal('{{ batch.id }}', '{{ batch.medicine.name|escapejs }}', '{{ batch.batch_number|escapejs }}')" class="inline-flex items-center px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition shadow-2xs space-x-1" title="Quarantine: Block from POS">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016zM12 9v2m0 4h.01"></path>
+                                        </svg>
+                                        <span>Quarantine</span>
+                                    </button>
+                                {% elif batch.status == 'QUARANTINED' %}
+                                    {% if not batch.is_expired %}
+                                    <form method="POST" action="{% url 'inventory:batch_quarantine_action' batch.id %}" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="release">
+                                        <button type="submit" class="inline-flex items-center px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition shadow-2xs space-x-1" title="Release back to active stock">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <span>Release</span>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    <button type="button" onclick="openDisposeModal('{{ batch.id }}', '{{ batch.medicine.name|escapejs }}', '{{ batch.batch_number|escapejs }}')" class="inline-flex items-center px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition shadow-2xs" title="Dispose / Write-Off">
+                                        Dispose
+                                    </button>
+                                    <button type="button" onclick="openReturnModal('{{ batch.id }}', '{{ batch.medicine.name|escapejs }}', '{{ batch.batch_number|escapejs }}')" class="inline-flex items-center px-2 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition shadow-2xs" title="Return to Supplier">
+                                        Return
+                                    </button>
+                                {% endif %}
+
+                                {% if can_manage_stock %}
+                                <a href="{% url 'inventory:batch_edit' batch.pk %}" class="inline-flex items-center p-1.5 text-slate-400 hover:text-[#283891] hover:bg-slate-100 rounded-lg transition" title="Edit batch">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-12 px-4 text-center">
+                            <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-bold text-slate-800">Inventory Expiry Health is Optimal!</p>
+                            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                                No batches matched your current filter criteria. All active inventory is well within expiration thresholds.
+                            </p>
+                            <div class="mt-4">
+                                <a href="{% url 'inventory:expiry_watch' %}?timeframe=all" class="text-xs font-bold text-[#283891] hover:underline">
+                                    View all store batches &rarr;
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-500">
+                Page <span class="font-bold text-slate-800">{{ page_obj.number }}</span> of <span class="font-bold text-slate-800">{{ page_obj.paginator.num_pages }}</span>
+            </span>
+            <div class="flex items-center space-x-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&timeframe={{ current_timeframe }}&q={{ current_q }}&category={{ current_category }}&sort={{ current_sort }}" class="px-3 py-1.5 border border-slate-200 text-xs font-bold text-slate-600 rounded-xl hover:bg-slate-50 transition">
+                    &larr; Previous
+                </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&timeframe={{ current_timeframe }}&q={{ current_q }}&category={{ current_category }}&sort={{ current_sort }}" class="px-3 py-1.5 border border-slate-200 text-xs font-bold text-slate-600 rounded-xl hover:bg-slate-50 transition">
+                    Next &rarr;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= QUARANTINE MODAL ================= -->
+<div id="quarantineModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2">
+                <span class="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </span>
+                <h3 class="text-base font-extrabold text-slate-900">Quarantine Batch</h3>
+            </div>
+            <button type="button" onclick="closeModal('quarantineModal')" class="text-slate-400 hover:text-slate-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <form id="quarantineForm" method="POST" action="" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="quarantine">
+            <p class="text-xs text-slate-600">
+                Quarantining <span id="quarantineMedicineName" class="font-bold text-slate-900"></span> (<span id="quarantineBatchNumber" class="font-mono font-bold"></span>) will immediately <strong>block it from POS billing</strong> and remove it from available sellable stock.
+            </p>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Reason for Quarantine</label>
+                <select id="presetReasonSelect" onchange="applyPresetReason(this.value)" class="w-full py-2 px-3 bg-[#f8fafc] rounded-xl border border-slate-200 text-xs font-medium text-slate-700 outline-none mb-2">
+                    <option value="Near Expiry / Expired Batch">Near Expiry / Expired Batch</option>
+                    <option value="Damaged Packaging / Broken Seal">Damaged Packaging / Broken Seal</option>
+                    <option value="Patient Return / Discontinued">Patient Return / Discontinued</option>
+                    <option value="Manufacturer Recall Notice">Manufacturer Recall Notice</option>
+                    <option value="Discoloration / Quality Defect">Discoloration / Quality Defect</option>
+                    <option value="Custom">Other (Type Custom Reason)</option>
+                </select>
+                <textarea id="quarantineReasonInput" name="reason" rows="2" placeholder="Provide reason for quarantine..." class="w-full py-2 px-3 bg-[#f8fafc] rounded-xl border border-slate-200 text-xs font-medium text-slate-700 focus:bg-white focus:border-rose-500 outline-none">Near Expiry / Expired Batch</textarea>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeModal('quarantineModal')" class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm shadow-rose-500/25 transition">
+                    Confirm Quarantine
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= DISPOSE MODAL ================= -->
+<div id="disposeModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-base font-extrabold text-slate-900">Mark Disposed / Write-Off</h3>
+            <button type="button" onclick="closeModal('disposeModal')" class="text-slate-400 hover:text-slate-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <form id="disposeForm" method="POST" action="" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="dispose">
+            <p class="text-xs text-slate-600">
+                Marking <span id="disposeMedicineName" class="font-bold text-slate-900"></span> (<span id="disposeBatchNumber" class="font-mono font-bold"></span>) as disposed permanently removes it from active pharmacy stock and records it as an inventory loss write-off.
+            </p>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Disposal Method / Note</label>
+                <textarea name="reason" rows="2" placeholder="e.g. Incinerated / Discarded via Biomedical Waste vendor..." class="w-full py-2 px-3 bg-[#f8fafc] rounded-xl border border-slate-200 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">Disposed via standard pharmacy biomedical waste protocol</textarea>
+            </div>
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeModal('disposeModal')" class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition">
+                    Confirm Disposal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= RETURN TO SUPPLIER MODAL ================= -->
+<div id="returnModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-base font-extrabold text-slate-900">Return to Supplier</h3>
+            <button type="button" onclick="closeModal('returnModal')" class="text-slate-400 hover:text-slate-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <form id="returnForm" method="POST" action="" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="return">
+            <p class="text-xs text-slate-600">
+                Record supplier return for <span id="returnMedicineName" class="font-bold text-slate-900"></span> (<span id="returnBatchNumber" class="font-mono font-bold"></span>). This helps in tracking supplier credit notes and replacements.
+            </p>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Distributor / Debit Note Reference</label>
+                <textarea name="reason" rows="2" placeholder="e.g. Returned to Apollo Wholesalers - Debit Note #DN-2026-09" class="w-full py-2 px-3 bg-[#f8fafc] rounded-xl border border-slate-200 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">Returned to distributor for credit replacement</textarea>
+            </div>
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeModal('returnModal')" class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
+                    Confirm Return
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openQuarantineModal(batchId, medicineName, batchNumber) {
+    document.getElementById('quarantineMedicineName').textContent = medicineName;
+    document.getElementById('quarantineBatchNumber').textContent = batchNumber;
+    document.getElementById('quarantineForm').action = `/inventory/batches/${batchId}/quarantine/`;
+    document.getElementById('quarantineModal').classList.remove('hidden');
+}
+
+function openDisposeModal(batchId, medicineName, batchNumber) {
+    document.getElementById('disposeMedicineName').textContent = medicineName;
+    document.getElementById('disposeBatchNumber').textContent = batchNumber;
+    document.getElementById('disposeForm').action = `/inventory/batches/${batchId}/quarantine/`;
+    document.getElementById('disposeModal').classList.remove('hidden');
+}
+
+function openReturnModal(batchId, medicineName, batchNumber) {
+    document.getElementById('returnMedicineName').textContent = medicineName;
+    document.getElementById('returnBatchNumber').textContent = batchNumber;
+    document.getElementById('returnForm').action = `/inventory/batches/${batchId}/quarantine/`;
+    document.getElementById('returnModal').classList.remove('hidden');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+}
+
+function applyPresetReason(val) {
+    const input = document.getElementById('quarantineReasonInput');
+    if (val !== 'Custom') {
+        input.value = val;
+    } else {
+        input.value = '';
+        input.focus();
+    }
+}
+</script>
+{% endblock %}

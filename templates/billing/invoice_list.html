@@ -1,0 +1,237 @@
+{% extends role_base_layout %}
+
+{% block title %}Billing &amp; Invoices - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    Sales History
+                </span>
+                <span class="text-slate-300">•</span>
+                <span class="text-xs text-slate-500 font-medium">Audit Trail &amp; Invoices</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">Billing &amp; Invoices</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Transaction audit trail and customer sales history for {{ request.user.store.name }}.</p>
+        </div>
+        <div>
+            <a href="{% url 'billing:pos' %}" class="inline-flex items-center px-4 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+                New Bill (POS)
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Metrics Strip -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Invoices</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ invoices|length }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Settlement Status</p>
+                <p class="text-base font-extrabold text-emerald-700 tracking-tight">Real-time Verified</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pharmacy Branch</p>
+                <p class="text-sm font-extrabold text-slate-900 tracking-tight truncate max-w-[180px]">{{ request.user.store.name }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search / Filter Bar -->
+    <div class="bg-white rounded-2xl p-4 shadow-card border border-slate-200/80">
+        <form method="GET" class="flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
+            <div class="flex-1 min-w-[200px] relative">
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" data-autosuggest="invoices" autocomplete="off" placeholder="Search invoice #, customer name, phone, doctor..." class="w-full pl-9 pr-9 py-2.5 bg-slate-50 rounded-xl border border-slate-200/90 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+            <div class="w-full sm:w-36">
+                <select name="status" onchange="this.form.submit()" class="w-full py-2.5 px-3 rounded-xl border border-slate-200/90 focus:bg-white focus:border-[#283891] text-xs text-slate-800 font-medium outline-none transition bg-slate-50">
+                    <option value="">Status: All</option>
+                    <option value="PAID" {% if request.GET.status == 'PAID' %}selected{% endif %}>Paid</option>
+                    <option value="CANCELLED" {% if request.GET.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="w-full sm:w-40">
+                <select name="payment" onchange="this.form.submit()" class="w-full py-2.5 px-3 rounded-xl border border-slate-200/90 focus:bg-white focus:border-[#283891] text-xs text-slate-800 font-medium outline-none transition bg-slate-50">
+                    <option value="">Payment: All</option>
+                    {% for code, label in payment_methods %}
+                    <option value="{{ code }}" {% if request.GET.payment == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-center gap-1.5 bg-slate-50 rounded-xl border border-slate-200/90 px-3 py-2 focus-within:bg-white focus-within:border-[#283891] focus-within:ring-4 focus-within:ring-[#283891]/10 transition">
+                <div class="flex items-center space-x-1.5">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">From</span>
+                    <input type="date" name="from_date" value="{{ request.GET.from_date|default:'' }}" title="From Date" class="bg-transparent border-0 text-xs text-slate-800 font-medium p-0 focus:ring-0 outline-none cursor-pointer">
+                </div>
+                <span class="text-slate-300 font-bold text-xs select-none">→</span>
+                <div class="flex items-center space-x-1.5">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">To</span>
+                    <input type="date" name="to_date" value="{{ request.GET.to_date|default:'' }}" title="To Date" class="bg-transparent border-0 text-xs text-slate-800 font-medium p-0 focus:ring-0 outline-none cursor-pointer">
+                </div>
+            </div>
+            <div class="w-full sm:w-40">
+                <select name="sort" onchange="this.form.submit()" class="w-full py-2.5 px-3 rounded-xl border border-slate-200/90 focus:bg-white focus:border-[#283891] text-xs text-slate-800 font-medium outline-none transition bg-slate-50">
+                    <option value="latest" {% if not request.GET.sort or request.GET.sort == 'latest' %}selected{% endif %}>Sort: Newest</option>
+                    <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>Sort: Oldest</option>
+                    <option value="amount_high" {% if request.GET.sort == 'amount_high' %}selected{% endif %}>Sort: Highest Amt</option>
+                    <option value="amount_low" {% if request.GET.sort == 'amount_low' %}selected{% endif %}>Sort: Lowest Amt</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="submit" class="px-4 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 whitespace-nowrap">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span>Filter</span>
+                </button>
+                {% if request.GET.q or request.GET.status or request.GET.payment or request.GET.from_date or request.GET.to_date or request.GET.date or request.GET.sort and request.GET.sort != 'latest' %}
+                <a href="{% url 'billing:invoice_list' %}" class="px-3.5 py-2.5 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-50 transition flex items-center justify-center whitespace-nowrap">
+                    Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-100 text-left text-xs min-w-[700px]">
+                <thead class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                        <th class="px-5 py-3.5">Invoice #</th>
+                        <th class="px-5 py-3.5">Customer</th>
+                        <th class="px-5 py-3.5">Payment</th>
+                        <th class="px-5 py-3.5">Status</th>
+                        <th class="px-5 py-3.5">Billed By</th>
+                        <th class="px-5 py-3.5">Date &amp; Time</th>
+                        <th class="px-5 py-3.5 text-right">Total Amount</th>
+                        <th class="px-5 py-3.5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for inv in invoices %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="px-5 py-4 font-mono font-bold text-slate-900">
+                            <a href="{% url 'billing:invoice_detail' inv.pk %}" class="text-[#283891] hover:underline">
+                                {{ inv.invoice_number }}
+                            </a>
+                        </td>
+                        <td class="px-5 py-4">
+                            <div class="font-bold text-slate-900 text-xs">{{ inv.customer_name }}</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">{{ inv.customer_phone|default:"Walk-in" }}</div>
+                        </td>
+                        <td class="px-5 py-4">
+                            <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700">
+                                {{ inv.get_payment_method_display }}
+                            </span>
+                        </td>
+                        <td class="px-5 py-4">
+                            {% if inv.status == 'PAID' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs">
+                                Paid
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-50 text-rose-700 border border-rose-200/60 shadow-2xs">
+                                Cancelled
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-slate-600 text-xs font-medium">
+                            {{ inv.created_by.username|default:"Unknown" }}
+                        </td>
+                        <td class="px-5 py-4 text-slate-500 text-xs font-mono">
+                            {{ inv.created_at|date:"d M Y, h:i A" }}
+                        </td>
+                        <td class="px-5 py-4 text-right font-mono font-bold text-slate-900 text-sm">
+                            {{ request.user.store.currency }}{{ inv.total_amount|floatformat:2 }}
+                        </td>
+                        <td class="px-5 py-4 text-right whitespace-nowrap">
+                            <div class="inline-flex items-center justify-end gap-1.5">
+                                <a href="{% url 'billing:invoice_detail' inv.pk %}" title="View Invoice" class="p-1.5 rounded-lg text-[#283891] hover:bg-blue-50 transition inline-flex items-center justify-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </a>
+                                <a href="{% url 'billing:invoice_thermal' inv.pk %}" target="_blank" title="Print 80mm Thermal Receipt" class="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition inline-flex items-center justify-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                    </svg>
+                                </a>
+                                <a href="{% url 'billing:invoice_print' inv.pk %}" target="_blank" title="Print A4 Tax Bill" class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition inline-flex items-center justify-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-14 text-center text-slate-400">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <p class="text-xs font-semibold text-slate-600">No bills found.</p>
+                            <p class="text-[11px] text-slate-400 mt-0.5">Try adjusting your search query or date filter.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div>
+                Showing page <span class="font-bold text-slate-800">{{ page_obj.number }}</span> of <span class="font-bold text-slate-800">{{ page_obj.paginator.num_pages }}</span> ({{ page_obj.paginator.count }} total bills)
+            </div>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.from_date %}&from_date={{ request.GET.from_date }}{% endif %}{% if request.GET.to_date %}&to_date={{ request.GET.to_date }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Prev</a>
+                {% endif %}
+                <span class="px-3 py-1.5 rounded-xl bg-[#283891] text-white font-bold text-xs shadow-2xs">{{ page_obj.number }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.from_date %}&from_date={{ request.GET.from_date }}{% endif %}{% if request.GET.to_date %}&to_date={{ request.GET.to_date }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.from_date %}&from_date={{ request.GET.from_date }}{% endif %}{% if request.GET.to_date %}&to_date={{ request.GET.to_date }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Last</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

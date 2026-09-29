@@ -1,0 +1,254 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}{% if object %}Edit Product{% else %}Add Product{% endif %} - Azmed{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'inventory:medicine_list' %}" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-[#283891] transition">
+                    &larr; Back to Products
+                </a>
+                <span class="text-slate-300">•</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    {% if object %}Product Editor{% else %}New Product{% endif %}
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Medicine: <span class="text-[#283891]">{{ object.name }}</span>{% else %}Add New Medicine{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Catalog master entry for pharmaceutical items and retail inventory.</p>
+        </div>
+        <a href="{% url 'inventory:medicine_list' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+            Back to List
+        </a>
+    </div>
+
+    <!-- Master Catalog Live Autocomplete Search -->
+    {% if not object %}
+    <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 rounded-2xl p-5 shadow-2xs">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+                <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs shadow-2xs">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </span>
+                <span class="text-xs font-extrabold text-emerald-950">Quick Auto-Fill from Indian Master Catalog (254,000+ Drugs)</span>
+            </div>
+            <a href="{% url 'inventory:master_catalog' %}" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline">
+                Browse Full Catalog &rarr;
+            </a>
+        </div>
+        <div class="relative">
+            <input type="text" id="master-search-input" placeholder="Type medicine name to auto-fill (e.g. Augmentin, Azithral, Pan 40, Dolo, Paracetamol)..." class="w-full pl-9 pr-4 py-2.5 bg-white border border-emerald-300 rounded-xl text-xs font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/10 outline-none transition shadow-2xs" autocomplete="off">
+            <svg class="w-4 h-4 text-emerald-600 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <div id="master-search-results" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100"></div>
+        </div>
+        <p class="text-[11px] text-emerald-800/80 mt-2">
+            Tip: Selecting a medicine will automatically fill the Brand Name, Generic Composition/Salt, and Clinical description below.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Section 1: Basic Identity -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Medicine Identity &amp; Salts</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Medicine / Commercial Brand Name *</label>
+                        <input type="text" name="name" id="{{ form.name.id_for_label }}" required value="{{ form.name.value|default:'' }}" placeholder="e.g. Augmentin 625 Duo" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.generic_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Generic Composition / Chemical Salts</label>
+                        <input type="text" name="generic_name" id="{{ form.generic_name.id_for_label }}" value="{{ form.generic_name.value|default:'' }}" placeholder="e.g. Amoxycillin (500mg) + Clavulanic Acid (125mg)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Classification, Units & Placement -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-indigo-50 text-[#283891] flex items-center justify-center font-bold text-xs">2</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Classification, Unit &amp; Storage Placement</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.category.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Therapeutic Category</label>
+                        <select name="category" id="{{ form.category.id_for_label }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                            {% for val, label in form.fields.category.choices %}
+                            <option value="{{ val }}" {% if form.category.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.unit.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Unit of Measure *</label>
+                        <select name="unit" id="{{ form.unit.id_for_label }}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                            {% for val, label in form.fields.unit.choices %}
+                            <option value="{{ val }}" {% if form.unit.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.rack_location.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Shelf / Rack Storage Location</label>
+                        <input type="text" name="rack_location" id="{{ form.rack_location.id_for_label }}" value="{{ form.rack_location.value|default:'' }}" placeholder="e.g. Shelf A-3" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.sku.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">SKU / Item Barcode</label>
+                        <input type="text" name="sku" id="{{ form.sku.id_for_label }}" value="{{ form.sku.value|default:'' }}" placeholder="e.g. 8901083002" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-mono font-medium outline-none transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Stock Governance & Compliance -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">3</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Inventory Thresholds &amp; Compliance</h3>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.min_stock_level.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Low Stock Reorder Alert (Units)</label>
+                            <input type="number" name="min_stock_level" id="{{ form.min_stock_level.id_for_label }}" value="{{ form.min_stock_level.value|default:'10' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                            <p class="text-[10px] text-slate-400 mt-1">Triggers low stock warnings when store units drop below this count.</p>
+                        </div>
+
+                        <div class="flex items-center pt-6">
+                            <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                                <input type="checkbox" name="is_prescription_required" {% if form.is_prescription_required.value %}checked{% endif %} class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]">
+                                <span>Requires Doctor Prescription (Schedule H / Rx)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {% if not object %}
+                    <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-start space-x-3">
+                        <input type="checkbox" name="contribute_to_master" id="id_contribute_to_master" checked class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891] mt-0.5">
+                        <div>
+                            <label for="id_contribute_to_master" class="text-xs font-bold text-slate-900 cursor-pointer">
+                                Submit to National Master Catalog (Super Admin Verification)
+                            </label>
+                            <p class="text-[11px] text-slate-500 mt-0.5">
+                                If this medicine does not exist in the national catalog, it will be queued for Super Admin approval. Once approved, all pharmacy branches can add it with 1 click.
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label for="{{ form.description.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Clinical Notes / Dosage Guidelines</label>
+                        <textarea name="description" id="{{ form.description.id_for_label }}" rows="2" placeholder="Indications, precautions, or dispensing guidance..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">{{ form.description.value|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <a href="{% url 'inventory:medicine_list' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    Save Product
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if not object %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('master-search-input');
+    const resultsContainer = document.getElementById('master-search-results');
+    if (!searchInput || !resultsContainer) return;
+
+    let debounceTimer;
+
+    searchInput.addEventListener('input', function(e) {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+        if (query.length < 2) {
+            resultsContainer.classList.add('hidden');
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetch(`{% url 'inventory:master_catalog_search' %}?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.results || data.results.length === 0) {
+                        resultsContainer.innerHTML = '<div class="p-3 text-xs text-slate-500 text-center">No matching medicines found in master catalog</div>';
+                        resultsContainer.classList.remove('hidden');
+                        return;
+                    }
+
+                    resultsContainer.innerHTML = data.results.map(item => `
+                        <div class="p-2.5 hover:bg-emerald-50/70 cursor-pointer transition flex items-center justify-between" data-json="${encodeURIComponent(JSON.stringify(item))}">
+                            <div>
+                                <div class="text-xs font-bold text-slate-900">${item.name}</div>
+                                <div class="text-[11px] text-[#283891] font-medium">${item.salt_composition || 'No composition specified'}</div>
+                                <div class="text-[10px] text-slate-400">${item.manufacturer || ''} • ${item.pack_size || ''}</div>
+                            </div>
+                            <div class="text-right flex-shrink-0 ml-3">
+                                <span class="text-xs font-extrabold text-slate-900">₹${item.price}</span>
+                                <span class="block text-[10px] font-bold text-emerald-600">Auto-fill &rarr;</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    resultsContainer.classList.remove('hidden');
+
+                    resultsContainer.querySelectorAll('[data-json]').forEach(el => {
+                        el.addEventListener('click', function() {
+                            const item = JSON.parse(decodeURIComponent(this.getAttribute('data-json')));
+                            
+                            // Fill fields
+                            const nameField = document.getElementById('{{ form.name.id_for_label }}');
+                            if (nameField) nameField.value = item.name;
+
+                            const genericField = document.getElementById('{{ form.generic_name.id_for_label }}');
+                            if (genericField) genericField.value = item.salt_composition || '';
+
+                            const descField = document.getElementById('{{ form.description.id_for_label }}');
+                            if (descField && item.description) descField.value = item.description;
+
+                            // Close dropdown
+                            resultsContainer.classList.add('hidden');
+                            searchInput.value = item.name;
+                        });
+                    });
+                })
+                .catch(err => console.error("Master search error:", err));
+        }, 250);
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.classList.add('hidden');
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

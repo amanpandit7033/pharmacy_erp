@@ -1,0 +1,189 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}Staff Management - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    Store Operations
+                </span>
+                <span class="text-slate-300">•</span>
+                <span class="text-xs text-slate-500 font-medium">Branch Cashiers &amp; Dispensers</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">Staff Management</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Manage cashier and dispensing operators assigned to {{ request.user.store.name }}.</p>
+        </div>
+        <div>
+            <a href="{% url 'accounts:staff_create' %}" class="inline-flex items-center px-4 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98] space-x-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>Add Staff Member</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Metrics Strip -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Staff</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ staff_members|length }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Counter Operators</p>
+                <p class="text-2xl font-extrabold text-emerald-600 tracking-tight">
+                    {% with active_count=0 %}
+                        {% for s in staff_members %}{% if s.is_active %}{% with active_count=active_count|add:1 %}{% endwith %}{% endif %}{% endfor %}
+                        {{ staff_members|length }}
+                    {% endwith %}
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Store Branch</p>
+                <p class="text-sm font-extrabold text-slate-900 tracking-tight truncate max-w-[180px]">{{ request.user.store.name }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card">
+        <form method="GET" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div class="flex-1 min-w-[220px] relative">
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" data-autosuggest="staff" autocomplete="off" placeholder="Search staff by username, full name, email, or phone..." class="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-medium placeholder:text-slate-400 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 outline-none transition">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+            <div class="w-full sm:w-44">
+                <select name="status" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="">Status: All</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Status: Active</option>
+                    <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Status: Inactive</option>
+                </select>
+            </div>
+            <div class="w-full sm:w-48">
+                <select name="sort" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="latest" {% if not request.GET.sort or request.GET.sort == 'latest' %}selected{% endif %}>Sort: Newest First</option>
+                    <option value="name_asc" {% if request.GET.sort == 'name_asc' %}selected{% endif %}>Sort: Name (A-Z)</option>
+                    <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>Sort: Oldest First</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="submit" class="px-4 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 whitespace-nowrap">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span>Filter</span>
+                </button>
+                {% if request.GET.q or request.GET.status or request.GET.sort and request.GET.sort != 'latest' %}
+                <a href="{% url 'accounts:staff_list' %}" class="px-3.5 py-2.5 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-50 transition flex items-center justify-center whitespace-nowrap">
+                    Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Staff Table Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[620px]">
+                <thead class="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
+                    <tr>
+                        <th class="py-3 px-4">Staff Member</th>
+                        <th class="py-3 px-4">Full Name</th>
+                        <th class="py-3 px-4">Contact Details</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">Joined Date</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for staff in staff_members %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3.5 px-4 font-bold text-slate-900">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#283891] font-bold flex items-center justify-center text-xs shadow-2xs">
+                                    {{ staff.username|slice:":2"|upper }}
+                                </div>
+                                <div>
+                                    <span class="block font-mono text-slate-900">{{ staff.username }}</span>
+                                    <span class="text-[10px] text-slate-400">Cashier / Staff</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-700 font-semibold">
+                            {{ staff.get_full_name|default:"-" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500">
+                            <div>{{ staff.email|default:"No email" }}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">{{ staff.phone|default:"" }}</div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            {% if staff.is_active %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs">
+                                Active
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200">
+                                Inactive
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
+                            {{ staff.date_joined|date:"M d, Y" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right space-x-2">
+                            <a href="{% url 'accounts:staff_edit' staff.pk %}" class="inline-flex items-center px-3 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold text-[#283891] hover:bg-blue-50 transition">Edit</a>
+                            <form action="{% url 'accounts:staff_toggle' staff.pk %}" method="post" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold transition {% if staff.is_active %}text-rose-600 hover:bg-rose-50 border border-rose-200{% else %}text-emerald-700 hover:bg-emerald-50 border border-emerald-200{% endif %}" onclick="return confirm('Change active status for this staff member?')">
+                                    {% if staff.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400">
+                            <div class="max-w-xs mx-auto space-y-2">
+                                <svg class="w-10 h-10 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                                <p class="text-xs font-medium text-slate-500">No staff members found matching your search.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

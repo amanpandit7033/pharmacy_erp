@@ -1,0 +1,326 @@
+{% extends 'layouts/base_super_admin.html' %}
+
+{% block title %}{% if object %}Edit Store Admin{% else %}Create Store Admin{% endif %} - Azmed Platform{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'accounts:store_admin_list' %}" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-[#283891] transition">
+                    &larr; Back to Store Admins
+                </a>
+                <span class="text-slate-300">•</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    {% if object %}Admin Editor{% else %}Manager Provisioning{% endif %}
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Store Administrator: <span class="text-[#283891] font-mono">{{ object.username }}</span>{% else %}Create Store Administrator{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                {% if object %}Update store assignment, manager contact details, or reset account password.{% else %}Assign a pharmacy manager to control their branch's inventory, staff, and billing.{% endif %}
+            </p>
+        </div>
+        <a href="{% url 'accounts:store_admin_list' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+            Back to List
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Section 1: Store Assignment -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Branch Assignment</h3>
+                </div>
+
+                <!-- Assign Pharmacy Store with Live Search Box -->
+                <div class="relative" id="storeSelectContainer">
+                    <label for="{{ form.store.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Assigned Pharmacy Branch *</label>
+
+                    <!-- Hidden native select for standard Django form submission and validation -->
+                    <select name="store" id="{{ form.store.id_for_label }}" required class="sr-only" tabindex="-1">
+                        {% for val, label in form.fields.store.choices %}
+                        <option value="{{ val }}" {% if form.store.value|stringformat:"s" == val|stringformat:"s" or object.store.pk|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Custom Trigger Display -->
+                    <button type="button" id="storeSelectTrigger" aria-haspopup="listbox" aria-expanded="false" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 hover:bg-white focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition flex items-center justify-between text-left shadow-2xs">
+                        <div class="flex items-center space-x-2.5 min-w-0 pr-2">
+                            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                            <span id="storeSelectedLabel" class="truncate text-slate-500 font-normal">- Select an option -</span>
+                        </div>
+                        <svg id="storeSelectChevron" class="w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+
+                    <!-- Searchable Dropdown Panel -->
+                    <div id="storeDropdownPanel" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl border border-slate-200/90 shadow-xl z-50 overflow-hidden">
+                        <div class="p-2.5 bg-slate-50/80 border-b border-slate-100">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                </div>
+                                <input type="text" id="storeSearchInput" placeholder="Search store by name or code..." autocomplete="off" class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 font-medium outline-none focus:border-[#283891] focus:ring-2 focus:ring-[#283891]/20 transition">
+                            </div>
+                        </div>
+
+                        <div id="storeOptionsList" role="listbox" class="max-h-60 overflow-y-auto p-1.5 space-y-0.5 text-xs">
+                            {% for val, label in form.fields.store.choices %}
+                            {% if val %}
+                            <div role="option" data-value="{{ val }}" data-label="{{ label }}" class="store-option-item px-3 py-2 rounded-xl flex items-center justify-between cursor-pointer transition hover:bg-blue-50/70 hover:text-[#283891] {% if form.store.value|stringformat:'s' == val|stringformat:'s' or object.store.pk|stringformat:'s' == val|stringformat:'s' %}bg-blue-50 text-[#283891] font-bold{% else %}text-slate-700 font-medium{% endif %}">
+                                <span class="truncate">{{ label }}</span>
+                                <svg class="check-icon w-4 h-4 text-[#283891] flex-shrink-0 {% if form.store.value|stringformat:'s' == val|stringformat:'s' or object.store.pk|stringformat:'s' == val|stringformat:'s' %}{% else %}hidden{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <div id="storeNoResults" class="hidden p-4 text-center text-xs text-slate-400 font-medium">
+                            No pharmacy branches found matching search.
+                        </div>
+                    </div>
+
+                    {% if form.store.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.store.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Section 2: Account & Security -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-indigo-50 text-[#283891] flex items-center justify-center font-bold text-xs">2</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Account Credentials &amp; Access</h3>
+                </div>
+
+                {% if not object %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Admin Username *</label>
+                        <input type="text" name="username" id="{{ form.username.id_for_label }}" required placeholder="e.g. apollo_admin" value="{{ form.username.value|default:'' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.username.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.username.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Initial Password *</label>
+                        <input type="password" name="password" id="{{ form.password.id_for_label }}" required placeholder="Set password" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.password.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.password.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="space-y-4">
+                    <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Admin Username</span>
+                            <span class="text-sm font-extrabold text-slate-900 font-mono">{{ object.username }}</span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-semibold italic bg-slate-100 px-2.5 py-1 rounded-lg">Fixed identifier</span>
+                    </div>
+
+                    <div class="p-4 bg-blue-50/40 rounded-xl border border-blue-100 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label for="{{ form.new_password.id_for_label }}" class="block text-xs font-bold text-slate-800">
+                                Update Password
+                            </label>
+                            <span class="text-[10px] text-[#283891] font-semibold">Leave blank to retain current password</span>
+                        </div>
+                        <input type="password" name="new_password" id="{{ form.new_password.id_for_label }}" placeholder="Enter new password to reset" autocomplete="new-password" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.new_password.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.new_password.errors.0 }}</p>{% endif %}
+                        <p class="text-[11px] text-slate-500">Only input text here if you explicitly wish to override this administrator's login credentials.</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Section 3: Manager Profile -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">3</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Manager Profile &amp; Contact</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">First Name</label>
+                        <input type="text" name="first_name" id="{{ form.first_name.id_for_label }}" value="{{ form.first_name.value|default:'' }}" placeholder="e.g. Rahul" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.first_name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.first_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Last Name</label>
+                        <input type="text" name="last_name" id="{{ form.last_name.id_for_label }}" value="{{ form.last_name.value|default:'' }}" placeholder="e.g. Sharma" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.last_name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.last_name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
+                        <input type="email" name="email" id="{{ form.email.id_for_label }}" value="{{ form.email.value|default:'' }}" placeholder="admin@pharmacy.com" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.email.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.phone.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Phone Number</label>
+                        <input type="text" name="phone" id="{{ form.phone.id_for_label }}" value="{{ form.phone.value|default:'' }}" placeholder="+91 98765 43210" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.phone.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.phone.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                {% if object %}
+                <div class="pt-4 mt-2">
+                    <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                        <input type="checkbox" name="is_active" {% if form.is_active.value %}checked{% endif %} class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]">
+                        <span>Account Active &amp; Login Permitted</span>
+                    </label>
+                    <span class="text-[10px] text-slate-400 block ml-6 mt-0.5">When disabled, this manager will immediately be blocked from logging into the store portal.</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <a href="{% url 'accounts:store_admin_list' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                    Cancel
+                </a>
+                <button type="submit" class="px-5 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    {% if object %}Update Store Admin{% else %}Create Store Admin{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('storeSelectContainer');
+    if (!container) return;
+
+    const nativeSelect = document.getElementById('{{ form.store.id_for_label }}');
+    const trigger = document.getElementById('storeSelectTrigger');
+    const labelSpan = document.getElementById('storeSelectedLabel');
+    const chevron = document.getElementById('storeSelectChevron');
+    const dropdown = document.getElementById('storeDropdownPanel');
+    const searchInput = document.getElementById('storeSearchInput');
+    const optionsList = document.getElementById('storeOptionsList');
+    const noResults = document.getElementById('storeNoResults');
+    const items = optionsList ? optionsList.querySelectorAll('.store-option-item') : [];
+
+    // Sync trigger label with initial or selected value
+    function updateTriggerLabel() {
+        const selectedVal = nativeSelect ? String(nativeSelect.value || '').trim() : '';
+        let matched = false;
+        items.forEach(item => {
+            const itemVal = String(item.getAttribute('data-value') || '').trim();
+            const itemLabel = item.getAttribute('data-label') || '';
+            const checkIcon = item.querySelector('.check-icon');
+            if (itemVal && itemVal === selectedVal) {
+                labelSpan.textContent = itemLabel;
+                labelSpan.classList.remove('text-slate-500', 'font-normal');
+                labelSpan.classList.add('text-slate-800', 'font-semibold');
+                item.classList.add('bg-blue-50', 'text-[#283891]', 'font-bold');
+                if (checkIcon) checkIcon.classList.remove('hidden');
+                matched = true;
+            } else {
+                item.classList.remove('bg-blue-50', 'text-[#283891]', 'font-bold');
+                if (checkIcon) checkIcon.classList.add('hidden');
+            }
+        });
+        if (!matched) {
+            labelSpan.textContent = '- Select an option -';
+            labelSpan.classList.add('text-slate-500', 'font-normal');
+            labelSpan.classList.remove('text-slate-800', 'font-semibold');
+        }
+    }
+
+    updateTriggerLabel();
+
+    function openDropdown() {
+        dropdown.classList.remove('hidden');
+        trigger.setAttribute('aria-expanded', 'true');
+        chevron.classList.add('rotate-180');
+        searchInput.value = '';
+        filterItems('');
+        setTimeout(() => searchInput.focus(), 60);
+    }
+
+    function closeDropdown() {
+        dropdown.classList.add('hidden');
+        trigger.setAttribute('aria-expanded', 'false');
+        chevron.classList.remove('rotate-180');
+    }
+
+    trigger.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (dropdown.classList.contains('hidden')) {
+            openDropdown();
+        } else {
+            closeDropdown();
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!container.contains(e.target)) {
+            closeDropdown();
+        }
+    });
+
+    function filterItems(query) {
+        const q = query.toLowerCase().trim();
+        let visibleCount = 0;
+        items.forEach(item => {
+            const text = (item.getAttribute('data-label') || '').toLowerCase();
+            if (!q || text.includes(q)) {
+                item.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+        } else {
+            noResults.classList.add('hidden');
+        }
+    }
+
+    searchInput.addEventListener('input', function() {
+        filterItems(this.value);
+    });
+
+    items.forEach(item => {
+        item.addEventListener('click', function() {
+            const val = this.getAttribute('data-value');
+            if (nativeSelect) {
+                nativeSelect.value = val;
+                nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            updateTriggerLabel();
+            closeDropdown();
+            trigger.focus();
+        });
+    });
+
+    container.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDropdown();
+            trigger.focus();
+        } else if (e.key === 'Enter' && !dropdown.classList.contains('hidden') && document.activeElement === searchInput) {
+            e.preventDefault();
+            const firstVisible = Array.from(items).find(i => !i.classList.contains('hidden'));
+            if (firstVisible) {
+                firstVisible.click();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,755 @@
+{% extends role_base_layout %}
+
+{% block title %}Platform & Branding Settings - {{ platform_settings.brand_name|default:'Azmed' }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-7xl mx-auto pb-16">
+    <!-- Top Bar: Breadcrumb, Title & Quick Save Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 sm:p-6 rounded-[24px] border border-slate-100 shadow-card">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-semibold text-slate-400 mb-1">
+                <span>System Administration</span>
+                <span>/</span>
+                <span class="text-[#283891] font-bold">Platform & Branding</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Platform & Branding Settings</h1>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#edf0fc] text-[#283891] border border-blue-100">
+                    Super Admin
+                </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Configure global platform branding, 1:1 logo icon, login screen experience, and copyright footers across all store portals.</p>
+        </div>
+
+        <div class="flex items-center space-x-2.5 self-start md:self-center">
+            <a href="{% url 'dashboard:super_admin_dashboard' %}" class="inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <span>Dashboard</span>
+            </a>
+            <button type="button" onclick="document.getElementById('settingsForm').requestSubmit();" class="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold transition shadow-sm shadow-blue-500/20 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>Save All Changes</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Category Tabs Navigation Bar -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-200/70" id="settingsTabsNav">
+        <button type="button" onclick="switchSettingsTab('brand')" id="tabBtn-brand" class="settings-tab-btn inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-[#283891] text-white shadow-xs">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            <span>Brand &amp; Identity</span>
+        </button>
+
+        <button type="button" onclick="switchSettingsTab('logo')" id="tabBtn-logo" class="settings-tab-btn inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span>Logo &amp; Assets</span>
+        </button>
+
+        <button type="button" onclick="switchSettingsTab('login')" id="tabBtn-login" class="settings-tab-btn inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+            <span>Login Page &amp; Footer</span>
+        </button>
+
+        <button type="button" onclick="switchSettingsTab('all')" id="tabBtn-all" class="settings-tab-btn inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 ml-auto">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+            </svg>
+            <span>View All</span>
+        </button>
+    </div>
+
+    <!-- Main Content Grid: Form (7 cols) + Real-time Interactive Simulator (5 cols) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left: Form Sections -->
+        <div class="lg:col-span-7">
+            <form method="POST" action="{% url 'core:platform_settings' %}" enctype="multipart/form-data" class="space-y-6" id="settingsForm">
+                {% csrf_token %}
+                <input type="hidden" name="remove_logo" id="removeLogoInput" value="0">
+
+                <!-- SECTION 1: Brand & Identity -->
+                <div id="section-brand" class="settings-section bg-white rounded-[24px] shadow-card border border-slate-100 p-6 sm:p-7 space-y-5 transition-all">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center font-bold">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold text-slate-900">Brand Identity &amp; Platform Name</h2>
+                                <p class="text-xs text-slate-500">Global brand title and tagline shown across headers, tabs, and documents.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Brand Name Input -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="brandNameInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                Brand / Platform Name <span class="text-rose-500">*</span>
+                            </label>
+                            <span class="text-[11px] text-slate-400">Required</span>
+                        </div>
+                        <input type="text"
+                               name="brand_name"
+                               id="brandNameInput"
+                               value="{{ settings.brand_name }}"
+                               required
+                               placeholder="e.g. Azmed or Azme"
+                               class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-semibold text-slate-900 outline-none transition bg-[#f8fafc] focus:bg-white placeholder-slate-400">
+                        <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                            Appears in the browser tab title, dashboard navigation header, invoice receipts, and login portal.
+                        </p>
+                    </div>
+
+                    <!-- Tagline Input -->
+                    <div>
+                        <label for="taglineInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                            Platform Slogan / Tagline
+                        </label>
+                        <input type="text"
+                               name="tagline"
+                               id="taglineInput"
+                               value="{{ settings.tagline }}"
+                               placeholder="e.g. Expert support for a happier, healthier you."
+                               class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white placeholder-slate-400">
+                        
+                        <!-- Quick presets -->
+                        <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Quick Presets:</span>
+                            <button type="button" onclick="setPreset('taglineInput', 'Expert support for a happier, healthier you.')" class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                                Healthier You
+                            </button>
+                            <button type="button" onclick="setPreset('taglineInput', 'Next-Gen Pharmacy ERP &amp; Healthcare POS')" class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                                Next-Gen ERP
+                            </button>
+                            <button type="button" onclick="setPreset('taglineInput', 'Smart Inventory, Point-of-Sale &amp; Patient Care')" class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                                Patient Care
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: Logo & Media Assets -->
+                <div id="section-logo" class="settings-section bg-white rounded-[24px] shadow-card border border-slate-100 p-6 sm:p-7 space-y-5 transition-all">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold text-slate-900">1:1 Brand Logo Icon</h2>
+                                <p class="text-xs text-slate-500">Square visual symbol for system sidebars, favicon, and login screen.</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">Ratio 1:1</span>
+                    </div>
+
+                    <!-- Modern Drag & Drop Zone -->
+                    <div id="dropZone" class="relative group border-2 border-dashed border-slate-200 hover:border-[#283891] rounded-2xl p-6 sm:p-7 bg-[#f8fafc] hover:bg-blue-50/20 transition-all text-center cursor-pointer">
+                        <input type="file"
+                               name="logo_icon"
+                               id="logoFileInput"
+                               accept="image/png, image/jpeg, image/jpg, image/svg+xml, image/webp"
+                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-5 pointer-events-none">
+                            <!-- Current / Live Icon Preview Box (1:1 Aspect Ratio) -->
+                            <div class="relative w-20 h-20 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+                                {% if settings.logo_icon %}
+                                <img id="iconPreviewImg" src="{{ settings.logo_icon.url }}" alt="1:1 Logo Icon" class="w-full h-full object-contain p-2 aspect-square">
+                                <div id="iconDefaultSvg" class="hidden"></div>
+                                {% else %}
+                                <div id="iconDefaultSvg" class="flex items-center justify-center p-2">
+                                    <svg class="w-12 h-12" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                                        <circle cx="26" cy="18" r="3.2" fill="white"/>
+                                        <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                                        <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+                                        <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                                        <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+                                        <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+                                    </svg>
+                                </div>
+                                <img id="iconPreviewImg" src="" alt="1:1 Logo Icon" class="w-full h-full object-contain p-2 aspect-square hidden">
+                                {% endif %}
+                            </div>
+
+                            <div class="text-center sm:text-left space-y-1">
+                                <div class="inline-flex items-center space-x-1.5 text-xs font-bold text-[#283891]">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                    </svg>
+                                    <span id="uploadHintText">Click to choose image or drag &amp; drop</span>
+                                </div>
+                                <p id="fileSelectedName" class="text-xs text-slate-500">
+                                    {% if settings.logo_icon %}
+                                    Active: <span class="font-mono text-slate-700 font-semibold">{{ settings.logo_icon.name }}</span>
+                                    {% else %}
+                                    Using system default SVG circular emblem.
+                                    {% endif %}
+                                </p>
+                                <p class="text-[11px] text-slate-400">Supported: PNG, SVG, JPG, WebP. Recommended: 512×512 or 256×256 px.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons for Logo -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex items-center space-x-2">
+                            <button type="button" onclick="document.getElementById('logoFileInput').click();" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                <span>Browse File</span>
+                            </button>
+
+                            {% if settings.logo_icon %}
+                            <button type="button" id="removeLogoBtn" onclick="resetToDefaultLogo()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                                <span>Reset to Default</span>
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        <span class="text-[11px] text-slate-400">Square icons look cleanest in dark and light modes.</span>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: Login Page & Footer Controls -->
+                <div id="section-login" class="settings-section bg-white rounded-[24px] shadow-card border border-slate-100 p-6 sm:p-7 space-y-5 transition-all">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold text-slate-900">Login Page &amp; Footer Controls</h2>
+                                <p class="text-xs text-slate-500">Manage the guest authentication screen and bottom copyright disclaimer.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Toggle Card: Show Login Footer -->
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-[#f8fafc] border border-slate-200/80">
+                        <div class="space-y-0.5">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-slate-800">Show Footer on Login Screen</span>
+                                <span id="footerToggleStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {% if settings.show_login_footer %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-600{% endif %}">
+                                    {% if settings.show_login_footer %}Active{% else %}Disabled{% endif %}
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500">Renders copyright notice and support contact line at the bottom of the login page.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-4">
+                            <input type="checkbox" name="show_login_footer" id="showFooterToggle" value="1" {% if settings.show_login_footer %}checked{% endif %} class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#283891]"></div>
+                        </label>
+                    </div>
+
+                    <!-- Footer Text Input -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="footerTextInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                Footer Copyright / Notice Text
+                            </label>
+                            <span class="text-[11px] text-slate-400">Primary Line</span>
+                        </div>
+                        <input type="text"
+                               name="footer_text"
+                               id="footerTextInput"
+                               value="{{ settings.footer_text }}"
+                               placeholder="e.g. © 2026 Azmed. All rights reserved."
+                               class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white placeholder-slate-400">
+                        
+                        <!-- Quick presets -->
+                        <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Quick Presets:</span>
+                            <button type="button" onclick="setPreset('footerTextInput', '© 2026 ' + (document.getElementById('brandNameInput').value || 'Azmed') + '. All rights reserved.')" class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                                Standard Copyright
+                            </button>
+                            <button type="button" onclick="setPreset('footerTextInput', '© 2026 ' + (document.getElementById('brandNameInput').value || 'Azmed') + ' Pharmacy ERP &bull; Licensed Healthcare Portal')" class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                                Licensed Healthcare
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Support / Contact Line Input -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="footerContactInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                Support / Contact Line <span class="text-slate-400 font-normal lowercase">(optional)</span>
+                            </label>
+                            <span class="text-[11px] text-slate-400">Secondary Line</span>
+                        </div>
+                        <input type="text"
+                               name="footer_contact_info"
+                               id="footerContactInput"
+                               value="{{ settings.footer_contact_info }}"
+                               placeholder="e.g. Need assistance? Contact support@azmed.com"
+                               class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white placeholder-slate-400">
+                        
+                        <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Quick Presets:</span>
+                            <button type="button" onclick="setPreset('footerContactInput', 'Need assistance? Contact support@' + (document.getElementById('brandNameInput').value.toLowerCase().replace(/\\s+/g, '') || 'azmed') + '.com')" class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                                Email Support
+                            </button>
+                            <button type="button" onclick="setPreset('footerContactInput', 'Need help? Contact IT Helpdesk or your Pharmacy Administrator.')" class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                                Internal IT Desk
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Save & Action Card -->
+                <div class="p-4 sm:p-5 rounded-[20px] bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+                    <div class="flex items-center space-x-2 text-xs text-slate-500">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Changes apply immediately across all logged-in users and guest sessions.</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5 w-full sm:w-auto">
+                        <button type="button" onclick="location.reload();" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold transition">
+                            Discard
+                        </button>
+                        <button type="submit" class="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold transition shadow-sm shadow-blue-500/20 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Save Platform Settings</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right: Real-time Live Simulator (Sticky) -->
+        <div class="lg:col-span-5 space-y-4 lg:sticky lg:top-20">
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-[24px] p-5 sm:p-6 shadow-xl border border-slate-700/80">
+                <!-- Simulator Header with View Switcher -->
+                <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-200">Live Simulator</h3>
+                    </div>
+                    
+                    <!-- Simulator View Switcher Pills -->
+                    <div class="flex items-center bg-slate-950/60 p-1 rounded-xl border border-slate-700/60 text-[10px] font-bold">
+                        <button type="button" onclick="switchSimulatorView('login')" id="simBtn-login" class="sim-view-btn px-2.5 py-1 rounded-lg transition bg-[#283891] text-white shadow-2xs">
+                            Login View
+                        </button>
+                        <button type="button" onclick="switchSimulatorView('sidebar')" id="simBtn-sidebar" class="sim-view-btn px-2.5 py-1 rounded-lg transition text-slate-400 hover:text-white">
+                            Sidebar
+                        </button>
+                        <button type="button" onclick="switchSimulatorView('tab')" id="simBtn-tab" class="sim-view-btn px-2.5 py-1 rounded-lg transition text-slate-400 hover:text-white">
+                            Browser
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SIMULATOR VIEW 1: Login Screen Simulator (Default) -->
+                <div id="simView-login" class="sim-panel space-y-3">
+                    <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span>Authentication Page Simulation</span>
+                        <span class="text-emerald-400">Live Sync</span>
+                    </div>
+
+                    <!-- Mini Mockup of Login Page -->
+                    <div class="relative rounded-2xl bg-[#edf2f7] p-4 text-slate-900 overflow-hidden border border-slate-700/50 shadow-inner min-h-[360px] flex flex-col justify-between items-center">
+                        <!-- Mini Background Vector -->
+                        <svg class="absolute inset-0 w-full h-full pointer-events-none stroke-slate-300/70 fill-none opacity-40" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M-50,80 C100,20 250,220 500,40" stroke-width="1.2" />
+                            <path d="M-80,240 C150,80 300,320 600,120" stroke-width="1.2" />
+                        </svg>
+
+                        <div class="w-full h-2"></div>
+
+                        <!-- Mini Login Card -->
+                        <div class="relative w-full max-w-[270px] bg-white rounded-2xl shadow-md border border-slate-100 p-4 text-center z-10 my-auto">
+                            <!-- Logo Icon -->
+                            <div class="w-10 h-10 rounded-xl bg-blue-50/80 border border-blue-100 flex items-center justify-center mx-auto mb-2 overflow-hidden shadow-2xs">
+                                <div id="simLoginIcon" class="w-7 h-7 flex items-center justify-center">
+                                    {% if settings.logo_icon %}
+                                    <img src="{{ settings.logo_icon.url }}" alt="Icon" class="w-7 h-7 object-contain aspect-square">
+                                    {% else %}
+                                    <svg class="w-7 h-7" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                                        <circle cx="26" cy="18" r="3.2" fill="white"/>
+                                        <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                                        <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+                                        <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                                        <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+                                        <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+                                    </svg>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <h4 id="simLoginTitle" class="text-xs font-bold text-slate-900 leading-tight">
+                                Login to {{ settings.brand_name }}
+                            </h4>
+                            <p id="simLoginTagline" class="text-[9px] text-slate-400 mt-0.5 line-clamp-1">
+                                {{ settings.tagline }}
+                            </p>
+
+                            <!-- Mini Input placeholders -->
+                            <div class="mt-3 space-y-1.5 text-left">
+                                <div class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-[9px] text-slate-400">
+                                    Username or Mobile
+                                </div>
+                                <div class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-[9px] text-slate-400">
+                                    Password
+                                </div>
+                                <div class="w-full py-1.5 rounded-lg bg-[#283891] text-white text-[10px] font-bold text-center">
+                                    Login
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mini Login Footer -->
+                        <div id="simLoginFooter" class="relative z-10 w-full text-center text-[9px] text-slate-500 py-1 transition-all {% if not settings.show_login_footer %}opacity-20{% endif %}">
+                            <p id="simFooterText" class="font-medium text-slate-600 line-clamp-1">
+                                {{ settings.footer_text|default:'© 2026 Azmed. All rights reserved.' }}
+                            </p>
+                            <p id="simFooterContact" class="text-[8px] text-slate-400 mt-0.5 line-clamp-1 {% if not settings.footer_contact_info %}hidden{% endif %}">
+                                {{ settings.footer_contact_info }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIMULATOR VIEW 2: Sidebar Header Simulator -->
+                <div id="simView-sidebar" class="sim-panel space-y-3 hidden">
+                    <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                        <span>Navigation Sidebar Header</span>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center space-x-3">
+                        <div class="w-10 h-10 flex-shrink-0 rounded-xl bg-white/15 flex items-center justify-center overflow-hidden">
+                            <div id="simSidebarIcon" class="w-8 h-8 flex items-center justify-center">
+                                {% if settings.logo_icon %}
+                                <img src="{{ settings.logo_icon.url }}" alt="Icon" class="w-8 h-8 object-contain aspect-square">
+                                {% else %}
+                                <svg class="w-8 h-8" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                                    <circle cx="26" cy="18" r="3.2" fill="white"/>
+                                    <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                                    <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+                                    <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                                    <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+                                    <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+                                </svg>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 id="simBrandName" class="text-base font-extrabold text-white tracking-tight leading-none">{{ settings.brand_name }}</h4>
+                            <span class="text-[10px] font-semibold text-blue-300 tracking-wider uppercase mt-1 block">Store Portal &amp; ERP</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 p-3 rounded-xl bg-slate-950/40 border border-slate-700/50 text-xs text-slate-400">
+                        <div class="flex items-center space-x-2 text-slate-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                            <span class="text-[11px] font-semibold">Store Dashboard</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-slate-500">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+                            <span class="text-[11px]">Billing POS Terminal</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-slate-500">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+                            <span class="text-[11px]">Medicine Catalog</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIMULATOR VIEW 3: Browser Tab & SEO -->
+                <div id="simView-tab" class="sim-panel space-y-3 hidden">
+                    <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                        <span>Browser Chrome Preview</span>
+                    </div>
+
+                    <!-- Browser Tab Mockup -->
+                    <div class="rounded-xl bg-slate-950/90 border border-slate-700/60 p-3 space-y-2.5">
+                        <div class="flex items-center space-x-1.5 pb-2 border-b border-slate-800">
+                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500/70"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500/70"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/70"></span>
+                        </div>
+
+                        <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700/70 flex items-center space-x-2">
+                            <div id="simTabIcon" class="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                                {% if settings.logo_icon %}
+                                <img src="{{ settings.logo_icon.url }}" alt="Favicon" class="w-4 h-4 object-contain aspect-square">
+                                {% else %}
+                                <svg class="w-4 h-4" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                                    <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                                    <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                                </svg>
+                                {% endif %}
+                            </div>
+                            <span id="simTabTitle" class="text-xs font-medium text-slate-200 truncate">
+                                {{ settings.brand_name }} - Pharmacy ERP &amp; CRM
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Tab Switching Functionality
+    function switchSettingsTab(tabName) {
+        // Update nav buttons
+        document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+            btn.className = 'settings-tab-btn inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80';
+        });
+
+        const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+        if (activeBtn) {
+            activeBtn.className = 'settings-tab-btn inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-[#283891] text-white shadow-xs';
+        }
+
+        // Show/hide sections
+        const sections = ['brand', 'logo', 'login'];
+        if (tabName === 'all') {
+            sections.forEach(s => {
+                const el = document.getElementById(`section-${s}`);
+                if (el) el.classList.remove('hidden');
+            });
+        } else {
+            sections.forEach(s => {
+                const el = document.getElementById(`section-${s}`);
+                if (el) {
+                    if (s === tabName) {
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                }
+            });
+            // Automatically switch simulator to most relevant view
+            if (tabName === 'login') switchSimulatorView('login');
+            else if (tabName === 'brand') switchSimulatorView('login');
+            else if (tabName === 'logo') switchSimulatorView('sidebar');
+        }
+    }
+
+    // Simulator View Switcher
+    function switchSimulatorView(viewName) {
+        document.querySelectorAll('.sim-view-btn').forEach(btn => {
+            btn.className = 'sim-view-btn px-2.5 py-1 rounded-lg transition text-slate-400 hover:text-white';
+        });
+        const activeBtn = document.getElementById(`simBtn-${viewName}`);
+        if (activeBtn) {
+            activeBtn.className = 'sim-view-btn px-2.5 py-1 rounded-lg transition bg-[#283891] text-white shadow-2xs';
+        }
+
+        document.querySelectorAll('.sim-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+        const activePanel = document.getElementById(`simView-${viewName}`);
+        if (activePanel) {
+            activePanel.classList.remove('hidden');
+        }
+    }
+
+    // Preset helper
+    function setPreset(inputId, value) {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+        }
+    }
+
+    // Interactive Real-Time Inputs & Sync
+    const brandNameInput = document.getElementById('brandNameInput');
+    const taglineInput = document.getElementById('taglineInput');
+    const footerTextInput = document.getElementById('footerTextInput');
+    const footerContactInput = document.getElementById('footerContactInput');
+    const showFooterToggle = document.getElementById('showFooterToggle');
+    const footerToggleStatusBadge = document.getElementById('footerToggleStatusBadge');
+
+    const simBrandName = document.getElementById('simBrandName');
+    const simLoginTitle = document.getElementById('simLoginTitle');
+    const simLoginTagline = document.getElementById('simLoginTagline');
+    const simTabTitle = document.getElementById('simTabTitle');
+    const simFooterText = document.getElementById('simFooterText');
+    const simFooterContact = document.getElementById('simFooterContact');
+    const simLoginFooter = document.getElementById('simLoginFooter');
+
+    const logoFileInput = document.getElementById('logoFileInput');
+    const removeLogoInput = document.getElementById('removeLogoInput');
+    const iconPreviewImg = document.getElementById('iconPreviewImg');
+    const iconDefaultSvg = document.getElementById('iconDefaultSvg');
+    const fileSelectedName = document.getElementById('fileSelectedName');
+    const simLoginIcon = document.getElementById('simLoginIcon');
+    const simSidebarIcon = document.getElementById('simSidebarIcon');
+    const simTabIcon = document.getElementById('simTabIcon');
+    const uploadHintText = document.getElementById('uploadHintText');
+
+    const defaultSvgEmblem = `
+        <svg class="w-full h-full" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+            <circle cx="26" cy="18" r="3.2" fill="white"/>
+            <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+            <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+            <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+            <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+            <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+        </svg>
+    `;
+
+    // Live sync: Brand Name
+    if (brandNameInput) {
+        brandNameInput.addEventListener('input', function() {
+            const val = this.value.trim() || 'Azmed';
+            if (simBrandName) simBrandName.textContent = val;
+            if (simLoginTitle) simLoginTitle.textContent = `Login to ${val}`;
+            if (simTabTitle) simTabTitle.textContent = `${val} - Pharmacy ERP & CRM`;
+        });
+    }
+
+    // Live sync: Tagline
+    if (taglineInput) {
+        taglineInput.addEventListener('input', function() {
+            const val = this.value.trim() || 'Expert support for a happier, healthier you.';
+            if (simLoginTagline) simLoginTagline.textContent = val;
+        });
+    }
+
+    // Live sync: Footer text
+    if (footerTextInput) {
+        footerTextInput.addEventListener('input', function() {
+            const val = this.value.trim() || '© 2026 Azmed. All rights reserved.';
+            if (simFooterText) simFooterText.textContent = val;
+        });
+    }
+
+    // Live sync: Footer contact line
+    if (footerContactInput) {
+        footerContactInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            if (simFooterContact) {
+                if (val) {
+                    simFooterContact.textContent = val;
+                    simFooterContact.classList.remove('hidden');
+                } else {
+                    simFooterContact.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    // Live sync: Footer toggle
+    if (showFooterToggle) {
+        showFooterToggle.addEventListener('change', function() {
+            if (this.checked) {
+                if (simLoginFooter) simLoginFooter.classList.remove('opacity-20');
+                if (footerToggleStatusBadge) {
+                    footerToggleStatusBadge.textContent = 'Active';
+                    footerToggleStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700';
+                }
+            } else {
+                if (simLoginFooter) simLoginFooter.classList.add('opacity-20');
+                if (footerToggleStatusBadge) {
+                    footerToggleStatusBadge.textContent = 'Disabled';
+                    footerToggleStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-600';
+                }
+            }
+        });
+    }
+
+    // Live Logo File Upload Handler
+    if (logoFileInput) {
+        logoFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            removeLogoInput.value = '0';
+            if (fileSelectedName) {
+                fileSelectedName.innerHTML = `Selected: <span class="font-mono text-slate-800 font-bold">${file.name}</span> (${(file.size / 1024).toFixed(1)} KB)`;
+            }
+            if (uploadHintText) uploadHintText.textContent = 'Change selected 1:1 image';
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const dataUrl = evt.target.result;
+
+                // Update uploader thumbnail
+                if (iconDefaultSvg) iconDefaultSvg.classList.add('hidden');
+                if (iconPreviewImg) {
+                    iconPreviewImg.src = dataUrl;
+                    iconPreviewImg.classList.remove('hidden');
+                }
+
+                // Update Simulators
+                if (simLoginIcon) simLoginIcon.innerHTML = `<img src="${dataUrl}" class="w-7 h-7 object-contain aspect-square">`;
+                if (simSidebarIcon) simSidebarIcon.innerHTML = `<img src="${dataUrl}" class="w-8 h-8 object-contain aspect-square">`;
+                if (simTabIcon) simTabIcon.innerHTML = `<img src="${dataUrl}" class="w-4 h-4 object-contain aspect-square">`;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Drag and Drop Zone styling
+    const dropZone = document.getElementById('dropZone');
+    if (dropZone) {
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('border-[#283891]', 'bg-blue-50/40');
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('border-[#283891]', 'bg-blue-50/40');
+            });
+        });
+    }
+
+    function resetToDefaultLogo() {
+        removeLogoInput.value = '1';
+        if (logoFileInput) logoFileInput.value = '';
+        if (fileSelectedName) fileSelectedName.textContent = 'Custom logo marked for removal. Will reset to system default SVG upon saving.';
+        if (uploadHintText) uploadHintText.textContent = 'Upload replacement 1:1 icon';
+
+        if (iconPreviewImg) iconPreviewImg.classList.add('hidden');
+        if (iconDefaultSvg) {
+            iconDefaultSvg.innerHTML = defaultSvgEmblem;
+            iconDefaultSvg.classList.remove('hidden');
+        }
+
+        if (simLoginIcon) simLoginIcon.innerHTML = defaultSvgEmblem;
+        if (simSidebarIcon) simSidebarIcon.innerHTML = defaultSvgEmblem;
+        if (simTabIcon) simTabIcon.innerHTML = defaultSvgEmblem;
+    }
+</script>
+{% endblock %}

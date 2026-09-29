@@ -1,0 +1,278 @@
+{% extends role_base_layout %}
+
+{% block title %}Products & Stock Inventory - Azmed{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    Store Inventory
+                </span>
+                <span class="text-slate-300">•</span>
+                <span class="text-xs text-slate-500 font-medium">Batch Stock &amp; Dispensing</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if can_manage_stock %}Products &amp; Stock Inventory{% else %}Medicine Stock Lookup{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                {% if can_manage_stock %}
+                Manage medicine master, shelf/rack positions, and active batches for {{ request.user.store.name }}.
+                {% else %}
+                View-only stock availability, shelf locations, and retail prices.
+                {% endif %}
+            </p>
+        </div>
+        {% if can_manage_stock %}
+        <div class="flex flex-wrap items-center gap-2.5">
+            <a href="{% url 'inventory:master_catalog' %}" class="inline-flex items-center px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm shadow-emerald-500/20 transition active:scale-[0.98] space-x-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                <span>Master Catalog (254k+)</span>
+            </a>
+            <a href="{% url 'inventory:category_list' %}" class="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition">
+                Categories &amp; Units
+            </a>
+            <a href="{% url 'inventory:medicine_create' %}" class="inline-flex items-center px-4 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98] space-x-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>Add Product</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Metrics Strip -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Products</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ medicines|length }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Stock Available</p>
+                <p class="text-base font-extrabold text-emerald-700 tracking-tight">Active for POS</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Reorder Alerts</p>
+                <a href="?stock=low_stock" class="text-xs font-extrabold text-amber-700 hover:underline flex items-center space-x-1 mt-0.5">
+                    <span>Low Stock Filter &rarr;</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Expiry Watch</p>
+                <a href="{% url 'inventory:expiry_watch' %}" class="text-xs font-extrabold text-rose-600 hover:underline flex items-center space-x-1 mt-0.5">
+                    <span>Watchlist &amp; Quarantine &rarr;</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card">
+        <form method="GET" class="flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
+            <!-- Search Input -->
+            <div class="flex-1 min-w-[220px] relative">
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" data-autosuggest="medicines" autocomplete="off" placeholder="Search brand name, generic formulation, SKU, barcode, rack..." class="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-medium placeholder:text-slate-400 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 outline-none transition">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="w-full sm:w-auto min-w-[130px]">
+                <select name="category" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="">Category: All</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"i" %}selected{% endif %}>Category: {{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Unit Filter -->
+            <div class="w-full sm:w-auto min-w-[120px]">
+                <select name="unit" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="">Unit: All</option>
+                    {% for u in units %}
+                    <option value="{{ u.id }}" {% if request.GET.unit == u.id|stringformat:"i" %}selected{% endif %}>Unit: {{ u.short_name|default:u.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Stock Level Filter -->
+            <div class="w-full sm:w-auto min-w-[130px]">
+                <select name="stock" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="">Stock: All</option>
+                    <option value="in_stock" {% if request.GET.stock == 'in_stock' %}selected{% endif %}>🟢 In Stock</option>
+                    <option value="low_stock" {% if request.GET.stock == 'low_stock' %}selected{% endif %}>🟡 Low Stock</option>
+                    <option value="out_of_stock" {% if request.GET.stock == 'out_of_stock' %}selected{% endif %}>🔴 Out of Stock</option>
+                </select>
+            </div>
+
+            <!-- Prescription Filter -->
+            <div class="w-full sm:w-auto min-w-[110px]">
+                <select name="rx" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="">Type: All</option>
+                    <option value="rx" {% if request.GET.rx == 'rx' %}selected{% endif %}>Type: Rx</option>
+                    <option value="otc" {% if request.GET.rx == 'otc' %}selected{% endif %}>Type: OTC</option>
+                </select>
+            </div>
+
+            <!-- Sort Filter -->
+            <div class="w-full sm:w-auto min-w-[140px]">
+                <select name="sort" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="latest" {% if not request.GET.sort or request.GET.sort == 'latest' %}selected{% endif %}>Sort: Latest Added</option>
+                    <option value="name_asc" {% if request.GET.sort == 'name_asc' %}selected{% endif %}>Sort: Name (A-Z)</option>
+                    <option value="name_desc" {% if request.GET.sort == 'name_desc' %}selected{% endif %}>Sort: Name (Z-A)</option>
+                    <option value="stock_high" {% if request.GET.sort == 'stock_high' %}selected{% endif %}>Sort: Stock (High)</option>
+                    <option value="stock_low" {% if request.GET.sort == 'stock_low' %}selected{% endif %}>Sort: Stock (Low)</option>
+                    <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>Sort: Oldest</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="submit" class="px-4 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 whitespace-nowrap">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span>Filter</span>
+                </button>
+                {% if request.GET.q or request.GET.category or request.GET.unit or request.GET.stock or request.GET.rx or request.GET.sort and request.GET.sort != 'latest' %}
+                <a href="{% url 'inventory:medicine_list' %}" class="px-3.5 py-2.5 border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-semibold rounded-xl hover:bg-slate-50 transition flex items-center justify-center whitespace-nowrap">
+                    Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Medicine Table Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[680px]">
+                <thead class="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
+                    <tr>
+                        <th class="py-3 px-4">Medicine Name</th>
+                        <th class="py-3 px-4">Generic Composition</th>
+                        <th class="py-3 px-4">Category / Unit</th>
+                        <th class="py-3 px-4">Rack Location</th>
+                        <th class="py-3 px-4 text-center">Available Stock</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for med in medicines %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3.5 px-4 font-bold text-slate-900">
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'inventory:medicine_detail' med.pk %}" class="hover:text-[#283891] transition font-bold text-slate-900">
+                                    {{ med.name }}
+                                </a>
+                                {% if med.is_prescription_required %}
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200/60">Rx</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 italic">
+                            {{ med.generic_name|default:"-" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600">
+                            <span class="font-semibold text-slate-800">{{ med.category.name|default:"General" }}</span>
+                            <span class="text-slate-400 text-[11px]">({{ med.unit.short_name }})</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            {% if med.rack_location %}
+                            <span class="px-2 py-0.5 bg-slate-100 rounded-lg text-[11px] font-mono font-semibold text-slate-700 border border-slate-200/80">
+                                📍 {{ med.rack_location }}
+                            </span>
+                            {% else %}
+                            <span class="text-slate-300">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            {% with stock=med.total_stock %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide
+                                {% if stock == 0 %}bg-rose-50 text-rose-600 border border-rose-200/60
+                                {% elif stock <= med.min_stock_level %}bg-amber-50 text-amber-700 border border-amber-200/60
+                                {% else %}bg-emerald-50 text-emerald-700 border border-emerald-200/60{% endif %}">
+                                {{ stock }} {{ med.unit.short_name }}
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <div class="inline-flex items-center justify-end space-x-1.5">
+                                <a href="{% url 'inventory:medicine_detail' med.pk %}" title="View Batches &amp; Stock" class="inline-flex items-center justify-center w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition shadow-2xs">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                    </svg>
+                                </a>
+                                {% if can_manage_stock %}
+                                <a href="{% url 'inventory:medicine_edit' med.pk %}" title="Edit Product" class="inline-flex items-center justify-center w-8 h-8 bg-blue-50 hover:bg-[#283891] text-[#283891] hover:text-white rounded-lg text-xs font-bold transition shadow-2xs">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </a>
+                                <form method="POST" action="{% url 'inventory:medicine_delete' med.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" title="Delete Product" class="inline-flex items-center justify-center w-8 h-8 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-300 text-slate-400 hover:text-rose-600 rounded-lg text-xs font-bold transition shadow-2xs" onclick="return confirm('Delete product \'{{ med.name|escapejs }}\' and all its stock batches?');">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400">
+                            <div class="max-w-xs mx-auto space-y-2">
+                                <svg class="w-10 h-10 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                </svg>
+                                <p class="text-xs font-medium text-slate-500">No products found matching your search.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tax Invoice #{{ invoice.invoice_number }} - {{ invoice.store.name }}</title>
+    <!-- Google Fonts Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 12mm 14mm 12mm 14mm; /* Clean, generous page margin with plenty of breathing space */
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            html, body {
+                background: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .a4-sheet {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important; /* NO OUTER BLACK BORDER IN PRINT / PDF */
+                border-radius: 0 !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+
+            .page-break-inside-avoid {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+
+        @media screen {
+            .a4-sheet {
+                width: 210mm;
+                min-height: 297mm;
+                margin: 0 auto;
+                background-color: #ffffff;
+                padding: 12mm 14mm;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
+                border: 1px solid #e2e8f0;
+                border-radius: 16px;
+            }
+        }
+
+        /* Subtle table borders */
+        .invoice-table th,
+        .invoice-table td {
+            border-color: #e2e8f0;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-200 text-slate-800 font-sans antialiased py-6 px-4 sm:px-6">
+
+    <!-- Top Action Bar (Screen Only) -->
+    <div class="no-print max-w-[210mm] mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 bg-white px-5 py-3 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'billing:invoice_detail' invoice.pk %}"
+                class="inline-flex items-center text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Return to Invoice
+            </a>
+            <span class="text-slate-300">|</span>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-[#283891] border border-blue-100">
+                A4 Clean Print (10-15 Rows)
+            </span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'billing:invoice_thermal' invoice.pk %}"
+                class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center space-x-1.5 transition">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                <span>Thermal (80mm)</span>
+            </a>
+            <button onclick="window.print()"
+                class="px-5 py-2 bg-[#283891] hover:bg-[#1f2d7a] text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-500/25 flex items-center space-x-2 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                    </path>
+                </svg>
+                <span>Print A4 Invoice</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Clean A4 Tax Invoice Sheet (NO OUTER BLACK BORDER) -->
+    <div class="a4-sheet flex flex-col justify-between text-slate-800">
+        <div>
+            <!-- Header: Pharmacy Identity & Statutory Info -->
+            <div class="border-b border-slate-300 pb-3.5 mb-3.5">
+                <div class="flex justify-between items-start">
+                    <!-- Left: Pharmacy Logo + Name & Address Block -->
+                    <div class="flex items-start space-x-3.5 flex-1 pr-6">
+                        {% if invoice.store.logo %}
+                        <img src="{{ invoice.store.logo.url }}" alt="{{ invoice.store.name }}" class="h-12 max-w-[140px] object-contain flex-shrink-0 mt-0.5 rounded-lg border border-slate-200 p-0.5 bg-white">
+                        {% else %}
+                        <div class="w-11 h-11 rounded-xl bg-slate-900 text-white font-black text-xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                            {{ invoice.store.name|slice:":1"|upper }}
+                        </div>
+                        {% endif %}
+                        <div class="space-y-0.5">
+                            <h1 class="text-xl font-black uppercase tracking-tight text-slate-900 leading-tight">
+                                {{ invoice.store.name }}
+                            </h1>
+                            <p class="text-[11px] font-semibold text-slate-600 leading-tight">
+                                {{ invoice.store.full_address }}
+                            </p>
+                            <p class="text-[11px] text-slate-500 font-medium">
+                                Ph: <strong class="text-slate-900 font-semibold">{{ invoice.store.phone }}</strong>
+                                {% if invoice.store.email %} | Email: <span class="text-slate-700">{{ invoice.store.email }}</span>{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Tax Invoice Badge & License Info -->
+                    <div class="w-64 flex-shrink-0 space-y-1.5">
+                        <div class="w-full py-1.5 px-2 bg-slate-900 text-white text-center text-xs font-black uppercase tracking-wider rounded-lg shadow-sm">
+                            TAX INVOICE / CASH MEMO
+                        </div>
+                        <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center">
+                            ORIGINAL FOR RECIPIENT
+                        </div>
+                        <div class="text-[10px] font-mono text-slate-700 border border-slate-200 rounded-lg p-2 bg-slate-50 space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400 font-sans font-bold text-[9px] uppercase tracking-wide">D.L. No:</span>
+                                <strong class="text-slate-900 font-bold">{{ invoice.store.license_number }}</strong>
+                            </div>
+                            {% if invoice.store.gst_number %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400 font-sans font-bold text-[9px] uppercase tracking-wide">GSTIN:</span>
+                                <strong class="text-slate-900 font-bold">{{ invoice.store.gst_number }}</strong>
+                            </div>
+                            {% endif %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400 font-sans font-bold text-[9px] uppercase tracking-wide">State:</span>
+                                <span class="text-slate-800 font-semibold">{{ invoice.store.state }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Biller & Customer Metadata Box (Clean Bordered Card) -->
+            <div class="border border-slate-200 rounded-xl bg-slate-50/60 grid grid-cols-2 text-[11px] mb-3.5 overflow-hidden">
+                <!-- Invoice Info Column -->
+                <div class="p-3 border-r border-slate-200 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Invoice No:</span>
+                        <span class="font-mono font-black text-xs text-slate-900">{{ invoice.invoice_number }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Date & Time:</span>
+                        <span class="font-semibold text-slate-800">{{ invoice.created_at|date:"d/m/Y, h:i A" }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Payment Mode:</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded font-bold uppercase text-[10px] bg-white border border-slate-200 text-slate-800 font-mono shadow-xs">
+                            {{ invoice.get_payment_method_display }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Cashier / Billed By:</span>
+                        <span class="text-slate-800 font-bold">{{ invoice.created_by.display_name|default:invoice.created_by.username|default:"Counter" }}</span>
+                    </div>
+                </div>
+
+                <!-- Patient / Customer Info Column -->
+                <div class="p-3 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Customer / Patient:</span>
+                        <strong class="text-slate-900 font-extrabold text-xs uppercase">{{ invoice.customer_name }}</strong>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Phone / Mobile:</span>
+                        <span class="font-mono text-slate-800 font-semibold">{{ invoice.customer_phone|default:"Walk-in Customer" }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Prescribing Doctor:</span>
+                        <span class="text-slate-800 font-bold">{{ invoice.doctor_name|default:"Self / OTC Dispense" }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Place of Supply:</span>
+                        <span class="text-slate-800 font-semibold">{{ invoice.store.city }}, {{ invoice.store.state }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Itemized Table (Clean Bordered Rounded Container) -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden mb-3.5">
+                <table class="w-full table-fixed invoice-table border-collapse text-left">
+                    <colgroup>
+                        <col style="width: 5%;"> <!-- 1: # -->
+                        <col style="width: 37%;"> <!-- 2: Description -->
+                        <col style="width: 8%;"> <!-- 3: Pack -->
+                        <col style="width: 14%;"> <!-- 4: Batch -->
+                        <col style="width: 10%;"> <!-- 5: Exp -->
+                        <col style="width: 6%;"> <!-- 6: Qty -->
+                        <col style="width: 10%;"> <!-- 7: Price -->
+                        <col style="width: 10%;"> <!-- 8: Total -->
+                    </colgroup>
+                    <thead>
+                        <tr class="bg-slate-100 text-[10px] font-black uppercase text-slate-700 border-b border-slate-200">
+                            <th class="py-2 px-1 text-center border-r border-slate-200">#</th>
+                            <th class="py-2 px-2.5 border-r border-slate-200">Medicine / Description</th>
+                            <th class="py-2 px-1 text-center border-r border-slate-200">Pack</th>
+                            <th class="py-2 px-1 text-center font-mono border-r border-slate-200">Batch</th>
+                            <th class="py-2 px-1 text-center font-mono border-r border-slate-200">Exp.</th>
+                            <th class="py-2 px-1 text-center border-r border-slate-200">Qty</th>
+                            <th class="py-2 px-2 text-right font-mono border-r border-slate-200">Price</th>
+                            <th class="py-2 px-2 text-right font-mono">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-[11px]">
+                        <!-- Real Billed Items -->
+                        {% for item in items %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-1 px-1 text-center font-mono text-slate-500 border-r border-slate-200/80">{{ forloop.counter }}</td>
+                            <td class="py-1 px-2.5 font-bold text-slate-900 border-r border-slate-200/80 truncate">
+                                <span>{{ item.medicine_name }}</span>
+                                {% if item.generic_name %}
+                                <span class="text-[9px] text-slate-500 font-normal block truncate">{{ item.generic_name }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-1 px-1 text-center text-slate-600 text-[10px] border-r border-slate-200/80">
+                                {{ item.unit_name }}
+                            </td>
+                            <td class="py-1 px-1 text-center font-mono text-[10px] text-slate-700 border-r border-slate-200/80">{{ item.batch_number|default:"-" }}</td>
+                            <td class="py-1 px-1 text-center font-mono text-[10px] text-slate-700 border-r border-slate-200/80">{% if item.expiry_date %}{{ item.expiry_date|date:"m/y" }}{% else %}-{% endif %}</td>
+                            <td class="py-1 px-1 text-center font-black text-slate-900 border-r border-slate-200/80">{{ item.quantity }}</td>
+                            <td class="py-1 px-2 text-right font-mono text-slate-700 border-r border-slate-200/80">{{ invoice.store.currency }}{{ item.unit_price|floatformat:2 }}</td>
+                            <td class="py-1 px-2 text-right font-mono font-black text-slate-900">{{ invoice.store.currency }}{{ item.total_price|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+
+                        <!-- Blank filler rows with matching column borders -->
+                        {% for _ in blank_rows %}
+                        <tr class="h-7 text-slate-300">
+                            <td class="py-1 px-1 text-center font-mono text-[10px] border-r border-slate-200/60">{{ items|length|add:forloop.counter }}</td>
+                            <td class="py-1 px-2.5 border-r border-slate-200/60">&nbsp;</td>
+                            <td class="py-1 px-1 text-center border-r border-slate-200/60">&nbsp;</td>
+                            <td class="py-1 px-1 text-center font-mono border-r border-slate-200/60">&nbsp;</td>
+                            <td class="py-1 px-1 text-center font-mono border-r border-slate-200/60">&nbsp;</td>
+                            <td class="py-1 px-1 text-center border-r border-slate-200/60">&nbsp;</td>
+                            <td class="py-1 px-2 text-right font-mono border-r border-slate-200/60">&nbsp;</td>
+                            <td class="py-1 px-2 text-right font-mono">&nbsp;</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-slate-50 border-t border-slate-200 font-bold text-[11px] text-slate-800">
+                            <td colspan="5" class="py-2 px-3 border-r border-slate-200">
+                                <span class="font-black text-slate-900 uppercase text-[10px]">Total Items:</span> {{ items|length }} &nbsp;|&nbsp;
+                                <span class="font-black text-slate-900 uppercase text-[10px]">Total Quantity:</span> {{ total_quantity }} units
+                            </td>
+                            <td class="py-2 px-1 text-center font-black text-slate-900 border-r border-slate-200">{{ total_quantity }}</td>
+                            <td class="py-2 px-2 text-right text-slate-600 uppercase text-[10px] font-bold border-r border-slate-200">Gross Total:</td>
+                            <td class="py-2 px-2 text-right font-mono font-black text-slate-900">{{ invoice.store.currency }}{{ invoice.subtotal|floatformat:2 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Financial Summary & Terms Section (Clean Bordered Card) -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden grid grid-cols-12 text-[11px] mb-4">
+                <!-- Left 7 Cols: Amount in Words & Terms -->
+                <div class="col-span-7 p-3.5 border-r border-slate-200 flex flex-col justify-between space-y-3 bg-white">
+                    <div>
+                        <div class="text-[9px] uppercase font-bold text-slate-500 tracking-wider">Amount Chargeable (in words):</div>
+                        <div class="font-black text-slate-900 italic text-xs mt-0.5 leading-snug">
+                            {{ amount_in_words }}
+                        </div>
+                    </div>
+
+                    <div class="pt-2.5 border-t border-slate-100 text-[9px] text-slate-500 space-y-0.5">
+                        <div class="font-bold uppercase text-slate-700 text-[10px]">Terms & Conditions:</div>
+                        <p>1. Goods once sold will be accepted back only within 7 days with original bill and unbroken seal.</p>
+                        <p>2. Scheduled medications dispensed strictly on valid prescription of a Registered Medical Practitioner.</p>
+                        <p>3. Store medicines in a cool, dry place. Keep all medicines out of reach of children.</p>
+                    </div>
+                </div>
+
+                <!-- Right 5 Cols: Financial Calculations Breakdown -->
+                <div class="col-span-5 p-3.5 space-y-2 bg-slate-50/60 flex flex-col justify-between">
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-slate-600 font-medium">
+                            <span>Subtotal (Before Tax):</span>
+                            <span class="font-mono text-slate-900 font-bold">{{ invoice.store.currency }}{{ invoice.subtotal|floatformat:2 }}</span>
+                        </div>
+
+                        {% if invoice.discount_amount > 0 %}
+                        <div class="flex justify-between items-center text-rose-600 font-bold">
+                            <span>Special Discount:</span>
+                            <span class="font-mono">-{{ invoice.store.currency }}{{ invoice.discount_amount|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if invoice.tax_amount > 0 %}
+                        <div class="flex justify-between items-center text-slate-600 font-medium">
+                            <span>GST / Tax Amount (Included):</span>
+                            <span class="font-mono text-slate-900 font-bold">{{ invoice.store.currency }}{{ invoice.tax_amount|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="border-t border-slate-200 pt-2 mt-2 flex justify-between items-center bg-slate-100/90 p-2 rounded-lg">
+                        <span class="text-xs font-black uppercase text-slate-900">Net Amount Payable:</span>
+                        <span class="font-mono text-base font-black text-slate-900">
+                            {{ invoice.store.currency }}{{ invoice.total_amount|floatformat:2 }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Signatures & Footer (Spacious & Clean) -->
+        <div class="pt-6 page-break-inside-avoid">
+            <div class="grid grid-cols-3 gap-8 text-center text-[10px]">
+                <!-- Customer Signature -->
+                <div class="flex flex-col justify-end">
+                    <div class="h-10 flex items-end justify-center pb-1 text-slate-400 font-medium text-[9px]">
+                        {{ invoice.customer_name }}
+                    </div>
+                    <div class="border-b border-slate-300 w-full mb-1"></div>
+                    <div class="font-semibold text-slate-500 uppercase text-[9px] tracking-wide">Customer / Patient Signature</div>
+                </div>
+
+                <!-- Pharmacist Signature -->
+                <div class="flex flex-col justify-end">
+                    <div class="h-10 flex items-end justify-center pb-1 font-mono text-[10px] text-slate-800 font-bold">
+                        {{ invoice.created_by.display_name|default:invoice.created_by.username|default:"Pharmacist" }}
+                    </div>
+                    <div class="border-b border-slate-300 w-full mb-1"></div>
+                    <div class="font-semibold text-slate-500 uppercase text-[9px] tracking-wide">Dispensed By (Pharmacist)</div>
+                </div>
+
+                <!-- Authorized Store Signature -->
+                <div class="flex flex-col justify-end">
+                    <div class="h-10 flex items-end justify-center pb-1 font-extrabold text-[10px] text-slate-900 uppercase leading-tight text-center px-1">
+                        For {{ invoice.store.name }}
+                    </div>
+                    <div class="border-b border-slate-300 w-full mb-1"></div>
+                    <div class="font-bold text-slate-800 uppercase text-[9px] tracking-wide">Authorized Signatory</div>
+                </div>
+            </div>
+
+            <!-- Bottom Disclaimer Bar -->
+            <div class="mt-6 pt-2.5 border-t border-slate-200 text-center text-[9px] text-slate-400 flex justify-between items-center">
+                <span>Computer Generated Tax Invoice • No signature required under IT Act</span>
+                <span class="font-bold text-slate-600">Wishing You Good Health! Get Well Soon.</span>
+                <span>Page 1 of 1</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto trigger print if parameter ?autoprint=1 is in URL
+        if (window.location.search.includes('autoprint=1')) {
+            window.print();
+        }
+    </script>
+</body>
+
+</html>

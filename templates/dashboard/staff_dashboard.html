@@ -1,0 +1,143 @@
+{% extends 'layouts/base_staff.html' %}
+
+{% block title %}Counter Dashboard - Azmed{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    Point of Sale
+                </span>
+                <span class="text-slate-300">•</span>
+                <span class="text-xs text-slate-500 font-medium">{{ request.user.store.name }}</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">Counter Dashboard</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Welcome back, <span class="font-bold text-slate-800">{{ request.user.display_name }}</span>. Ready for rapid billing and patient dispensing.</p>
+        </div>
+
+        <div>
+            <a href="{% url 'billing:pos' %}" class="px-5 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white rounded-xl text-xs font-extrabold shadow-sm shadow-[#283891]/25 flex items-center space-x-2 transition active:scale-[0.98]">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>Launch POS Terminal</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 3 Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">My Sales Today</span>
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center font-bold">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline space-x-2">
+                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight font-mono">{{ request.user.store.currency }}{{ my_today_sales|floatformat:2 }}</h3>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">Billed across your shifts today</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">My Invoices Count</span>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline space-x-2">
+                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight font-mono">{{ my_today_count }} Bills</h3>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">Customer checkouts recorded today</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Available Catalog</span>
+                <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline space-x-2">
+                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight font-mono">{{ total_medicines }} Products</h3>
+            </div>
+            <p class="text-[11px] text-[#283891] mt-1 font-semibold">
+                <a href="{% url 'inventory:medicine_list' %}" class="hover:underline flex items-center space-x-1">
+                    <span>Stock &amp; shelf lookup &rarr;</span>
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Recent Personal Invoices Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Recent Invoices Generated By You</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Quickly re-print thermal receipts or inspect recent billing totals.</p>
+            </div>
+            <a href="{% url 'billing:invoice_list' %}" class="text-xs font-bold text-[#283891] hover:underline">View All Bills &rarr;</a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[580px]">
+                <thead class="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
+                    <tr>
+                        <th class="py-3 px-4">Invoice #</th>
+                        <th class="py-3 px-4">Customer</th>
+                        <th class="py-3 px-4">Payment</th>
+                        <th class="py-3 px-4">Time</th>
+                        <th class="py-3 px-4 text-right">Amount</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for inv in recent_invoices %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3.5 px-4 font-mono font-bold text-[#283891]">
+                            <a href="{% url 'billing:invoice_detail' inv.pk %}" class="hover:underline">{{ inv.invoice_number }}</a>
+                        </td>
+                        <td class="py-3.5 px-4 font-semibold text-slate-800">{{ inv.customer_name }}</td>
+                        <td class="py-3.5 px-4 text-slate-600">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
+                                {{ inv.get_payment_method_display }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 font-mono text-[11px]">{{ inv.created_at|date:"h:i A" }}</td>
+                        <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900 text-sm">{{ request.user.store.currency }}{{ inv.total_amount|floatformat:2 }}</td>
+                        <td class="py-3.5 px-4 text-right">
+                            <a href="{% url 'billing:invoice_print' inv.pk %}" target="_blank" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition shadow-2xs">
+                                Print
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400">
+                            <div class="max-w-xs mx-auto space-y-2">
+                                <svg class="w-10 h-10 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <p class="text-xs font-medium text-slate-500">No bills processed yet today.</p>
+                                <p class="text-[11px] text-slate-400">Click "Launch POS Terminal" to start billing.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

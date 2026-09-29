@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block root_content %}
+<style>
+    #mainSidebar {
+        transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* Desktop collapsed state (md and up) */
+    @media (min-width: 768px) {
+        #mainSidebar.sidebar-collapsed {
+            width: 4.75rem !important; /* 76px */
+            padding: 1.25rem 0.625rem !important;
+        }
+        #mainSidebar.sidebar-collapsed .sidebar-text {
+            display: none !important;
+        }
+        #mainSidebar.sidebar-collapsed .sidebar-icon-only {
+            display: flex !important;
+        }
+        #mainSidebar.sidebar-collapsed .sidebar-link {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        #mainSidebar.sidebar-collapsed .sidebar-link div {
+            justify-content: center !important;
+            margin: 0 !important;
+        }
+        #mainSidebar.sidebar-collapsed #sidebarBrandRow {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+    }
+    /* Mobile off-canvas drawer (below 768px) */
+    @media (max-width: 767px) {
+        #mainSidebar {
+            position: fixed !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            z-index: 50 !important;
+            width: 16rem !important;
+            transform: translateX(-100%) !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1) !important;
+        }
+        #mainSidebar.sidebar-mobile-open {
+            transform: translateX(0) !important;
+        }
+    }
+</style>
+
+<div class="min-h-screen flex bg-[#f4f7fb] relative">
+    <!-- Mobile Backdrop Overlay -->
+    <div id="sidebarBackdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 hidden transition-opacity md:hidden"></div>
+
+    <!-- Left Sidebar -->
+    <aside id="mainSidebar" class="w-64 bg-white border-r border-[#e8ecf4] flex-shrink-0 flex flex-col justify-between p-4 sm:p-5 sticky top-0 h-screen max-h-screen self-start overflow-hidden z-30">
+        <div class="space-y-6 overflow-y-auto flex-1 min-h-0 no-scrollbar">
+            <!-- Brand Header -->
+            <div class="flex items-center justify-between px-1" id="sidebarBrandRow">
+                <div class="flex items-center space-x-3 overflow-hidden cursor-pointer" onclick="toggleSidebar()" title="Toggle Sidebar">
+                    <div class="w-10 h-10 flex-shrink-0 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-center shadow-2xs overflow-hidden">
+                        {% if platform_settings.logo_icon %}
+                        <img src="{{ platform_settings.logo_icon.url }}" alt="{{ platform_settings.brand_name|default:'Azmed' }}" class="w-8 h-8 rounded-lg object-contain aspect-square">
+                        {% else %}
+                        <svg class="w-8 h-8" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                            <circle cx="26" cy="18" r="3.2" fill="white"/>
+                            <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                            <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+                            <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                            <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+                            <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div class="sidebar-text whitespace-nowrap">
+                        <h1 class="text-base font-extrabold text-slate-900 tracking-tight leading-tight">{{ platform_settings.brand_name|default:'Azmed' }}</h1>
+                        <span class="inline-flex items-center space-x-1 text-[10px] font-bold text-[#283891] tracking-wider uppercase mt-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#39b54a]"></span>
+                            <span>Super Admin</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1.5">
+                <!-- Platform Overview -->
+                <a href="{% url 'dashboard:super_admin_dashboard' %}" title="Platform Overview" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all {% if request.resolver_match.url_name == 'super_admin_dashboard' %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if request.resolver_match.url_name == 'super_admin_dashboard' %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10-4a1 1 0 011-1h4a1 1 0 011 1v8a1 1 0 01-1 1h-4a1 1 0 01-1-1v-8z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Platform Overview</span>
+                    </div>
+                </a>
+
+                <!-- Analytics -->
+                <a href="{% url 'dashboard:analytics_report' %}" title="Analytics & Growth" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all {% if request.resolver_match.url_name == 'analytics_report' %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if request.resolver_match.url_name == 'analytics_report' %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Analytics</span>
+                    </div>
+                    <span class="sidebar-text px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 rounded-full shadow-2xs">
+                        P&amp;L
+                    </span>
+                </a>
+
+                <!-- SECTION: Tenants -->
+                <div class="sidebar-text pt-4 pb-1 px-2.5 flex items-center space-x-2">
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Tenants</span>
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                </div>
+
+                <!-- Pharmacy Stores -->
+                <a href="{% url 'stores:store_list' %}" title="Pharmacy Stores" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'stores' in request.path and 'settings' not in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'stores' in request.path and 'settings' not in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Pharmacy Stores</span>
+                    </div>
+                </a>
+
+                <!-- Store Admins -->
+                <a href="{% url 'accounts:store_admin_list' %}" title="Store Admins" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'store-admins' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'store-admins' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Store Admins</span>
+                    </div>
+                </a>
+
+                <!-- Store Staff -->
+                <a href="{% url 'accounts:all_staff_list' %}" title="Store Staff" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'store-staff' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'store-staff' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Store Staff</span>
+                    </div>
+                </a>
+
+                <!-- SECTION: Catalog & Drugs -->
+                <div class="sidebar-text pt-4 pb-1 px-2.5 flex items-center space-x-2">
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Catalog &amp; Drugs</span>
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                </div>
+
+                <!-- National Catalog -->
+                <a href="{% url 'inventory:master_catalog' %}" title="Master Catalog" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'master-catalog' in request.path and 'contributions' not in request.path %}bg-emerald-50 text-emerald-800 font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-emerald-600 before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'master-catalog' in request.path and 'contributions' not in request.path %}bg-emerald-600 text-white shadow-xs{% else %}bg-slate-100/80 text-emerald-600 group-hover:bg-emerald-50 group-hover:text-emerald-700{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">National Catalog</span>
+                    </div>
+                    <span class="sidebar-text px-2 py-0.5 text-[9px] font-extrabold tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full shadow-2xs">
+                        254k
+                    </span>
+                </a>
+
+                <!-- Store Contributions -->
+                <a href="{% url 'inventory:master_contributions' %}" title="Store Contributions" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'contributions' in request.path %}bg-amber-50 text-amber-900 font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-amber-500 before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'contributions' in request.path %}bg-amber-500 text-white shadow-xs{% else %}bg-slate-100/80 text-amber-600 group-hover:bg-amber-50 group-hover:text-amber-700{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Store Contributions</span>
+                    </div>
+                    {% if pending_contributions_count %}
+                    <span class="sidebar-text px-2 py-0.5 text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300/80 rounded-full shadow-2xs animate-pulse">
+                        {{ pending_contributions_count }}
+                    </span>
+                    {% endif %}
+                </a>
+
+                <!-- SECTION: Settings -->
+                <div class="sidebar-text pt-4 pb-1 px-2.5 flex items-center space-x-2">
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Settings</span>
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                </div>
+
+                <!-- Platform Settings -->
+                <a href="{% url 'core:platform_settings' %}" title="Platform Settings & Branding" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'settings' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'settings' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Platform Settings</span>
+                    </div>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Super Admin Isolation Badge -->
+        <div class="mt-3 pt-3 border-t border-slate-100 flex-shrink-0">
+            <div class="sidebar-text bg-gradient-to-br from-[#121a48] via-[#1f2d7a] to-[#283891] text-white rounded-2xl p-4 shadow-lg shadow-[#283891]/20">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-[#39b54a] animate-pulse"></span>
+                    <span class="text-xs font-bold uppercase tracking-wider">Super Admin Mode</span>
+                </div>
+                <p class="text-[11px] text-blue-100/90 mt-1 leading-snug">Tenant stores and bills are securely isolated.</p>
+            </div>
+
+            <!-- Collapsed Icon Indicator -->
+            <div class="sidebar-icon-only hidden flex-col items-center cursor-pointer" onclick="toggleSidebar()" title="Super Admin Mode">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#182260] to-[#283891] text-white flex items-center justify-center font-bold text-xs shadow-md shadow-[#283891]/25">
+                    SA
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Topbar -->
+        <header class="h-16 bg-white border-b border-[#e8ecf4] flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
+            <!-- Left Controls: Sidebar Toggle Button -->
+            <div class="flex items-center space-x-3">
+                <button type="button" onclick="toggleSidebar()" class="w-9 h-9 rounded-xl border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition" title="Toggle Sidebar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <div class="flex items-center space-x-2 sm:space-x-3 pl-2 border-l border-slate-200/80">
+                    <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2.5 group">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#182260] to-[#283891] text-white font-bold flex items-center justify-center text-xs shadow-xs">
+                            SA
+                        </div>
+                        <div class="hidden sm:block text-left">
+                            <span class="text-xs font-bold text-slate-800 group-hover:text-[#283891] transition block leading-tight">{{ request.user.username }}</span>
+                            <span class="text-[10px] text-slate-400 font-medium leading-none block mt-0.5">Platform Owner</span>
+                        </div>
+                    </a>
+
+                    <form action="{% url 'accounts:logout' %}" method="post" class="inline ml-1">
+                        {% csrf_token %}
+                        <button type="submit" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Sign Out">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Body -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('mainSidebar');
+        const backdrop = document.getElementById('sidebarBackdrop');
+        if (!sidebar) return;
+
+        if (window.innerWidth < 768) {
+            // Mobile off-canvas drawer
+            const isOpen = sidebar.classList.toggle('sidebar-mobile-open');
+            if (backdrop) {
+                if (isOpen) {
+                    backdrop.classList.remove('hidden');
+                } else {
+                    backdrop.classList.add('hidden');
+                }
+            }
+        } else {
+            // Desktop icon-only toggle
+            sidebar.classList.toggle('sidebar-collapsed');
+            try {
+                const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                localStorage.setItem('azmed_sidebar_collapsed', isCollapsed ? '1' : '0');
+            } catch (e) {}
+        }
+    }
+    (function() {
+        try {
+            if (window.innerWidth >= 768 && localStorage.getItem('azmed_sidebar_collapsed') === '1') {
+                document.getElementById('mainSidebar')?.classList.add('sidebar-collapsed');
+            }
+        } catch (e) {}
+    })();
+</script>
+{% endblock %}

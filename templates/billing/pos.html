@@ -1,0 +1,521 @@
+{% extends role_base_layout %}
+
+{% block title %}POS Billing - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-bold text-slate-900 tracking-tight">Point of Sale (POS)</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Quick billing terminal for {{ request.user.store.name }}.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="px-3 py-1.5 bg-blue-50 border border-blue-100 text-[#283891] text-xs font-mono font-bold rounded-xl">
+                Terminal: {{ request.user.username }}
+            </span>
+            <a href="{% url 'billing:invoice_list' %}" class="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition shadow-sm">
+                Bill History
+            </a>
+        </div>
+    </div>
+
+    <!-- POS Two-Column Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left Column: Medicine Search & Cart Items (8 Cols) -->
+        <div class="lg:col-span-8 space-y-5">
+            <!-- Item Search Input & Dropdown -->
+            <div class="bg-white rounded-2xl p-5 shadow-card border border-slate-200/80 relative">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Scan Barcode or Search Medicine / Salt
+                </label>
+                <div class="relative">
+                    <input type="text" id="medSearch" autocomplete="off" placeholder="Type medicine name, generic composition, or batch..." class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+
+                <!-- Live Search Results Dropdown -->
+                <div id="searchResults" class="hidden absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-200/90 z-40 max-h-80 overflow-y-auto divide-y divide-slate-100">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Current Cart Items Table -->
+            <div class="bg-white rounded-2xl shadow-card border border-slate-200/80 overflow-hidden">
+                <div class="px-6 py-3.5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center space-x-2.5">
+                        <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Billed Line Items</h2>
+                        <span id="itemCount" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">0 items</span>
+                    </div>
+                    <button type="button" onclick="addManualItem()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#283891] text-xs font-bold transition border border-blue-200/80 shadow-2xs cursor-pointer active:scale-95">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span>Add Custom / Manual Item</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-100 text-left text-xs min-w-[580px]">
+                        <thead class="bg-slate-50/75 border-b border-slate-100 font-bold text-slate-400 uppercase tracking-wider text-[11px]">
+                            <tr>
+                                <th class="px-5 py-3.5">Medicine</th>
+                                <th class="px-5 py-3.5">Batch & Expiry</th>
+                                <th class="px-5 py-3.5 text-right">Price</th>
+                                <th class="px-5 py-3.5 text-center">Qty</th>
+                                <th class="px-5 py-3.5 text-right">Tax</th>
+                                <th class="px-5 py-3.5 text-right">Total</th>
+                                <th class="px-4 py-3.5 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartTableBody" class="divide-y divide-slate-100 bg-white">
+                            <tr id="emptyCartRow">
+                                <td colspan="7" class="px-4 py-14 text-center text-slate-400">
+                                    <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-xs font-semibold text-slate-600">No medicines added yet.</p>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Use the search bar above or click "+ Add Custom / Manual Item" to enter prices directly.</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right Column: Customer Details & Checkout Card (4 Cols) -->
+        <div class="lg:col-span-4">
+            <div class="bg-white rounded-2xl p-6 shadow-card border border-slate-200/80 space-y-5 lg:sticky lg:top-24">
+                <div class="border-b border-slate-100 pb-3">
+                    <h2 class="text-sm font-bold text-slate-900">Checkout & Customer</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Enter details to complete transaction.</p>
+                </div>
+
+                <form id="posForm" method="POST" action="{% url 'billing:pos' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="items_json" id="itemsJsonInput">
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Customer Name</label>
+                            <input type="text" name="customer_name" id="customerName" value="Walk-in Customer" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Customer Phone</label>
+                            <input type="text" name="customer_phone" id="customerPhone" placeholder="Mobile number" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Prescribing Doctor</label>
+                            <input type="text" name="doctor_name" id="doctorName" placeholder="Dr. Name (Optional)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Payment Mode</label>
+                                <select name="payment_method" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                                    {% for code, label in payment_methods %}
+                                    <option value="{{ code }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Discount ({{ request.user.store.currency }})</label>
+                                <input type="number" step="0.01" min="0" value="0.00" name="discount_amount" id="discountInput" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                            </div>
+                        </div>
+
+                        <!-- Bill Calculation Summary -->
+                        <div class="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2.5 text-xs">
+                            <div class="flex justify-between text-slate-500 font-medium">
+                                <span>Subtotal:</span>
+                                <span class="font-mono font-bold text-slate-800">{{ request.user.store.currency }}<span id="subtotalDisplay">0.00</span></span>
+                            </div>
+                            <div class="flex justify-between text-slate-500 font-medium">
+                                <span>Tax / GST:</span>
+                                <span class="font-mono font-bold text-slate-800">{{ request.user.store.currency }}<span id="taxDisplay">0.00</span></span>
+                            </div>
+                            <div class="flex justify-between text-rose-600 font-medium">
+                                <span>Discount:</span>
+                                <span class="font-mono font-bold">-{{ request.user.store.currency }}<span id="discountDisplay">0.00</span></span>
+                            </div>
+                            <div class="border-t border-slate-200/80 pt-2.5 flex justify-between items-center text-slate-900 font-bold">
+                                <span class="text-xs">Grand Total:</span>
+                                <span class="text-[#283891] font-mono font-extrabold text-lg">{{ request.user.store.currency }}<span id="grandTotalDisplay">0.00</span></span>
+                            </div>
+                        </div>
+
+                        <button type="button" id="submitBillBtn" onclick="submitInvoice()" class="w-full py-3.5 px-4 bg-[#283891] hover:bg-[#1f2d7a] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Complete & Print Bill</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const availableBatches = {{ batches_json|safe }};
+    const currency = "{{ request.user.store.currency }}";
+    let cart = [];
+
+    const searchInput = document.getElementById('medSearch');
+    const searchResults = document.getElementById('searchResults');
+    const cartTableBody = document.getElementById('cartTableBody');
+    const emptyCartRow = document.getElementById('emptyCartRow');
+    const itemCount = document.getElementById('itemCount');
+    const discountInput = document.getElementById('discountInput');
+
+    const subtotalDisplay = document.getElementById('subtotalDisplay');
+    const taxDisplay = document.getElementById('taxDisplay');
+    const discountDisplay = document.getElementById('discountDisplay');
+    const grandTotalDisplay = document.getElementById('grandTotalDisplay');
+    const itemsJsonInput = document.getElementById('itemsJsonInput');
+
+    // Search filter
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase().trim();
+        if (!query) {
+            searchResults.classList.add('hidden');
+            return;
+        }
+
+        const filtered = availableBatches.filter(b => 
+            b.medicine_name.toLowerCase().includes(query) ||
+            b.generic_name.toLowerCase().includes(query) ||
+            b.batch_number.toLowerCase().includes(query)
+        );
+
+        if (filtered.length === 0) {
+            searchResults.innerHTML = '<div class="p-4 text-xs text-slate-400 text-center font-medium">No matching medicines with available stock.</div>';
+        } else {
+            searchResults.innerHTML = filtered.slice(0, 10).map(b => `
+                <div onclick="addToCart(${b.id})" class="p-3.5 hover:bg-blue-50/60 cursor-pointer flex justify-between items-center transition">
+                    <div>
+                        <div class="font-bold text-slate-900 text-xs">${b.medicine_name} <span class="text-slate-400 font-normal">(${b.unit})</span></div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">Batch: <span class="font-mono font-semibold text-slate-700">${b.batch_number}</span> | Exp: ${b.expiry_date} | Rack: ${b.rack || 'N/A'}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-[#283891] text-xs">${currency}${b.selling_price}</div>
+                        <div class="text-[10px] text-slate-400 font-medium">Stock: ${b.available_qty}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        searchResults.classList.remove('hidden');
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.classList.add('hidden');
+        }
+    });
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    function addToCart(batchId) {
+        const batch = availableBatches.find(b => b.id === batchId);
+        if (!batch) return;
+
+        const uid = 'b_' + batch.id;
+        const existing = cart.find(item => item.uid === uid);
+        if (existing) {
+            if (existing.quantity < batch.available_qty) {
+                existing.quantity += 1;
+            } else {
+                alert(`Cannot exceed available stock of ${batch.available_qty} units.`);
+            }
+        } else {
+            cart.push({
+                uid: uid,
+                is_manual: false,
+                batch_id: batch.id,
+                medicine_name: batch.medicine_name,
+                batch_number: batch.batch_number,
+                expiry_date: batch.expiry_date,
+                unit: batch.unit,
+                unit_price: parseFloat(batch.selling_price),
+                tax_percentage: parseFloat(batch.tax_percentage || 0),
+                available_qty: batch.available_qty,
+                quantity: 1
+            });
+        }
+
+        searchInput.value = '';
+        searchResults.classList.add('hidden');
+        renderCart();
+    }
+
+    function addManualItem() {
+        const uid = 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+        cart.push({
+            uid: uid,
+            is_manual: true,
+            batch_id: null,
+            medicine_name: '',
+            batch_number: 'OTC',
+            expiry_date: '',
+            unit: 'unit',
+            unit_price: 0.0,
+            tax_percentage: 0.0,
+            available_qty: 999999,
+            quantity: 1
+        });
+        renderCart();
+        setTimeout(() => {
+            const row = document.querySelector(`[data-uid="${uid}"]`);
+            if (row) {
+                const nameInput = row.querySelector('.manual-name-input');
+                if (nameInput) nameInput.focus();
+            }
+        }, 50);
+    }
+
+    function updateQtyByUid(uid, delta) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+
+        const newQty = item.quantity + delta;
+        if (newQty <= 0) {
+            removeFromCartByUid(uid);
+            return;
+        }
+        if (!item.is_manual && newQty > item.available_qty) {
+            alert(`Maximum available stock is ${item.available_qty}`);
+            return;
+        }
+        item.quantity = newQty;
+        renderCart();
+    }
+
+    function updateManualName(uid, value) {
+        const item = cart.find(i => i.uid === uid);
+        if (item) {
+            item.medicine_name = value;
+        }
+    }
+
+    function updateManualPrice(uid, value) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+        item.unit_price = parseFloat(value) || 0.0;
+        updateRowTotals(uid);
+        calculateTotals();
+    }
+
+    function updateManualQty(uid, value) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+        const q = parseInt(value, 10);
+        item.quantity = isNaN(q) || q < 1 ? 1 : q;
+        updateRowTotals(uid);
+        calculateTotals();
+    }
+
+    function updateRowTotals(uid) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+        const row = document.querySelector(`[data-uid="${uid}"]`);
+        if (!row) return;
+
+        const lineSub = item.unit_price * item.quantity;
+        const lineTax = lineSub * (item.tax_percentage / 100);
+        const lineTotal = lineSub + lineTax;
+
+        const taxEl = row.querySelector('.line-tax');
+        const totalEl = row.querySelector('.line-total');
+        if (taxEl) taxEl.textContent = `${currency}${lineTax.toFixed(2)}`;
+        if (totalEl) totalEl.textContent = `${currency}${lineTotal.toFixed(2)}`;
+    }
+
+    function removeFromCartByUid(uid) {
+        cart = cart.filter(i => i.uid !== uid);
+        renderCart();
+    }
+
+    discountInput.addEventListener('input', calculateTotals);
+
+    function renderCart() {
+        if (cart.length === 0) {
+            cartTableBody.innerHTML = `
+                <tr id="emptyCartRow">
+                    <td colspan="7" class="px-4 py-14 text-center text-slate-400">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                            </svg>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-600">No medicines added yet.</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Use the search bar above or click "+ Add Custom / Manual Item" to enter prices directly.</p>
+                    </td>
+                </tr>
+            `;
+            itemCount.textContent = '0 items';
+        } else {
+            cartTableBody.innerHTML = cart.map(item => {
+                const lineSub = item.unit_price * item.quantity;
+                const lineTax = lineSub * (item.tax_percentage / 100);
+                const lineTotal = lineSub + lineTax;
+
+                if (item.is_manual) {
+                    return `
+                        <tr data-uid="${item.uid}" class="hover:bg-blue-50/20 bg-blue-50/10 transition">
+                            <td class="px-5 py-3">
+                                <div class="space-y-1">
+                                    <input type="text"
+                                           value="${escapeHtml(item.medicine_name)}"
+                                           placeholder="e.g. Fever Medicine, Paracetamol..."
+                                           oninput="updateManualName('${item.uid}', this.value)"
+                                           class="manual-name-input w-full max-w-[220px] px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-400">
+                                    <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">Manual Entry</span>
+                                </div>
+                            </td>
+                            <td class="px-5 py-3 font-mono text-[11px] text-slate-500">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 border border-slate-200/80">
+                                    Direct / OTC
+                                </span>
+                            </td>
+                            <td class="px-5 py-3 text-right">
+                                <div class="inline-flex items-center justify-end">
+                                    <span class="text-xs font-mono font-bold text-slate-400 mr-1">${currency}</span>
+                                    <input type="number"
+                                           step="0.01"
+                                           min="0"
+                                           value="${item.unit_price > 0 ? item.unit_price : ''}"
+                                           placeholder="0.00"
+                                           oninput="updateManualPrice('${item.uid}', this.value)"
+                                           class="manual-price w-24 px-2.5 py-1.5 text-right font-mono font-bold text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-300">
+                                </div>
+                            </td>
+                            <td class="px-5 py-3 text-center">
+                                <div class="inline-flex items-center space-x-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                                    <button type="button" onclick="updateQtyByUid('${item.uid}', -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">-</button>
+                                    <input type="number" min="1" value="${item.quantity}" oninput="updateManualQty('${item.uid}', this.value)" class="w-8 text-center font-bold text-xs text-slate-800 bg-transparent border-0 outline-none p-0 font-mono">
+                                    <button type="button" onclick="updateQtyByUid('${item.uid}', 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">+</button>
+                                </div>
+                            </td>
+                            <td class="px-5 py-3 text-right font-mono text-slate-500 text-xs">
+                                <span class="line-tax">${currency}${lineTax.toFixed(2)}</span>
+                            </td>
+                            <td class="px-5 py-3 text-right font-mono font-bold text-slate-900 text-xs">
+                                <span class="line-total text-[#283891]">${currency}${lineTotal.toFixed(2)}</span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                return `
+                    <tr data-uid="${item.uid}" class="hover:bg-slate-50/60 transition">
+                        <td class="px-5 py-3.5 font-bold text-slate-900 text-xs">${escapeHtml(item.medicine_name)}</td>
+                        <td class="px-5 py-3.5 font-mono text-[11px] text-slate-600">${escapeHtml(item.batch_number)} <br><span class="text-[10px] text-slate-400">Exp: ${item.expiry_date}</span></td>
+                        <td class="px-5 py-3.5 text-right font-mono text-slate-700 text-xs">${currency}${item.unit_price.toFixed(2)}</td>
+                        <td class="px-5 py-3.5 text-center">
+                            <div class="inline-flex items-center space-x-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                                <button type="button" onclick="updateQtyByUid('${item.uid}', -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">-</button>
+                                <span class="w-7 text-center font-bold text-xs text-slate-800 font-mono">${item.quantity}</span>
+                                <button type="button" onclick="updateQtyByUid('${item.uid}', 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">+</button>
+                            </div>
+                        </td>
+                        <td class="px-5 py-3.5 text-right font-mono text-slate-500 text-xs">${currency}${lineTax.toFixed(2)}</td>
+                        <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-900 text-xs">${currency}${lineTotal.toFixed(2)}</td>
+                        <td class="px-4 py-3.5 text-center">
+                            <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            itemCount.textContent = `${cart.length} item${cart.length > 1 ? 's' : ''}`;
+        }
+        calculateTotals();
+    }
+
+    function calculateTotals() {
+        let sub = 0;
+        let tax = 0;
+
+        cart.forEach(item => {
+            const lineSub = item.unit_price * item.quantity;
+            const lineTax = lineSub * (item.tax_percentage / 100);
+            sub += lineSub;
+            tax += lineTax;
+        });
+
+        const disc = parseFloat(discountInput.value) || 0;
+        const grand = Math.max(0, sub + tax - disc);
+
+        subtotalDisplay.textContent = sub.toFixed(2);
+        taxDisplay.textContent = tax.toFixed(2);
+        discountDisplay.textContent = disc.toFixed(2);
+        grandTotalDisplay.textContent = grand.toFixed(2);
+    }
+
+    function submitInvoice() {
+        if (cart.length === 0) {
+            alert("Please add at least one medicine item to the bill.");
+            return;
+        }
+
+        // Validate manual items
+        for (let i = 0; i < cart.length; i++) {
+            const it = cart[i];
+            if (it.is_manual) {
+                if (!it.medicine_name || !it.medicine_name.trim()) {
+                    it.medicine_name = 'General Medicine';
+                }
+                if (it.unit_price <= 0) {
+                    alert(`Please enter a valid price for '${it.medicine_name}'.`);
+                    const row = document.querySelector(`[data-uid="${it.uid}"]`);
+                    if (row) {
+                        const priceInp = row.querySelector('.manual-price');
+                        if (priceInp) priceInp.focus();
+                    }
+                    return;
+                }
+            }
+        }
+
+        const payload = cart.map(i => ({
+            batch_id: i.batch_id || null,
+            medicine_name: i.medicine_name || 'General Medicine',
+            batch_number: i.batch_number || 'OTC',
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+            tax_percentage: i.tax_percentage || 0
+        }));
+
+        itemsJsonInput.value = JSON.stringify(payload);
+        document.getElementById('posForm').submit();
+    }
+</script>
+{% endblock %}

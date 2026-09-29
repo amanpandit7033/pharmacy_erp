@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+
+{% block root_content %}
+<style>
+    #mainSidebar {
+        transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* Desktop collapsed state (md and up) */
+    @media (min-width: 768px) {
+        #mainSidebar.sidebar-collapsed {
+            width: 4.75rem !important; /* 76px */
+            padding: 1.25rem 0.625rem !important;
+        }
+        #mainSidebar.sidebar-collapsed .sidebar-text {
+            display: none !important;
+        }
+        #mainSidebar.sidebar-collapsed .sidebar-icon-only {
+            display: flex !important;
+        }
+        #mainSidebar.sidebar-collapsed .sidebar-link {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        #mainSidebar.sidebar-collapsed .sidebar-link div {
+            justify-content: center !important;
+            margin: 0 !important;
+        }
+        #mainSidebar.sidebar-collapsed #sidebarBrandRow {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+    }
+    /* Mobile off-canvas drawer (below 768px) */
+    @media (max-width: 767px) {
+        #mainSidebar {
+            position: fixed !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            z-index: 50 !important;
+            width: 16rem !important;
+            transform: translateX(-100%) !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1) !important;
+        }
+        #mainSidebar.sidebar-mobile-open {
+            transform: translateX(0) !important;
+        }
+    }
+</style>
+
+<div class="min-h-screen flex bg-[#f4f7fb] relative">
+    <!-- Mobile Backdrop Overlay -->
+    <div id="sidebarBackdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 hidden transition-opacity md:hidden"></div>
+
+    <!-- Left Sidebar -->
+    <aside id="mainSidebar" class="w-64 bg-white border-r border-[#e8ecf4] flex-shrink-0 flex flex-col justify-between p-4 sm:p-5 sticky top-0 h-screen max-h-screen self-start overflow-hidden z-30">
+        <div class="space-y-6 overflow-y-auto flex-1 min-h-0 no-scrollbar">
+            <!-- Brand Header -->
+            <div class="flex items-center justify-between px-1" id="sidebarBrandRow">
+                <div class="flex items-center space-x-3 overflow-hidden cursor-pointer" onclick="toggleSidebar()" title="Toggle Sidebar">
+                    <div class="w-10 h-10 flex-shrink-0 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-center shadow-2xs overflow-hidden">
+                        {% if platform_settings.logo_icon %}
+                        <img src="{{ platform_settings.logo_icon.url }}" alt="{{ platform_settings.brand_name|default:'Azmed' }}" class="w-8 h-8 rounded-lg object-contain aspect-square">
+                        {% else %}
+                        <svg class="w-8 h-8" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                            <circle cx="26" cy="18" r="3.2" fill="white"/>
+                            <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                            <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+                            <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                            <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+                            <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div class="sidebar-text whitespace-nowrap">
+                        <h1 class="text-base font-extrabold text-slate-900 tracking-tight leading-tight">{{ platform_settings.brand_name|default:'Azmed' }}</h1>
+                        <span class="inline-flex items-center space-x-1 text-[10px] font-bold text-[#283891] tracking-wider uppercase mt-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#283891]"></span>
+                            <span>Store Portal</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1.5">
+                <!-- Dashboard -->
+                <a href="{% url 'dashboard:store_admin_dashboard' %}" title="Dashboard" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all {% if request.resolver_match.url_name == 'store_admin_dashboard' %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if request.resolver_match.url_name == 'store_admin_dashboard' %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10-4a1 1 0 011-1h4a1 1 0 011 1v8a1 1 0 01-1 1h-4a1 1 0 01-1-1v-8z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Dashboard</span>
+                    </div>
+                </a>
+
+                <!-- POS Billing / Orders -->
+                <a href="{% url 'billing:pos' %}" title="POS Billing" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all {% if 'pos' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'pos' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">POS Billing</span>
+                    </div>
+                    <span class="sidebar-text px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full shadow-2xs">
+                        Live
+                    </span>
+                </a>
+
+                <!-- Products / Medicines -->
+                <a href="{% url 'inventory:medicine_list' %}" title="Products & Stock" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'medicines' in request.path or 'batches' in request.path and 'expiry-watch' not in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'medicines' in request.path or 'batches' in request.path and 'expiry-watch' not in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Products &amp; Stock</span>
+                    </div>
+                </a>
+
+                <!-- Expiry Watchlist & Quarantine -->
+                <a href="{% url 'inventory:expiry_watch' %}" title="Expiry & Quarantine" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'expiry-watch' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'expiry-watch' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Expiry &amp; Quarantine</span>
+                    </div>
+                </a>
+
+                <!-- Master Medicine Catalog (254k+) -->
+                <a href="{% url 'inventory:master_catalog' %}" title="Master Catalog" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'master-catalog' in request.path %}bg-emerald-50 text-emerald-800 font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-emerald-600 before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'master-catalog' in request.path %}bg-emerald-600 text-white shadow-xs{% else %}bg-slate-100/80 text-emerald-600 group-hover:bg-emerald-50 group-hover:text-emerald-700{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Master Catalog</span>
+                    </div>
+                    <span class="sidebar-text px-2 py-0.5 text-[9px] font-extrabold tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full shadow-2xs">
+                        254k
+                    </span>
+                </a>
+
+                <!-- Staff Members -->
+                <a href="{% url 'accounts:staff_list' %}" title="Staff Members" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'staff' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'staff' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Staff Members</span>
+                    </div>
+                </a>
+
+                <!-- SECTION: Finances -->
+                <div class="sidebar-text pt-4 pb-1 px-2.5 flex items-center space-x-2">
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Finances</span>
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                </div>
+
+                <!-- Invoices -->
+                <a href="{% url 'billing:invoice_list' %}" title="Invoices" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'billing/invoices' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'billing/invoices' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Invoices</span>
+                    </div>
+                </a>
+
+                <!-- Analytics Report / P&L -->
+                <a href="{% url 'dashboard:analytics_report' %}" title="Analytics & P&L" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if request.resolver_match.url_name == 'analytics_report' %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if request.resolver_match.url_name == 'analytics_report' %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Analytics</span>
+                    </div>
+                </a>
+
+                <!-- Categories & Units -->
+                <a href="{% url 'inventory:category_list' %}" title="Categories & Units" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'categories' in request.path or 'units' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'categories' in request.path or 'units' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Categories &amp; Units</span>
+                    </div>
+                </a>
+
+                <!-- SECTION: Store Settings -->
+                <div class="sidebar-text pt-4 pb-1 px-2.5 flex items-center space-x-2">
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Store</span>
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                </div>
+
+                <!-- Store Settings -->
+                <a href="{% url 'stores:settings' %}" title="Store Settings" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'stores/settings' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'stores/settings' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Store Settings</span>
+                    </div>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Bottom Banner Card -->
+        <div class="mt-3 pt-3 border-t border-slate-100 flex-shrink-0">
+            <div class="sidebar-text bg-gradient-to-br from-[#121a48] via-[#1f2d7a] to-[#283891] text-white rounded-2xl p-4 shadow-lg shadow-[#283891]/20 relative overflow-hidden">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full blur-sm pointer-events-none"></div>
+
+                <div class="flex items-center space-x-2 text-white/90">
+                    <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-bold tracking-tight">{{ request.user.store.code }}</span>
+                </div>
+
+                <h3 class="text-sm font-bold text-white mt-2 leading-tight truncate">{{ request.user.store.name }}</h3>
+                <p class="text-[11px] text-blue-100/80 mt-0.5 leading-snug">Tenant verified & active.</p>
+
+                <a href="{% url 'stores:settings' %}" class="mt-3 block w-full py-1.5 px-3 bg-white text-[#283891] hover:bg-blue-50 font-bold text-xs rounded-xl text-center shadow-xs transition duration-150">
+                    Store Settings
+                </a>
+            </div>
+
+            <!-- Collapsed Icon Indicator -->
+            <div class="sidebar-icon-only hidden flex-col items-center cursor-pointer" onclick="toggleSidebar()" title="{{ request.user.store.name }} ({{ request.user.store.code }})">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#182260] to-[#283891] text-white flex items-center justify-center font-bold text-xs shadow-md shadow-[#283891]/25">
+                    {{ request.user.store.code|slice:":2" }}
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Topbar -->
+        <header class="h-16 bg-white border-b border-[#e8ecf4] flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
+            <!-- Left Controls: Sidebar Toggle Button -->
+            <div class="flex items-center space-x-3">
+                <button type="button" onclick="toggleSidebar()" class="w-9 h-9 rounded-xl border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition" title="Toggle Sidebar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Right Controls: Theme Toggle, Notifications, User Profile -->
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <!-- Notifications -->
+                <button type="button" class="relative w-8 h-8 rounded-xl border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition" title="Notifications">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                    <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#283891] ring-2 ring-white"></span>
+                </button>
+
+                <!-- User Profile Pill -->
+                <div class="flex items-center space-x-2 sm:space-x-3 pl-2 border-l border-slate-200/80">
+                    <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2.5 group">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#182260] to-[#283891] text-white font-bold flex items-center justify-center text-xs shadow-xs">
+                            {{ request.user.username|slice:":2"|upper }}
+                        </div>
+                        <div class="hidden sm:block text-left">
+                            <span class="text-xs font-bold text-slate-800 group-hover:text-[#283891] transition block leading-tight">{{ request.user.display_name }}</span>
+                            <span class="text-[10px] text-slate-400 font-medium leading-none block mt-0.5">{{ request.user.store.code }}</span>
+                        </div>
+                    </a>
+
+                    <!-- Sign Out -->
+                    <form action="{% url 'accounts:logout' %}" method="post" class="inline ml-1">
+                        {% csrf_token %}
+                        <button type="submit" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Sign Out">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Body -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('mainSidebar');
+        const backdrop = document.getElementById('sidebarBackdrop');
+        if (!sidebar) return;
+
+        if (window.innerWidth < 768) {
+            // Mobile off-canvas drawer
+            const isOpen = sidebar.classList.toggle('sidebar-mobile-open');
+            if (backdrop) {
+                if (isOpen) {
+                    backdrop.classList.remove('hidden');
+                } else {
+                    backdrop.classList.add('hidden');
+                }
+            }
+        } else {
+            // Desktop icon-only toggle
+            sidebar.classList.toggle('sidebar-collapsed');
+            try {
+                const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                localStorage.setItem('azmed_sidebar_collapsed', isCollapsed ? '1' : '0');
+            } catch (e) {}
+        }
+    }
+    (function() {
+        try {
+            if (window.innerWidth >= 768 && localStorage.getItem('azmed_sidebar_collapsed') === '1') {
+                document.getElementById('mainSidebar')?.classList.add('sidebar-collapsed');
+            }
+        } catch (e) {}
+    })();
+</script>
+{% endblock %}

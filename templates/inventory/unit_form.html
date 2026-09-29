@@ -1,0 +1,54 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}New Unit{% endif %} - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'inventory:unit_list' %}" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-[#283891] transition">
+                    &larr; Back to Units
+                </a>
+                <span class="text-slate-300">•</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    {% if object %}Unit Editor{% else %}New Unit{% endif %}
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Unit: <span class="text-[#283891]">{{ object.name }}</span>{% else %}Create Measurement Unit{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Define unit measures like Strip, Bottle, Box, Ampoule, or Vial for dispensing.</p>
+        </div>
+        <a href="{% url 'inventory:unit_list' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+            Back to List
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" class="space-y-5">
+            {% csrf_token %}
+            <div>
+                <label for="{{ form.name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Unit Full Name *</label>
+                {{ form.name }}
+                {% if form.name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.name.errors.0 }}</p>{% endif %}
+            </div>
+            <div>
+                <label for="{{ form.short_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Short Name / Abbreviation *</label>
+                {{ form.short_name }}
+                <p class="text-[10px] text-slate-400 mt-1">e.g. TAB, STR, BTL, VIAL, SYR</p>
+                {% if form.short_name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.short_name.errors.0 }}</p>{% endif %}
+            </div>
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <a href="{% url 'inventory:unit_list' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    {% if object %}Save Changes{% else %}Save Unit{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}{% if object %}Edit Batch{% else %}Add Batch{% endif %} - {{ medicine.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'inventory:medicine_detail' medicine.pk %}" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-[#283891] transition">
+                    &larr; Back to {{ medicine.name }}
+                </a>
+                <span class="text-slate-300">•</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    {% if object %}Batch Editor{% else %}New Batch Intake{% endif %}
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Batch: <span class="text-[#283891] font-mono">{{ object.batch_number }}</span>{% else %}Register Stock Batch: <span class="text-[#283891]">{{ medicine.name }}</span>{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Specify manufacturer batch number, expiry schedule, purchase cost, and receiving quantities.</p>
+        </div>
+        <a href="{% url 'inventory:medicine_detail' medicine.pk %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+            Back to Details
+        </a>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Section 1: Batch Identification & Dates -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Batch Identification &amp; Shelf Life</h3>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="{{ form.batch_number.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Batch Number *</label>
+                        {{ form.batch_number }}
+                        {% if form.batch_number.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.batch_number.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.manufacturing_date.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Manufacturing Date (Mfg)</label>
+                            {{ form.manufacturing_date }}
+                            {% if form.manufacturing_date.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.manufacturing_date.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.expiry_date.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Expiry Date (Exp) *</label>
+                            {{ form.expiry_date }}
+                            {% if form.expiry_date.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.expiry_date.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Pricing & Taxation -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-indigo-50 text-[#283891] flex items-center justify-center font-bold text-xs">2</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Purchase Cost &amp; Dispensing Prices</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="{{ form.cost_price.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Purchase Cost ({{ request.user.store.currency }}) *
+                        </label>
+                        {{ form.cost_price }}
+                        <span class="text-[10px] text-amber-600 font-semibold block mt-1">Confidential (Hidden from Cashiers)</span>
+                        {% if form.cost_price.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.cost_price.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.mrp.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Printed MRP ({{ request.user.store.currency }}) *
+                        </label>
+                        {{ form.mrp }}
+                        <span class="text-[10px] text-slate-400 block mt-1">Maximum retail rate on packaging</span>
+                        {% if form.mrp.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.mrp.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.selling_price.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Store Selling Price ({{ request.user.store.currency }}) *
+                        </label>
+                        {{ form.selling_price }}
+                        <span class="text-[10px] text-emerald-600 font-semibold block mt-1">Default POS billed rate</span>
+                        {% if form.selling_price.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.selling_price.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Quantity & Tax -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">3</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Stock Units &amp; GST Compliance</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.tax_percentage.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Tax / GST Rate (%)</label>
+                        {{ form.tax_percentage }}
+                        {% if form.tax_percentage.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.tax_percentage.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.quantity.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Stock Quantity ({{ medicine.unit.short_name }}) *</label>
+                        {{ form.quantity }}
+                        <p class="text-[10px] text-slate-400 mt-1">Available inventory added immediately to POS counter.</p>
+                        {% if form.quantity.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.quantity.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <a href="{% url 'inventory:medicine_detail' medicine.pk %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    Save Batch
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

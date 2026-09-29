@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermal Receipt #{{ invoice.invoice_number }} - {{ invoice.store.name }}</title>
+    <!-- Google Fonts for crisp thermal styling -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Plus+Jakarta+Sans:wght@500;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', '"Courier Prime"', 'Courier', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style id="pageSizeStyle">
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+    </style>
+    <style>
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            html, body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                font-family: 'JetBrains Mono', 'Courier Prime', 'Consolas', monospace !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            #receiptContainer {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0.5mm 1mm !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                max-width: 74mm !important;
+            }
+
+            .thermal-58 #receiptContainer {
+                max-width: 52mm !important;
+            }
+
+            /* Force crisp, small font sizes when printing to thermal rolls */
+            #receiptContainer,
+            #receiptContainer * {
+                font-size: 7pt !important;
+                line-height: 1.12 !important;
+            }
+
+            #receiptContainer .store-title {
+                font-size: 8.5pt !important;
+                font-weight: 800 !important;
+            }
+
+            #receiptContainer .item-title {
+                font-size: 7.2pt !important;
+                font-weight: 700 !important;
+            }
+
+            #receiptContainer .net-total {
+                font-size: 9.5pt !important;
+                font-weight: 900 !important;
+            }
+
+            #receiptContainer .meta-text,
+            #receiptContainer .sub-meta {
+                font-size: 6pt !important;
+                line-height: 1.08 !important;
+            }
+
+            /* Mini / Extra-small Mode in print */
+            .size-mini#receiptContainer,
+            .size-mini#receiptContainer * {
+                font-size: 5.8pt !important;
+                line-height: 1.05 !important;
+            }
+            .size-mini .store-title {
+                font-size: 7.2pt !important;
+            }
+            .size-mini .item-title {
+                font-size: 6.2pt !important;
+            }
+            .size-mini .net-total {
+                font-size: 8pt !important;
+            }
+            .size-mini .meta-text {
+                font-size: 5pt !important;
+            }
+
+            /* Standard Mode in print */
+            .size-standard#receiptContainer,
+            .size-standard#receiptContainer * {
+                font-size: 8.5pt !important;
+                line-height: 1.18 !important;
+            }
+            .size-standard .store-title {
+                font-size: 10.5pt !important;
+            }
+            .size-standard .item-title {
+                font-size: 8.5pt !important;
+            }
+            .size-standard .net-total {
+                font-size: 11.5pt !important;
+            }
+            .size-standard .meta-text {
+                font-size: 7pt !important;
+            }
+            .solid-line {
+                border-top: 1px solid #000000 !important;
+                margin: 1.5mm 0 !important;
+            }
+
+            .dashed-line {
+                border-top: 1px dashed #000000 !important;
+                margin: 1.5mm 0 !important;
+            }
+        }
+
+        /* Screen Preview Styling */
+        body {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .receipt-80mm {
+            width: 80mm;
+        }
+
+        .receipt-58mm {
+            width: 58mm;
+        }
+
+        .solid-line {
+            border-top: 1px solid #000000;
+            margin: 4px 0;
+            width: 100%;
+        }
+
+        .dashed-line {
+            border-top: 1px dashed #000000;
+            margin: 4px 0;
+            width: 100%;
+        }
+
+        .double-line {
+            border-top: 2px dashed #000000;
+            margin: 4px 0;
+            width: 100%;
+        }
+
+        /* Mini Font Scaling */
+        .size-mini {
+            font-size: 7.5px;
+            line-height: 1.1;
+        }
+        .size-mini .item-title { font-size: 8px; }
+        .size-mini .store-title { font-size: 9.5px; }
+        .size-mini .meta-text { font-size: 6.8px; }
+        .size-mini .net-total { font-size: 11px; }
+
+        /* Compact Font Scaling */
+        .size-compact {
+            font-size: 8.5px;
+            line-height: 1.15;
+        }
+        .size-compact .item-title { font-size: 9px; }
+        .size-compact .store-title { font-size: 11.5px; }
+        .size-compact .meta-text { font-size: 7.5px; }
+        .size-compact .net-total { font-size: 12.5px; }
+
+        .receipt-58mm.size-compact {
+            font-size: 7.5px;
+            line-height: 1.1;
+        }
+        .receipt-58mm.size-compact .item-title { font-size: 8px; }
+        .receipt-58mm.size-compact .store-title { font-size: 9.5px; }
+        .receipt-58mm.size-compact .meta-text { font-size: 6.8px; }
+        .receipt-58mm.size-compact .net-total { font-size: 11px; }
+
+        /* Standard Font Scaling */
+        .size-standard {
+            font-size: 10.5px;
+            line-height: 1.25;
+        }
+        .size-standard .item-title { font-size: 11px; }
+        .size-standard .store-title { font-size: 13.5px; }
+        .size-standard .meta-text { font-size: 9px; }
+        .size-standard .net-total { font-size: 15px; }
+    </style>
+</head>
+
+<body class="font-mono text-[9.5px] leading-tight select-none">
+
+    <!-- Top Action Bar (Screen Only - Hidden in Print) -->
+    <header class="no-print sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800 px-4 py-2.5 shadow-lg">
+        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center space-x-2.5">
+                <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="inline-flex items-center text-xs font-bold text-slate-300 hover:text-white transition space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    <span>Back to Invoice</span>
+                </a>
+                <span class="text-slate-600">|</span>
+                <span class="text-xs font-bold text-slate-200">
+                    POS Slip <span class="text-emerald-400 font-mono">#{{ invoice.invoice_number }}</span>
+                </span>
+            </div>
+
+            <!-- Controls: Font Size, Roll Width & Print Buttons -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Font Size Toggle (Mini vs Small vs Standard) -->
+                <div class="inline-flex rounded-xl bg-slate-800 p-0.5 border border-slate-700 text-xs">
+                    <button type="button" id="btnSizeMini" onclick="setFontSize('mini')" class="px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-white transition" title="Extra Small / Micro Font (Lowest paper height)">
+                        Extra Small
+                    </button>
+                    <button type="button" id="btnSizeCompact" onclick="setFontSize('compact')" class="px-2.5 py-1 rounded-lg font-bold bg-emerald-500 text-slate-950 transition" title="Small / Compact (Default POS size)">
+                        Small
+                    </button>
+                    <button type="button" id="btnSizeStandard" onclick="setFontSize('standard')" class="px-2.5 py-1 rounded-lg font-bold text-slate-400 hover:text-white transition" title="Standard size">
+                        Standard
+                    </button>
+                </div>
+
+                <!-- Paper Width Selector -->
+                <div class="inline-flex rounded-xl bg-slate-800 p-0.5 border border-slate-700 text-xs">
+                    <button type="button" id="btnWidth80" onclick="setRollWidth('80')" class="px-2.5 py-1 rounded-lg font-bold bg-[#283891] text-white transition">
+                        80mm (3")
+                    </button>
+                    <button type="button" id="btnWidth58" onclick="setRollWidth('58')" class="px-2.5 py-1 rounded-lg font-bold text-slate-400 hover:text-white transition">
+                        58mm (2")
+                    </button>
+                </div>
+
+                <!-- Switch to Standard A4 Bill -->
+                <a href="{% url 'billing:invoice_print' invoice.pk %}" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition flex items-center space-x-1">
+                    <span>A4 PDF</span>
+                </a>
+
+                <!-- Direct Bluetooth (1-Click) Button -->
+                <button type="button" id="btnBluetoothPrint" onclick="printDirectBluetooth()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/25 transition flex items-center space-x-1" title="Direct Bluetooth 1-Click Print (ESC/POS)">
+                    <svg class="w-3.5 h-3.5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l10-10L12 2v20l5-4-10-10z"></path>
+                    </svg>
+                    <span>Bluetooth (1-Click)</span>
+                </button>
+
+                <!-- Regular System Print Button -->
+                <button type="button" onclick="window.print()" class="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold rounded-xl shadow-md shadow-emerald-500/20 transition flex items-center space-x-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                    </svg>
+                    <span>Print</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Receipt Center Canvas -->
+    <main class="py-4 sm:py-6 px-2 flex justify-center">
+        <div id="receiptContainer" class="receipt-80mm size-compact bg-white text-black p-3.5 sm:p-4 shadow-2xl rounded-sm border border-slate-300/80 transition-all duration-200">
+            
+            <!-- Store Header -->
+            <div class="text-center space-y-0.5">
+                <h1 class="store-title font-extrabold uppercase tracking-wide leading-tight text-[12.5px] sm:text-[13.5px]">
+                    {{ invoice.store.name }}
+                </h1>
+                
+                {% if invoice.store.full_address %}
+                <p class="meta-text text-slate-800 leading-tight">
+                    {{ invoice.store.full_address }}
+                </p>
+                {% endif %}
+                
+                {% if invoice.store.phone %}
+                <div class="meta-text text-slate-800">
+                    Ph: {{ invoice.store.phone }}
+                </div>
+                {% endif %}
+                {% if invoice.store.gst_number %}
+                <div class="meta-text text-slate-800">
+                    GSTIN: {{ invoice.store.gst_number }}
+                </div>
+                {% endif %}
+                {% if invoice.store.license_number %}
+                <div class="meta-text text-slate-800">
+                    Drug Lic. No: {{ invoice.store.license_number }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="solid-line"></div>
+
+            <!-- Bill Metadata -->
+            <div class="space-y-0.5 font-mono text-[8.5px]">
+                <div class="flex justify-between">
+                    <span class="text-slate-700">Bill No</span>
+                    <span class="font-bold text-black">{{ invoice.invoice_number }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-700">Date</span>
+                    <span class="text-black">{{ invoice.created_at|date:"d M Y, g:i A" }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-700">Cashier</span>
+                    <span class="text-black">{{ invoice.created_by.get_full_name|default:invoice.created_by.username }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-700">Patient</span>
+                    <span class="text-black font-semibold">{{ invoice.customer_name|default:"Walk-in Customer" }}</span>
+                </div>
+            </div>
+
+            <div class="dashed-line"></div>
+
+            <!-- Items Table Header -->
+            <div class="flex justify-between font-bold text-[8.5px] uppercase tracking-wider py-0.5 font-mono">
+                <span>ITEM</span>
+                <span>AMOUNT</span>
+            </div>
+
+            <div class="solid-line"></div>
+
+            <!-- Items List -->
+            <div class="space-y-2 py-0.5 font-mono">
+                {% for item in items %}
+                <div class="space-y-0.5">
+                    <!-- Line 1: Item Name -->
+                    <div class="item-title font-bold leading-tight text-black text-[9px]">
+                        {{ item.medicine_name }}
+                    </div>
+                    <!-- Line 2: Batch & Expiry -->
+                    <div class="text-[8px] text-slate-600">
+                        {% if item.batch_number %}Batch {{ item.batch_number }}{% endif %}{% if item.expiry_date %}{% if item.batch_number %} &nbsp;-&nbsp; {% endif %}Exp {{ item.expiry_date|date:"m/y" }}{% endif %}
+                    </div>
+                    <!-- Line 3: Qty x Rate & Total Amount -->
+                    <div class="flex justify-between items-center text-[8.5px]">
+                        <span class="text-slate-700">
+                            {{ item.quantity }} {{ item.unit_name }} &times; {{ invoice.store.currency }}{{ item.unit_price|floatformat:2 }}
+                        </span>
+                        <span class="font-bold text-black">
+                            {{ invoice.store.currency }}{{ item.total_price|floatformat:2 }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="dashed-line"></div>
+
+            <!-- Subtotal & Taxes -->
+            <div class="space-y-0.5 font-mono text-[8.5px]">
+                <div class="flex justify-between">
+                    <span>Subtotal</span>
+                    <span class="font-semibold">{{ invoice.store.currency }}{{ invoice.subtotal|floatformat:2 }}</span>
+                </div>
+                {% if cgst_amount > 0 %}
+                <div class="flex justify-between text-slate-700">
+                    <span>CGST (2.5%)</span>
+                    <span>{{ invoice.store.currency }}{{ cgst_amount|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-between text-slate-700">
+                    <span>SGST (2.5%)</span>
+                    <span>{{ invoice.store.currency }}{{ sgst_amount|floatformat:2 }}</span>
+                </div>
+                {% elif invoice.tax_amount > 0 %}
+                <div class="flex justify-between text-slate-700">
+                    <span>GST</span>
+                    <span>{{ invoice.store.currency }}{{ invoice.tax_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                {% if invoice.discount_amount > 0 %}
+                <div class="flex justify-between text-slate-700 font-semibold">
+                    <span>Discount</span>
+                    <span>-{{ invoice.store.currency }}{{ invoice.discount_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="solid-line"></div>
+
+            <!-- TOTAL & Payment Method -->
+            <div class="space-y-0.5 font-mono">
+                <div class="flex justify-between items-baseline py-0.5">
+                    <span class="font-bold text-[11px] uppercase tracking-wide">TOTAL</span>
+                    <span class="net-total font-extrabold text-[13.5px] tracking-tight">
+                        {{ invoice.store.currency }}{{ invoice.total_amount|floatformat:2 }}
+                    </span>
+                </div>
+                <div class="flex justify-between text-[8.5px]">
+                    <span class="text-slate-700">Paid via</span>
+                    <span class="font-bold uppercase text-black">{{ invoice.get_payment_method_display }}</span>
+                </div>
+                {% if invoice.discount_amount > 0 %}
+                <div class="text-right text-[7.5px] text-slate-600 mt-0.5 italic">
+                    You saved {{ invoice.store.currency }}{{ invoice.discount_amount|floatformat:2 }} on this bill
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="dashed-line"></div>
+
+            <!-- Note / Return Policy -->
+            <div class="note-text text-[7.5px] text-slate-700 leading-snug text-left pt-0.5 font-mono">
+                <strong>Note:</strong> Medicines once sold are not returned or exchanged unless defective. Please check strip &amp; expiry before leaving the counter. Keep this bill.
+            </div>
+
+            <div class="dashed-line"></div>
+
+            <!-- Footer Greeting -->
+            <div class="text-center font-bold text-[8.5px] tracking-widest uppercase py-1 text-black font-mono">
+                THANK YOU &nbsp;&bull;&nbsp; GET WELL SOON
+            </div>
+
+            <div class="h-1"></div>
+        </div>
+    </main>
+
+    <!-- Embedded Invoice Data for Web Bluetooth ESC/POS Engine -->
+    <script id="receiptJson" type="application/json">
+    {
+        "store_name": "{{ invoice.store.name|escapejs }}",
+        "store_address": "{{ invoice.store.full_address|escapejs }}",
+        "store_phone": "{{ invoice.store.phone|escapejs }}",
+        "store_email": "{{ invoice.store.email|escapejs }}",
+        "gst_number": "{{ invoice.store.gst_number|escapejs }}",
+        "license_number": "{{ invoice.store.license_number|escapejs }}",
+        "invoice_number": "{{ invoice.invoice_number|escapejs }}",
+        "date": "{{ invoice.created_at|date:'d M Y, g:i A'|escapejs }}",
+        "cashier": "{{ invoice.created_by.get_full_name|default:invoice.created_by.username|escapejs }}",
+        "customer_name": "{{ invoice.customer_name|escapejs }}",
+        "customer_phone": "{{ invoice.customer_phone|escapejs }}",
+        "doctor_name": "{{ invoice.doctor_name|escapejs }}",
+        "subtotal": "{{ invoice.subtotal|floatformat:2 }}",
+        "tax_amount": "{{ invoice.tax_amount|floatformat:2 }}",
+        "cgst": "{{ cgst_amount|floatformat:2 }}",
+        "sgst": "{{ sgst_amount|floatformat:2 }}",
+        "discount": "{{ invoice.discount_amount|floatformat:2 }}",
+        "total": "{{ invoice.total_amount|floatformat:2 }}",
+        "currency": "{{ invoice.store.currency|escapejs }}",
+        "payment_method": "{{ invoice.get_payment_method_display|upper|escapejs }}",
+        "items": [
+            {% for item in items %}
+            {
+                "name": "{{ item.medicine_name|escapejs }}",
+                "batch": "{{ item.batch_number|escapejs }}",
+                "expiry": "{{ item.expiry_date|date:'m/y'|escapejs }}",
+                "quantity": {{ item.quantity }},
+                "unit": "{{ item.unit_name|escapejs }}",
+                "unit_price": "{{ item.unit_price|floatformat:2 }}",
+                "total_price": "{{ item.total_price|floatformat:2 }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }
+    </script>
+
+    <script>
+        let currentWidth = parseInt(localStorage.getItem('thermal_roll_width') || '58');
+        let currentFontSize = localStorage.getItem('thermal_font_size') || 'compact';
+
+        function setFontSize(size) {
+            const container = document.getElementById('receiptContainer');
+            const btnMini = document.getElementById('btnSizeMini');
+            const btnCompact = document.getElementById('btnSizeCompact');
+            const btnStandard = document.getElementById('btnSizeStandard');
+            currentFontSize = size;
+            try { localStorage.setItem('thermal_font_size', size); } catch(e) {}
+
+            [btnMini, btnCompact, btnStandard].forEach(btn => {
+                if (btn) {
+                    btn.classList.remove('bg-emerald-500', 'text-slate-950');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+            container.classList.remove('size-mini', 'size-compact', 'size-standard');
+
+            if (size === 'mini') {
+                container.classList.add('size-mini');
+                if (btnMini) {
+                    btnMini.classList.add('bg-emerald-500', 'text-slate-950');
+                    btnMini.classList.remove('text-slate-400');
+                }
+            } else if (size === 'standard') {
+                container.classList.add('size-standard');
+                if (btnStandard) {
+                    btnStandard.classList.add('bg-emerald-500', 'text-slate-950');
+                    btnStandard.classList.remove('text-slate-400');
+                }
+            } else {
+                container.classList.add('size-compact');
+                if (btnCompact) {
+                    btnCompact.classList.add('bg-emerald-500', 'text-slate-950');
+                    btnCompact.classList.remove('text-slate-400');
+                }
+            }
+        }
+
+        function setRollWidth(width) {
+            const container = document.getElementById('receiptContainer');
+            const btn80 = document.getElementById('btnWidth80');
+            const btn58 = document.getElementById('btnWidth58');
+            const pageStyle = document.getElementById('pageSizeStyle');
+            currentWidth = parseInt(width);
+            try { localStorage.setItem('thermal_roll_width', width); } catch(e) {}
+
+            if (width === '58') {
+                container.classList.remove('receipt-80mm');
+                container.classList.add('receipt-58mm');
+                btn58.classList.add('bg-[#283891]', 'text-white');
+                btn58.classList.remove('text-slate-400');
+                btn80.classList.remove('bg-[#283891]', 'text-white');
+                btn80.classList.add('text-slate-400');
+                document.body.classList.add('thermal-58');
+                if (pageStyle) {
+                    pageStyle.textContent = '@page { size: 58mm auto; margin: 0; }';
+                }
+            } else {
+                container.classList.remove('receipt-58mm');
+                container.classList.add('receipt-80mm');
+                btn80.classList.add('bg-[#283891]', 'text-white');
+                btn80.classList.remove('text-slate-400');
+                btn58.classList.remove('bg-[#283891]', 'text-white');
+                btn58.classList.add('text-slate-400');
+                document.body.classList.remove('thermal-58');
+                if (pageStyle) {
+                    pageStyle.textContent = '@page { size: 80mm auto; margin: 0; }';
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setRollWidth(currentWidth.toString());
+            setFontSize(currentFontSize);
+            {% if autoprint %}
+            setTimeout(() => {
+                window.print();
+            }, 300);
+            {% endif %}
+        });
+
+        // =========================================================================
+        // DIRECT WEB BLUETOOTH ESC/POS PRINTING ENGINE
+        // =========================================================================
+        let bluetoothDevice = null;
+        let bluetoothCharacteristic = null;
+
+        const PRINTER_SERVICES = [
+            '000018f0-0000-1000-8000-00805f9b34fb', // Standard POS Printer service
+            'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Portable Bluetooth printer BLE
+            '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC transparent UART service
+            '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 BLE serial
+            '0000ff00-0000-1000-8000-00805f9b34fb',
+            '0000ae00-0000-1000-8000-00805f9b34fb'
+        ];
+
+        async function printDirectBluetooth() {
+            if (!navigator.bluetooth) {
+                alert("Web Bluetooth is not supported on this browser.\n\nPlease open this page in Google Chrome or Microsoft Edge (Android, Windows, or Mac) for 1-click Direct Bluetooth printing.\n\nOpening standard system print preview instead...");
+                window.print();
+                return;
+            }
+
+            const btn = document.getElementById('btnBluetoothPrint');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<span class="animate-spin inline-block mr-1">⏳</span> Connecting...`;
+            btn.disabled = true;
+
+            try {
+                if (!bluetoothCharacteristic || !bluetoothDevice || !bluetoothDevice.gatt.connected) {
+                    bluetoothDevice = await navigator.bluetooth.requestDevice({
+                        acceptAllDevices: true,
+                        optionalServices: PRINTER_SERVICES
+                    });
+
+                    const server = await bluetoothDevice.gatt.connect();
+
+                    for (const serviceUuid of PRINTER_SERVICES) {
+                        try {
+                            const service = await server.getPrimaryService(serviceUuid);
+                            const characteristics = await service.getCharacteristics();
+                            for (const char of characteristics) {
+                                if (char.properties.write || char.properties.writeWithoutResponse) {
+                                    bluetoothCharacteristic = char;
+                                    break;
+                                }
+                            }
+                            if (bluetoothCharacteristic) break;
+                        } catch (e) {
+                            // Try next service UUID
+                        }
+                    }
+                }
+
+                if (!bluetoothCharacteristic) {
+                    throw new Error("Connected to printer, but could not detect an ESC/POS write service. Please pair in Android/Windows Bluetooth settings first or use 'Print Receipt'.");
+                }
+
+                btn.innerHTML = `<span class="animate-pulse inline-block mr-1">🖨️</span> Printing...`;
+
+                const escPosData = buildEscPosPayload(currentWidth);
+
+                // Safe chunk transfer (100 bytes per chunk to prevent BLE buffer drops)
+                const chunkSize = 100;
+                for (let i = 0; i < escPosData.length; i += chunkSize) {
+                    const chunk = escPosData.slice(i, i + chunkSize);
+                    if (bluetoothCharacteristic.properties.writeWithoutResponse) {
+                        await bluetoothCharacteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                        await bluetoothCharacteristic.writeValue(chunk);
+                    }
+                    await new Promise(r => setTimeout(r, 25));
+                }
+
+                btn.innerHTML = `<span class="text-emerald-300 font-extrabold mr-1">✓</span> Printed!`;
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2500);
+
+            } catch (err) {
+                console.warn("Bluetooth print warning:", err);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+
+                if (err.name !== 'NotFoundError') { // User did not cancel prompt
+                    if (confirm(`Bluetooth Connection Note: ${err.message}\n\nWould you like to open standard print preview instead?`)) {
+                        window.print();
+                    }
+                }
+            }
+        }
+
+        // Build raw ESC/POS byte commands for high-speed thermal printers
+        function buildEscPosPayload(widthMm) {
+            const data = JSON.parse(document.getElementById('receiptJson').textContent);
+            
+            // 58mm roll (384 dots): Font A (12 dots) = 32 cols; Font B (9 dots) = 40 cols
+            // 80mm roll (576 dots): Font A (12 dots) = 48 cols; Font B (9 dots) = 58 cols
+            let cols;
+            if (widthMm === 58) {
+                cols = (currentFontSize === 'standard') ? 32 : 40;
+            } else {
+                cols = (currentFontSize === 'standard') ? 48 : 58;
+            }
+
+            const curr = (data.currency && !data.currency.includes('₹')) ? data.currency : 'Rs.';
+            const encoder = new TextEncoder();
+            const bytes = [];
+
+            function appendBytes(arr) {
+                for (let b of arr) bytes.push(b);
+            }
+
+            function appendText(str) {
+                const encoded = encoder.encode(str);
+                for (let b of encoded) bytes.push(b);
+            }
+
+            function appendLine(str = '') {
+                appendText(str + '\n');
+            }
+
+            function divider(char = '-') {
+                appendLine(char.repeat(cols));
+            }
+
+            function center(str, targetCols = cols) {
+                const s = (str || '').toString().trim();
+                if (s.length >= targetCols) return s;
+                const pad = Math.floor((targetCols - s.length) / 2);
+                return ' '.repeat(pad) + s;
+            }
+
+            function twoCol(left, right, targetCols = cols) {
+                const l = (left || '').toString().trim();
+                const r = (right || '').toString().trim();
+                const space = targetCols - l.length - r.length;
+                if (space > 0) {
+                    return l + ' '.repeat(space) + r;
+                }
+                return l + ' ' + r;
+            }
+
+            function wrapText(text, maxCols = cols) {
+                if (!text) return [];
+                const words = text.toString().trim().split(/\s+/);
+                const lines = [];
+                let currentLine = '';
+
+                for (let word of words) {
+                    if (!currentLine) {
+                        if (word.length <= maxCols) {
+                            currentLine = word;
+                        } else {
+                            let temp = word;
+                            while (temp.length > maxCols) {
+                                lines.push(temp.slice(0, maxCols));
+                                temp = temp.slice(maxCols);
+                            }
+                            currentLine = temp;
+                        }
+                    } else if ((currentLine + ' ' + word).length <= maxCols) {
+                        currentLine += ' ' + word;
+                    } else {
+                        lines.push(currentLine);
+                        if (word.length <= maxCols) {
+                            currentLine = word;
+                        } else {
+                            let temp = word;
+                            while (temp.length > maxCols) {
+                                lines.push(temp.slice(0, maxCols));
+                                temp = temp.slice(maxCols);
+                            }
+                            currentLine = temp;
+                        }
+                    }
+                }
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+                return lines;
+            }
+
+            // ESC @ -> Initialize printer
+            appendBytes([0x1B, 0x40]);
+
+            // ESC M n -> Font Selection (0: Font A standard, 1: Font B small/compressed)
+            if (currentFontSize === 'standard') {
+                appendBytes([0x1B, 0x4D, 0x00]);
+            } else {
+                appendBytes([0x1B, 0x4D, 0x01]);
+            }
+
+            // Center align command
+            appendBytes([0x1B, 0x61, 0x01]);
+
+            // Store Name
+            appendBytes([0x1B, 0x45, 0x01]);
+            if (currentFontSize === 'standard') {
+                appendBytes([0x1D, 0x21, 0x11]);
+            } else {
+                appendBytes([0x1D, 0x21, 0x00]);
+            }
+            const storeName = (data.store_name || '').trim();
+            const storeLines = wrapText(storeName, cols);
+            for (let sl of storeLines) {
+                appendLine(center(sl));
+            }
+            appendBytes([0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00]);
+
+            // Address & Contacts (Center)
+            if (data.store_address) {
+                const addr = data.store_address.replace(/\s*,\s*/g, ', ');
+                const addrLines = wrapText(addr, cols);
+                for (let al of addrLines) {
+                    appendLine(center(al));
+                }
+            }
+            
+            if (data.store_phone) {
+                appendLine(center('Ph: ' + data.store_phone));
+            }
+            if (data.gst_number) {
+                appendLine(center('GSTIN: ' + data.gst_number));
+            }
+            if (data.license_number) {
+                appendLine(center('Drug Lic. No: ' + data.license_number));
+            }
+
+            divider('-');
+
+            // Bill Metadata (Left & Right 2-column)
+            appendBytes([0x1B, 0x61, 0x00]);
+            appendLine(twoCol('Bill No', data.invoice_number));
+            appendLine(twoCol('Date', data.date));
+            appendLine(twoCol('Cashier', data.cashier));
+            appendLine(twoCol('Patient', data.customer_name || 'Walk-in Customer'));
+
+            divider('-');
+
+            // Items Table Header
+            appendLine(twoCol('ITEM', 'AMOUNT'));
+            divider('-');
+
+            // Items List
+            for (let idx = 0; idx < data.items.length; idx++) {
+                const it = data.items[idx];
+                appendBytes([0x1B, 0x45, 0x01]);
+                appendLine(it.name);
+                appendBytes([0x1B, 0x45, 0x00]);
+
+                const subInfo = `Batch ${it.batch}  -  Exp ${it.expiry}`;
+                appendLine(subInfo);
+
+                const uStr = (it.unit && it.unit !== 'unit') ? it.unit : 'unit';
+                const plural = (it.quantity > 1) ? 's' : '';
+                const lineCalc = `${it.quantity} ${uStr}${plural} * ${curr}${it.unit_price}`;
+                appendLine(twoCol(lineCalc, `${curr}${it.total_price}`));
+            }
+
+            divider('-');
+
+            // Subtotal & Taxes
+            appendLine(twoCol('Subtotal', `${curr}${data.subtotal}`));
+            if (parseFloat(data.cgst) > 0) {
+                appendLine(twoCol('CGST (2.5%)', `${curr}${data.cgst}`));
+                appendLine(twoCol('SGST (2.5%)', `${curr}${data.sgst}`));
+            } else if (parseFloat(data.tax_amount) > 0) {
+                appendLine(twoCol('GST', `${curr}${data.tax_amount}`));
+            }
+            if (parseFloat(data.discount) > 0) {
+                appendLine(twoCol('Discount', `-${curr}${data.discount}`));
+            }
+
+            divider('-');
+
+            // TOTAL & Payment Method
+            appendBytes([0x1B, 0x45, 0x01]);
+            appendLine(twoCol('TOTAL', `${curr}${data.total}`));
+            appendBytes([0x1B, 0x45, 0x00]);
+            appendLine(twoCol('Paid via', data.payment_method));
+            if (parseFloat(data.discount) > 0) {
+                appendLine(center(`You saved ${curr}${data.discount} on this bill`));
+            }
+
+            divider('-');
+
+            // Note / Return Policy (Clean word-wrapping prevents mid-word splitting)
+            const noteText = 'Note: Medicines once sold are not returned or exchanged unless defective. Please check strip & expiry before leaving the counter. Keep this bill.';
+            const noteLines = wrapText(noteText, cols);
+            for (let nl of noteLines) {
+                appendLine(nl);
+            }
+
+            divider('-');
+
+            // Footer Greeting (ASCII character to prevent garbled unicode bullet)
+            appendBytes([0x1B, 0x45, 0x01]);
+            appendLine(center('THANK YOU  *  GET WELL SOON'));
+            appendBytes([0x1B, 0x45, 0x00]);
+
+            // Feed paper 2 lines and cut
+            appendBytes([0x1B, 0x64, 0x02]);
+
+            // Partial cut command: GS V 66 0
+            appendBytes([0x1D, 0x56, 0x42, 0x00]);
+
+            return new Uint8Array(bytes);
+        }
+    </script>
+</body>
+
+</html>
+

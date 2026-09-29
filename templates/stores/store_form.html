@@ -1,0 +1,135 @@
+{% extends 'layouts/base_super_admin.html' %}
+
+{% block title %}{% if object %}Edit Pharmacy Store{% else %}Register Store{% endif %} - Azmed Platform{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'stores:store_list' %}" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-[#283891] transition">
+                    &larr; Back to Stores
+                </a>
+                <span class="text-slate-300">•</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    {% if object %}Store Editor{% else %}Store Registration{% endif %}
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Store: {{ object.name }}{% else %}Register New Pharmacy Store{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Tenant licensing compliance, legal address, contact info, and receipt settings.</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Section 1: Store Identity -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Store Identity</h3>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Store / Pharmacy Name *</label>
+                        <input type="text" name="name" id="{{ form.name.id_for_label }}" required value="{{ form.name.value|default:'' }}" placeholder="e.g. Apollo MedPlus Care" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.code.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Unique Store Code *</label>
+                        <input type="text" name="code" id="{{ form.code.id_for_label }}" required value="{{ form.code.value|default:'' }}" placeholder="e.g. APL01" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-mono font-bold uppercase outline-none transition">
+                        {% if form.code.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.code.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.currency.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Currency Symbol *</label>
+                        <input type="text" name="currency" id="{{ form.currency.id_for_label }}" required value="{{ form.currency.value|default:'₹' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-bold outline-none transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Licensing & Tax -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-indigo-50 text-[#283891] flex items-center justify-center font-bold text-xs">2</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Licensing &amp; Taxation</h3>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.license_number.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Drug License Number (DL) *</label>
+                        <input type="text" name="license_number" id="{{ form.license_number.id_for_label }}" required value="{{ form.license_number.value|default:'' }}" placeholder="e.g. DL-20B/21B-49202" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-mono font-medium outline-none transition">
+                        {% if form.license_number.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.license_number.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.gst_number.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">GST / Tax Registration</label>
+                        <input type="text" name="gst_number" id="{{ form.gst_number.id_for_label }}" value="{{ form.gst_number.value|default:'' }}" placeholder="e.g. 07AAAAA0000A1Z5" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-mono font-medium outline-none transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Contact & Location -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">3</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Contact &amp; Physical Location</h3>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.phone.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Phone Number *</label>
+                        <input type="text" name="phone" id="{{ form.phone.id_for_label }}" required value="{{ form.phone.value|default:'' }}" placeholder="+91 98765 43210" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Email Address *</label>
+                        <input type="email" name="email" id="{{ form.email.id_for_label }}" required value="{{ form.email.value|default:'' }}" placeholder="store@pharmacy.com" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.address.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Street Address *</label>
+                        <textarea name="address" id="{{ form.address.id_for_label }}" required rows="2" placeholder="Building, Street, Landmark" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">{{ form.address.value|default:'' }}</textarea>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.city.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">City *</label>
+                        <input type="text" name="city" id="{{ form.city.id_for_label }}" required value="{{ form.city.value|default:'' }}" placeholder="e.g. New Delhi" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.state.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">State *</label>
+                        <input type="text" name="state" id="{{ form.state.id_for_label }}" required value="{{ form.state.value|default:'' }}" placeholder="e.g. Delhi" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.pincode.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Postal Code / PIN *</label>
+                        <input type="text" name="pincode" id="{{ form.pincode.id_for_label }}" required value="{{ form.pincode.value|default:'' }}" placeholder="e.g. 110001" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+
+                    <div class="flex items-center pt-6">
+                        <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                            <input type="checkbox" name="is_active" {% if form.is_active.value %}checked{% endif %} class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]">
+                            <span>Active Pharmacy Store</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <a href="{% url 'stores:store_list' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                    Cancel
+                </a>
+                <button type="submit" class="px-5 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    Save Pharmacy Store
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

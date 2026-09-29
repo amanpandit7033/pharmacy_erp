@@ -1,0 +1,119 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}{% if object %}Edit Staff{% else %}New Staff Member{% endif %} - Azmed{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'accounts:staff_list' %}" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-[#283891] transition">
+                    &larr; Back to Staff List
+                </a>
+                <span class="text-slate-300">•</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    {% if object %}Staff Editor{% else %}New Operator{% endif %}
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Staff Member: <span class="text-[#283891] font-mono">{{ object.username }}</span>{% else %}Provision New Staff Member{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Staff accounts operate POS billing counters and have inventory lookup permissions.</p>
+        </div>
+        <a href="{% url 'accounts:staff_list' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+            Back to List
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Section 1: Credentials -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Account Credentials</h3>
+                </div>
+
+                {% if not object %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Username *</label>
+                        <input type="text" name="username" id="{{ form.username.id_for_label }}" required placeholder="e.g. apollo_cashier1" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.username.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.username.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Initial Password *</label>
+                        <input type="password" name="password" id="{{ form.password.id_for_label }}" required placeholder="Set counter access password" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.password.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.password.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Staff Username</span>
+                        <span class="text-sm font-extrabold text-slate-900 font-mono">{{ object.username }}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-semibold italic bg-slate-100 px-2.5 py-1 rounded-lg">Fixed identifier</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Section 2: Personal & Contact -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">2</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Operator Profile &amp; Contact</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">First Name</label>
+                        <input type="text" name="first_name" id="{{ form.first_name.id_for_label }}" value="{{ form.first_name.value|default:'' }}" placeholder="e.g. Vikas" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.first_name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.first_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Last Name</label>
+                        <input type="text" name="last_name" id="{{ form.last_name.id_for_label }}" value="{{ form.last_name.value|default:'' }}" placeholder="e.g. Kumar" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.last_name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.last_name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
+                        <input type="email" name="email" id="{{ form.email.id_for_label }}" value="{{ form.email.value|default:'' }}" placeholder="staff@pharmacy.com" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.email.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.phone.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Phone Number</label>
+                        <input type="text" name="phone" id="{{ form.phone.id_for_label }}" value="{{ form.phone.value|default:'' }}" placeholder="+91 98765 43210" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.phone.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.phone.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                {% if object %}
+                <div class="pt-4 mt-2">
+                    <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                        <input type="checkbox" name="is_active" {% if form.is_active.value %}checked{% endif %} class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]">
+                        <span>Counter Account Active</span>
+                    </label>
+                    <span class="text-[10px] text-slate-400 block ml-6 mt-0.5">When disabled, this cashier or pharmacist cannot log in or issue invoices.</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <a href="{% url 'accounts:staff_list' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                    Cancel
+                </a>
+                <button type="submit" class="px-5 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    Save Staff Member
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

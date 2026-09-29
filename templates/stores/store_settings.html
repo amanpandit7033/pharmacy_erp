@@ -1,0 +1,214 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}Store Settings - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    Store Configuration
+                </span>
+                <span class="text-slate-300">•</span>
+                <span class="text-xs text-slate-500 font-medium">Compliance &amp; Invoice Identity</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">Store Settings</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Manage your pharmacy logo, invoice details, drug licensing compliance, and location info.</p>
+        </div>
+        <span class="self-start sm:self-auto px-3.5 py-1.5 bg-blue-50 text-[#283891] text-xs font-mono font-bold rounded-xl border border-blue-200/60 shadow-2xs">
+            BRANCH CODE: {{ request.user.store.code }}
+        </span>
+    </div>
+
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" enctype="multipart/form-data" class="space-y-6" id="settings-form">
+            {% csrf_token %}
+            <input type="hidden" name="remove_logo" id="id_remove_logo" value="0">
+
+            <!-- Section 1: Store Logo & Branding (Appears on Invoices & PDF) -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Pharmacy Store Logo &amp; Receipt Branding</h3>
+                </div>
+
+                <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                    <p class="text-[11px] text-slate-500">
+                        This logo appears on customer thermal slips, A4 tax invoices, and exported PDF reports.
+                    </p>
+
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5 pt-1">
+                        <!-- Logo Preview Container -->
+                        <div class="relative group">
+                            <div id="logo-preview-box" class="w-32 h-24 rounded-2xl border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center overflow-hidden p-2 shadow-2xs transition hover:border-[#283891]">
+                                {% if object.logo %}
+                                <img src="{{ object.logo.url }}" alt="{{ object.name }} Logo" id="logo-img-preview" class="max-h-full max-w-full object-contain">
+                                <div id="logo-placeholder" class="hidden flex-col items-center text-slate-400 text-center">
+                                    <svg class="w-7 h-7 mb-1 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span class="text-[10px] font-bold">No Logo</span>
+                                </div>
+                                {% else %}
+                                <img src="" alt="Logo Preview" id="logo-img-preview" class="hidden max-h-full max-w-full object-contain">
+                                <div id="logo-placeholder" class="flex flex-col items-center text-slate-400 text-center">
+                                    <svg class="w-7 h-7 mb-1 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span class="text-[10px] font-bold">No Logo Uploaded</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Upload Controls & Action Buttons -->
+                        <div class="flex-1 space-y-2">
+                            <div class="flex flex-wrap items-center gap-2.5">
+                                <input type="file" name="logo" id="id_logo" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" class="hidden">
+                                <button type="button" onclick="document.getElementById('id_logo').click()" class="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition space-x-1.5">
+                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                    </svg>
+                                    <span id="upload-btn-text">{% if object.logo %}Change Logo{% else %}Upload Store Logo{% endif %}</span>
+                                </button>
+
+                                <button type="button" id="remove-logo-btn" onclick="removeCurrentLogo()" class="{% if not object.logo %}hidden{% endif %} inline-flex items-center px-3.5 py-2.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold rounded-xl shadow-2xs transition space-x-1">
+                                    <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    <span>Remove Logo</span>
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-slate-400">
+                                Recommended: High-resolution PNG or JPG with transparent or clean white background. Max size: 3 MB.
+                            </p>
+                            {% if form.logo.errors %}
+                            <p class="text-[10px] text-rose-500 font-semibold">{{ form.logo.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Store Identity & Statutory Compliance -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-indigo-50 text-[#283891] flex items-center justify-center font-bold text-xs">2</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Legal Licensing &amp; Tax Identifiers</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Pharmacy / Trade Name *</label>
+                        <input type="text" name="name" id="{{ form.name.id_for_label }}" required value="{{ form.name.value|default:'' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.license_number.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Drug License Number (DL) *</label>
+                        <input type="text" name="license_number" id="{{ form.license_number.id_for_label }}" required value="{{ form.license_number.value|default:'' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-mono font-medium outline-none transition">
+                        {% if form.license_number.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.license_number.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.gst_number.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">GST / Tax Registration ID</label>
+                        <input type="text" name="gst_number" id="{{ form.gst_number.id_for_label }}" value="{{ form.gst_number.value|default:'' }}" placeholder="e.g. 07AAAAA0000A1Z5" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-mono font-medium outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.phone.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Contact Phone *</label>
+                        <input type="text" name="phone" id="{{ form.phone.id_for_label }}" required value="{{ form.phone.value|default:'' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.phone.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.phone.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Contact Email *</label>
+                        <input type="email" name="email" id="{{ form.email.id_for_label }}" required value="{{ form.email.value|default:'' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        {% if form.email.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.currency.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Currency Symbol *</label>
+                        <input type="text" name="currency" id="{{ form.currency.id_for_label }}" required value="{{ form.currency.value|default:'₹' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-bold outline-none transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Physical Address -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">3</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Physical Premises &amp; Location</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.address.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Street Address *</label>
+                        <textarea name="address" id="{{ form.address.id_for_label }}" required rows="2" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">{{ form.address.value|default:'' }}</textarea>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.city.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">City *</label>
+                        <input type="text" name="city" id="{{ form.city.id_for_label }}" required value="{{ form.city.value|default:'' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.state.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">State *</label>
+                        <input type="text" name="state" id="{{ form.state.id_for_label }}" required value="{{ form.state.value|default:'' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.pincode.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Postal Code / PIN *</label>
+                        <input type="text" name="pincode" id="{{ form.pincode.id_for_label }}" required value="{{ form.pincode.value|default:'' }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Section -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span class="text-xs text-slate-400">All updates apply instantly across new and historical store invoices.</span>
+                <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    Save Store Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const logoInput = document.getElementById('id_logo');
+    const logoImg = document.getElementById('logo-img-preview');
+    const logoPlaceholder = document.getElementById('logo-placeholder');
+    const removeBtn = document.getElementById('remove-logo-btn');
+    const uploadText = document.getElementById('upload-btn-text');
+    const removeInput = document.getElementById('id_remove_logo');
+
+    logoInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                logoImg.src = e.target.result;
+                logoImg.classList.remove('hidden');
+                logoPlaceholder.classList.add('hidden');
+                removeBtn.classList.remove('hidden');
+                uploadText.textContent = "Change Logo";
+                removeInput.value = "0";
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function removeCurrentLogo() {
+        logoInput.value = "";
+        logoImg.src = "";
+        logoImg.classList.add('hidden');
+        logoPlaceholder.classList.remove('hidden');
+        removeBtn.classList.add('hidden');
+        uploadText.textContent = "Upload Store Logo";
+        removeInput.value = "1";
+    }
+</script>
+{% endblock %}

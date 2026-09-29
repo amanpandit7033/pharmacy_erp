@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Login to {{ platform_settings.brand_name|default:'Azmed' }}{% endblock %}
+
+{% block root_content %}
+<div class="min-h-screen relative flex flex-col justify-between items-center p-4 sm:p-6 bg-[#edf2f7] overflow-hidden">
+    <!-- Subtle Background Vector Waves matching mockup -->
+    <svg class="absolute inset-0 w-full h-full pointer-events-none stroke-slate-300/60 fill-none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <path d="M-100,200 C300,50 700,600 1600,100" stroke-width="1.5" />
+        <path d="M-200,600 C400,200 900,900 1800,400" stroke-width="1.5" />
+        <path d="M200,-100 C700,400 1100,100 1900,800" stroke-width="1.5" />
+        <path d="M-150,900 C600,700 1000,1000 2000,500" stroke-width="1.5" />
+    </svg>
+
+    <!-- Top Spacer to keep card optically centered -->
+    <div class="w-full h-4 sm:h-8 flex-shrink-0"></div>
+
+    <!-- Main Centered Card -->
+    <div class="relative w-full max-w-[420px] bg-white rounded-[32px] sm:rounded-[36px] shadow-[0_20px_60px_-15px_rgba(15,23,42,0.08),0_10px_25px_-5px_rgba(15,23,42,0.04)] border border-slate-100/80 px-7 py-9 sm:px-10 sm:py-11 z-10 transition-all my-auto">
+        <!-- Brand Tri-Circle Logo or Custom 1:1 Icon -->
+        <div class="flex justify-center">
+            <div class="w-14 h-14 flex items-center justify-center">
+                {% if platform_settings.logo_icon %}
+                <img src="{{ platform_settings.logo_icon.url }}" alt="{{ platform_settings.brand_name|default:'Azmed' }}" class="w-12 h-12 rounded-2xl object-contain aspect-square shadow-2xs">
+                {% else %}
+                <svg class="w-12 h-12" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Top Circle -->
+                    <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                    <circle cx="26" cy="18" r="3.2" fill="white"/>
+                    <!-- Bottom Left Circle -->
+                    <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                    <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+                    <!-- Bottom Right Circle -->
+                    <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                    <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+                    <!-- Center Core Gap -->
+                    <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+                </svg>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Heading & Subtitle -->
+        <div class="text-center mt-3 mb-7">
+            <h1 class="text-[23px] font-bold text-slate-900 tracking-tight">
+                Login to {{ platform_settings.brand_name|default:'Azmed' }}
+            </h1>
+            <p class="text-xs text-slate-500 font-normal mt-1 leading-relaxed">
+                {{ platform_settings.tagline|default:'Expert support for a happier, healthier you.' }}
+            </p>
+        </div>
+
+        <!-- Login Form -->
+        <form method="POST" action="{% url 'accounts:login' %}" class="space-y-4" id="loginForm">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium text-center">
+                {{ form.non_field_errors.0 }}
+            </div>
+            {% endif %}
+
+            <!-- Username / Mobile Field -->
+            <div class="relative rounded-2xl border border-slate-200 focus-within:border-[#283891] focus-within:ring-2 focus-within:ring-[#283891]/10 px-4 py-2.5 bg-white transition-all">
+                <label for="id_username" class="block text-[11px] font-medium text-slate-400 leading-tight">
+                    Username or Mobile Number
+                </label>
+                <input 
+                    type="text" 
+                    name="username" 
+                    id="id_username" 
+                    required 
+                    autocomplete="username" 
+                    value="{{ form.username.value|default:'' }}"
+                    placeholder="e.g. apollo_admin" 
+                    class="w-full mt-0.5 p-0 border-0 bg-transparent text-sm font-semibold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-0 outline-none"
+                >
+            </div>
+            {% if form.username.errors %}
+            <p class="text-[11px] text-rose-500 px-1">{{ form.username.errors.0 }}</p>
+            {% endif %}
+
+            <!-- Password Field -->
+            <div class="relative rounded-2xl border border-slate-200 focus-within:border-[#283891] focus-within:ring-2 focus-within:ring-[#283891]/10 px-4 py-2.5 bg-white transition-all">
+                <label for="id_password" class="block text-[11px] font-medium text-slate-400 leading-tight">
+                    Password
+                </label>
+                <input 
+                    type="password" 
+                    name="password" 
+                    id="id_password" 
+                    required 
+                    autocomplete="current-password" 
+                    placeholder="Enter password" 
+                    class="w-full mt-0.5 p-0 border-0 bg-transparent text-sm font-semibold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-0 outline-none"
+                >
+            </div>
+            {% if form.password.errors %}
+            <p class="text-[11px] text-rose-500 px-1">{{ form.password.errors.0 }}</p>
+            {% endif %}
+
+            <!-- Primary Login Button -->
+            <div class="pt-1">
+                <button 
+                    type="submit" 
+                    class="w-full py-3.5 px-4 bg-[#283891] hover:bg-[#1f2d7a] active:bg-[#1a4bc4] text-white font-semibold text-[15px] rounded-2xl shadow-sm transition duration-150 text-center flex items-center justify-center"
+                >
+                    Login
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Platform Settings Controlled Footer -->
+    {% if platform_settings.show_login_footer %}
+    <footer class="w-full max-w-[460px] text-center text-xs text-slate-500 z-10 pt-4 pb-2 sm:pb-4 space-y-1 flex-shrink-0">
+        <p class="font-medium text-slate-500 tracking-tight">
+            {{ platform_settings.footer_text|default:'© 2026 Azmed. All rights reserved.' }}
+        </p>
+        {% if platform_settings.footer_contact_info %}
+        <p class="text-[11px] text-slate-400">
+            {{ platform_settings.footer_contact_info }}
+        </p>
+        {% endif %}
+    </footer>
+    {% else %}
+    <div class="w-full h-4 sm:h-8 flex-shrink-0"></div>
+    {% endif %}
+</div>
+
+<script>
+    function quickLogin(username, password) {
+        document.getElementById('id_username').value = username;
+        document.getElementById('id_password').value = password;
+        // Visual feedback
+        const btn = document.querySelector('#loginForm button[type="submit"]');
+        btn.classList.add('ring-4', 'ring-[#283891]/20');
+        setTimeout(() => {
+            document.getElementById('loginForm').submit();
+        }, 150);
+    }
+
+    function toggleDemoModal() {
+        alert("In this multi-tenant pharmacy ERP, new pharmacy store accounts are provisioned by the Super Admin, while staff accounts are invited by the Store Admin.");
+    }
+</script>
+{% endblock %}

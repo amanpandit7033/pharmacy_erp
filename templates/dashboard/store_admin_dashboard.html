@@ -1,0 +1,403 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}Dashboard - Azmed CRM{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Dashboard Top Action Bar -->
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Dashboard</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Real-time performance and inventory metrics for {{ request.user.store.name }}.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Date Range Selector Pill -->
+            <div class="flex items-center space-x-2 px-3 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-700 shadow-card">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span>{{ trend_days.0.date_str }} - Today</span>
+            </div>
+
+            <!-- Time Filter Dropdown -->
+            <div class="px-3 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-700 shadow-card flex items-center space-x-1.5 cursor-default">
+                <span>Last 7 Days</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            </div>
+
+            <!-- Quick Add Product Button -->
+            <a href="{% url 'inventory:medicine_create' %}" class="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 shadow-card flex items-center space-x-1.5 transition">
+                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>Add Product</span>
+            </a>
+
+            <!-- Primary Action Button: New Bill -->
+            <a href="{% url 'billing:pos' %}" class="px-4 py-1.5 bg-[#283891] hover:bg-[#1f2d7a] text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-500/25 flex items-center space-x-1.5 transition">
+                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>New Bill (POS)</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 4 Top Stat Cards (Real Data) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Card 1: Today's Revenue -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Today's Sales</span>
+                <div class="w-7 h-7 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline space-x-2">
+                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ request.user.store.currency }}{{ today_sales|floatformat:2 }}</h3>
+                {% if today_growth_pct >= 0 %}
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                    ▲ {{ today_growth_pct }}%
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-500 border border-rose-100">
+                    ▼ {{ today_growth_pct }}%
+                </span>
+                {% endif %}
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">{{ today_bills_count }} bill{{ today_bills_count|pluralize }} processed today</p>
+        </div>
+
+        <!-- Card 2: Month to Date Sales -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Month to Date</span>
+                <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline space-x-2">
+                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ request.user.store.currency }}{{ month_sales|floatformat:2 }}</h3>
+                {% if month_growth_pct >= 0 %}
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                    ▲ {{ month_growth_pct }}%
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-500 border border-rose-100">
+                    ▼ {{ month_growth_pct }}%
+                </span>
+                {% endif %}
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">{{ month_bills_count }} total order{{ month_bills_count|pluralize }} this month</p>
+        </div>
+
+        <!-- Card 3: Stock Valuation -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Retail Inventory</span>
+                <div class="w-7 h-7 rounded-lg bg-indigo-50 text-[#283891] flex items-center justify-center">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline space-x-2">
+                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ request.user.store.currency }}{{ stock_retail_value|floatformat:2 }}</h3>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-[#283891] border border-blue-100">
+                    {{ stock_margin_pct }}% margin
+                </span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">Cost basis: <span class="text-slate-700 font-semibold">{{ request.user.store.currency }}{{ stock_cost_value|floatformat:2 }}</span></p>
+        </div>
+
+        <!-- Card 4: Catalog & Active Staff -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card hover:shadow-card-hover transition-all">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Catalog Medicines</span>
+                <div class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline space-x-2">
+                <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ total_medicines }}</h3>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                    {{ in_stock_medicines_count }}/{{ total_medicines }} In Stock
+                </span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">{{ store_staff_count }} cashier team member{{ store_staff_count|pluralize }}</p>
+        </div>
+    </div>
+
+    <!-- Main Section: 8 Cols Chart & Table + 4 Cols Side Widgets -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- 8 Columns: Main Chart & Best Selling Table -->
+        <div class="lg:col-span-8 space-y-6">
+            <!-- Main Total Profit Area Chart Card -->
+            <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-card">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <span class="text-xs font-semibold text-slate-500">7-Day Revenue Trend</span>
+                        <div class="flex items-baseline space-x-2 mt-1">
+                            <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">
+                                {{ request.user.store.currency }}{{ month_sales|floatformat:2 }}
+                            </h2>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold {% if month_growth_pct >= 0 %}bg-emerald-50 text-emerald-600 border border-emerald-100{% else %}bg-rose-50 text-rose-500 border border-rose-100{% endif %}">
+                                {% if month_growth_pct >= 0 %}▲{% else %}▼{% endif %} {{ month_growth_pct }}% vs. prev month
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SVG Area Chart Calculated Dynamically from Real Sales -->
+                <div class="relative w-full h-56 mt-4">
+                    <svg class="w-full h-full" viewBox="0 0 700 200" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#283891" stop-opacity="0.22" />
+                                <stop offset="100%" stop-color="#283891" stop-opacity="0.00" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Background Grid Lines -->
+                        <line x1="0" y1="40" x2="700" y2="40" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4" />
+                        <line x1="0" y1="90" x2="700" y2="90" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4" />
+                        <line x1="0" y1="140" x2="700" y2="140" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4" />
+
+                        <!-- Real Area Fill -->
+                        <path d="{{ chart_area_path }}" fill="url(#chartGradient)" />
+
+                        <!-- Real Blue Line -->
+                        <path d="{{ chart_line_path }}" fill="none" stroke="#283891" stroke-width="3" stroke-linecap="round" />
+
+                        <!-- Real Data Points -->
+                        {% for pt in chart_points %}
+                        <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="4" fill="#ffffff" stroke="#283891" stroke-width="2.5" />
+                        {% endfor %}
+                    </svg>
+
+                    <!-- Real Floating Tooltip at Peak Day -->
+                    {% if active_point %}
+                    <div class="absolute bg-white rounded-xl shadow-lg border border-slate-100 p-2 text-[10px] pointer-events-none z-10 whitespace-nowrap transform -translate-x-1/2"
+                         style="left: calc({{ active_point.x }} * 100% / 700); top: 15%;">
+                        <span class="font-bold text-slate-800 block text-[11px]">{{ active_point.date_str }} ({{ active_point.day_name }})</span>
+                        <div class="flex items-center space-x-1 text-[#283891] font-semibold mt-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#283891]"></span>
+                            <span>{{ request.user.store.currency }}{{ active_point.sales|floatformat:2 }} billed</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- X-Axis Labels (Real Days) -->
+                <div class="flex justify-between text-[11px] font-medium text-slate-400 px-2 mt-2">
+                    {% for day in trend_days %}
+                    <span class="text-center">{{ day.day_name }}<br><span class="text-[9px] text-slate-300 font-mono">{{ day.date_str }}</span></span>
+                    {% endfor %}
+                </div>
+
+                <!-- Real Customer & Channel Breakdown Cards -->
+                <div class="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100 flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-xl bg-blue-100 text-[#283891] flex items-center justify-center font-bold text-xs">
+                            RC
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 font-medium block">Unique Customers</span>
+                            <span class="text-sm font-extrabold text-slate-800">{{ total_customers }}</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100 flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                            Rx
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 font-medium block">Prescription Orders</span>
+                            <span class="text-sm font-extrabold text-slate-800">{{ prescription_count }}</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100 flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xs">
+                            CW
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 font-medium block">Counter Walk-in</span>
+                            <span class="text-sm font-extrabold text-slate-800">{{ walkin_count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Best Selling Medicines Table Card (REAL DATA) -->
+            <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-card overflow-hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 tracking-tight">Top Selling Medicines</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Ranked by total revenue generated from customer bills.</p>
+                    </div>
+                    <a href="{% url 'billing:invoice_list' %}" class="text-xs font-bold text-[#283891] hover:underline">All Bills →</a>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs min-w-[550px]">
+                        <thead class="text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-100 pb-2">
+                            <tr>
+                                <th class="pb-3 px-2">Rank</th>
+                                <th class="pb-3 px-2">Medicine Name</th>
+                                <th class="pb-3 px-2 text-center">Billed Qty</th>
+                                <th class="pb-3 px-2 text-right">Revenue</th>
+                                <th class="pb-3 px-2 text-right">Invoices</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for med in best_selling_medicines %}
+                            <tr class="hover:bg-slate-50/70 transition">
+                                <td class="py-3.5 px-2 font-mono font-bold text-slate-400">
+                                    #0{{ forloop.counter }}
+                                </td>
+                                <td class="py-3.5 px-2 font-bold text-slate-900">
+                                    <div class="flex items-center space-x-2.5">
+                                        <div class="w-7 h-7 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">
+                                            {{ med.medicine_name|slice:":1"|upper }}
+                                        </div>
+                                        <span>{{ med.medicine_name }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-3.5 px-2 text-center font-bold text-slate-700">
+                                    {{ med.total_sold }} units
+                                </td>
+                                <td class="py-3.5 px-2 text-right font-mono font-bold text-slate-900">
+                                    {{ request.user.store.currency }}{{ med.total_revenue|floatformat:2 }}
+                                </td>
+                                <td class="py-3.5 px-2 text-right">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                                        {{ med.orders_count }} bill{{ med.orders_count|pluralize }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-10 text-center text-slate-400">
+                                    No medicines billed yet. Start billing items via <a href="{% url 'billing:pos' %}" class="text-[#283891] font-bold underline">POS Terminal</a>.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Columns: Right Sidebar Widgets (REAL DATA) -->
+        <div class="lg:col-span-4 space-y-6">
+            <!-- Weekly Activity Bar Chart Widget (REAL DATA) -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-card">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 tracking-tight">Most Day Active</h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Sales activity across the week.</p>
+                    </div>
+                    <span class="text-slate-300 font-bold tracking-widest text-xs">•••</span>
+                </div>
+
+                <!-- Real Bars Display with highest active day highlighted in blue -->
+                <div class="flex items-end justify-between h-44 pt-8 px-2">
+                    {% for day in trend_days %}
+                    <div class="flex flex-col items-center space-y-2 relative group">
+                        {% if forloop.counter0 == active_day_index and day.sales > 0 %}
+                        <span class="absolute -top-7 px-1.5 py-0.5 rounded bg-slate-900 text-white font-mono text-[9px] font-bold whitespace-nowrap shadow-xs">
+                            {{ request.user.store.currency }}{{ day.sales|floatformat:0 }}
+                        </span>
+                        <div class="w-6 bg-[#283891] rounded-lg shadow-sm shadow-blue-500/30 transition-all duration-300" style="height: {{ day.height_pct }}px;"></div>
+                        <span class="text-[10px] font-bold text-[#283891]">{{ day.day_name }}</span>
+                        {% else %}
+                        <div class="w-6 bg-slate-100 group-hover:bg-slate-200 rounded-lg transition-all duration-300" style="height: {{ day.height_pct }}px;"></div>
+                        <span class="text-[10px] font-medium text-slate-400">{{ day.day_name }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Radial Gauge Card (REAL STOCK HEALTH) -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-card text-center">
+                <div class="flex items-center justify-between mb-2 text-left">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 tracking-tight">Stock Health Rate</h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Availability of catalog medications.</p>
+                    </div>
+                    <span class="text-slate-300 font-bold tracking-widest text-xs">•••</span>
+                </div>
+
+                <!-- Radial Gauge SVG with dynamic percentage -->
+                <div class="relative w-40 h-24 mx-auto mt-3 flex items-end justify-center">
+                    <svg class="w-36 h-20 overflow-visible" viewBox="0 0 100 50">
+                        <!-- Background arc -->
+                        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#f1f5f9" stroke-width="8" stroke-linecap="round" />
+                        <!-- Progress green arc based on real stock_health_rate -->
+                        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#10b981" stroke-width="8" stroke-dasharray="{{ stock_health_rate }} 100" stroke-linecap="round" />
+                    </svg>
+                    <div class="absolute bottom-0 text-center">
+                        <span class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ stock_health_rate }}%</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500 font-medium mt-3">{{ in_stock_medicines_count }} of {{ total_medicines }} medicines in stock</p>
+
+                <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-left text-xs">
+                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                        <span class="text-[10px] text-slate-400 block font-semibold">Low Stock Alert</span>
+                        <span class="text-sm font-bold {% if low_stock_count > 0 %}text-rose-600{% else %}text-slate-700{% endif %}">{{ low_stock_count }} item{{ low_stock_count|pluralize }}</span>
+                    </div>
+                    <a href="{% url 'inventory:expiry_watch' %}?timeframe=all_risk" class="bg-slate-50 hover:bg-amber-50/50 p-2.5 rounded-xl border border-slate-100 hover:border-amber-200 transition block group">
+                        <span class="text-[10px] text-slate-400 group-hover:text-amber-700 block font-semibold">Expiring &le; 60d</span>
+                        <span class="text-sm font-bold {% if expiring_batches_count > 0 %}text-amber-600{% else %}text-slate-700{% endif %}">{{ expiring_batches_count }} batch{{ expiring_batches_count|pluralize }} &rarr;</span>
+                    </a>
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    <a href="{% url 'inventory:medicine_list' %}" class="py-2 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 shadow-xs transition text-center">
+                        All Products
+                    </a>
+                    <a href="{% url 'inventory:expiry_watch' %}" class="py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold shadow-xs transition text-center">
+                        Expiry Watch
+                    </a>
+                </div>
+            </div>
+
+            <!-- Recent Invoices Feed -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-card">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-bold text-slate-900 tracking-tight">Recent Invoices</h3>
+                    <a href="{% url 'billing:invoice_list' %}" class="text-xs font-bold text-[#283891] hover:underline">View all</a>
+                </div>
+
+                <div class="divide-y divide-slate-100">
+                    {% for inv in recent_invoices|slice:":4" %}
+                    <div class="py-2.5 flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-slate-800 text-xs">{{ inv.customer_name }}</div>
+                            <span class="font-mono text-[10px] text-slate-400">{{ inv.invoice_number }} • {{ inv.created_at|date:"h:i A" }}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-mono font-bold text-xs text-slate-900 block">{{ request.user.store.currency }}{{ inv.total_amount|floatformat:2 }}</span>
+                            <span class="text-[10px] font-semibold {% if inv.status == 'PAID' %}text-emerald-600{% else %}text-rose-600{% endif %}">{{ inv.get_status_display }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="py-4 text-xs text-slate-400 text-center">No recent bills.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

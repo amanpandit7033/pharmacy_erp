@@ -1,0 +1,174 @@
+{% extends role_base_layout %}
+
+{% block title %}{% if object %}Edit Master Medicine: {{ object.name }}{% else %}Add National Master Medicine{% endif %} - Azmed{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    National Catalog Registry
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Formulation: <span class="text-[#283891]">{{ object.name }}</span>{% else %}Add National Master Medicine{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Formulations defined in the National Master Catalog are synced globally across all pharmacy branches.
+            </p>
+        </div>
+        <a href="{% url 'inventory:master_catalog' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+            Back to Catalog
+        </a>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" id="masterMedicineForm" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Section 1: Medicine Identity & Salt Composition -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Drug Identity &amp; Active Salt</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Brand Name -->
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Medicine / Commercial Brand Name *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Generic Salt Composition -->
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.salt_composition.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Active Salt Composition / Generic Chemical Formulation *</label>
+                        {{ form.salt_composition }}
+                        <p class="text-[10px] text-slate-400 mt-1">e.g. Amoxycillin (500mg) + Clavulanic Acid (125mg)</p>
+                        {% if form.salt_composition.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.salt_composition.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Classification & Pricing -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-indigo-50 text-[#283891] flex items-center justify-center font-bold text-xs">2</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Classification, Packaging &amp; Baseline MRP</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Manufacturer -->
+                    <div>
+                        <label for="{{ form.manufacturer_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Manufacturer / Pharmaceutical Company</label>
+                        {{ form.manufacturer_name }}
+                        <p class="text-[10px] text-slate-400 mt-1">e.g. Cipla Ltd, Sun Pharma, Abbott Laboratories</p>
+                    </div>
+
+                    <!-- Baseline MRP -->
+                    <div>
+                        <label for="{{ form.price.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Baseline Maximum Retail Price (MRP ₹)</label>
+                        {{ form.price }}
+                        <p class="text-[10px] text-slate-400 mt-1">Default MRP recommendation for branch batches</p>
+                    </div>
+
+                    <!-- Category -->
+                    <div>
+                        <label for="{{ form.category_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Medicine Classification / Type</label>
+                        {{ form.category_name }}
+                        <p class="text-[10px] text-slate-400 mt-1">e.g. Allopathy, Ayurvedic, Homeopathy</p>
+                    </div>
+
+                    <!-- Pack Size -->
+                    <div>
+                        <label for="{{ form.pack_size_label.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Packaging / Unit of Sale</label>
+                        {{ form.pack_size_label }}
+                        <p class="text-[10px] text-slate-400 mt-1">e.g. strip of 10 tablets, bottle of 100 ml</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: National Catalog Governance Status -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">3</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Governance &amp; Publishing Status</h3>
+                </div>
+
+                <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                    <label class="flex items-center space-x-2.5 text-xs font-bold text-slate-800 cursor-pointer select-none">
+                        {{ form.is_approved }}
+                        <span class="text-emerald-700">Approved &amp; Published to All Branches</span>
+                    </label>
+
+                    <label class="flex items-center space-x-2.5 text-xs font-bold text-slate-800 cursor-pointer select-none">
+                        {{ form.is_discontinued }}
+                        <span class="text-rose-600">Mark as Discontinued / Obsolete</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Section 4: Clinical Usage & Safety Warnings -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs">4</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Clinical Description &amp; Pharmacological Alerts</h3>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Clinical Usage -->
+                    <div>
+                        <label for="{{ form.medicine_desc.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Clinical Indications &amp; Usage Instructions</label>
+                        {{ form.medicine_desc }}
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Side Effects -->
+                        <div>
+                            <label for="{{ form.side_effects.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Reported Side Effects</label>
+                            {{ form.side_effects }}
+                        </div>
+
+                        <!-- Drug Interactions -->
+                        <div>
+                            <label for="{{ form.drug_interactions.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Drug-Drug Interactions (Clinical Alert)</label>
+                            {{ form.drug_interactions }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-between items-center gap-3">
+                {% if object %}
+                <button type="button" onclick="if(confirm('WARNING: Are you sure you want to permanently delete \'{{ object.name|escapejs }}\' from the National Master Catalog?')) document.getElementById('deleteMasterForm').submit();" class="px-4 py-2.5 text-xs font-bold text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 rounded-xl transition">
+                    Delete from Master Catalog
+                </button>
+                {% else %}
+                <div></div>
+                {% endif %}
+
+                <div class="flex items-center space-x-2.5">
+                    <a href="{% url 'inventory:master_catalog' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-6 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                        {% if object %}Save Catalog Changes{% else %}Publish to Master Catalog{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        {% if object %}
+        <!-- Hidden external delete form to avoid nested forms in HTML -->
+        <form id="deleteMasterForm" method="POST" action="{% url 'inventory:master_medicine_delete' object.id %}" class="hidden">
+            {% csrf_token %}
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

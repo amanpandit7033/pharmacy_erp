@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Django local database
+db.sqlite3
+db.sqlite3-journal
+*.sqlite3
+
+# User uploaded media & collected static
+staticfiles/
+media/*
+!media/.gitkeep
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# OS generated files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Testing & Coverage
+.coverage
+htmlcov/
+.pytest_cache/

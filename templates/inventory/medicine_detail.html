@@ -1,0 +1,201 @@
+{% extends role_base_layout %}
+
+{% block title %}{{ medicine.name }} - Batches &amp; Details - Azmed{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2 text-xs">
+                <a href="{% url 'inventory:medicine_list' %}" class="inline-flex items-center text-slate-400 hover:text-[#283891] font-bold transition">
+                    &larr; Products
+                </a>
+                <span class="text-slate-300">/</span>
+                <span class="text-slate-700 font-bold">{{ medicine.name }}</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5 flex items-center gap-2.5">
+                <span>{{ medicine.name }}</span>
+                {% if medicine.is_prescription_required %}
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200/60 uppercase tracking-wide">Rx Required</span>
+                {% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 italic mt-0.5">{{ medicine.generic_name|default:"No generic composition specified" }}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+            {% if can_manage_stock %}
+            <a href="{% url 'inventory:medicine_edit' medicine.pk %}" class="px-3.5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition">
+                Edit Product
+            </a>
+            <form method="POST" action="{% url 'inventory:medicine_delete' medicine.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="px-3.5 py-2.5 border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-bold rounded-xl shadow-2xs transition" onclick="return confirm('Are you sure you want to delete \'{{ medicine.name|escapejs }}\' and all its stock batches?');">
+                    Delete Product
+                </button>
+            </form>
+            <a href="{% url 'inventory:batch_create' medicine.pk %}" class="inline-flex items-center px-4 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98] space-x-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>Add Batch</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Product Metadata Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Category</p>
+                <p class="text-base font-extrabold text-slate-900 tracking-tight truncate max-w-[150px]">{{ medicine.category.name|default:"General" }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 text-[#283891] flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Rack / Shelf</p>
+                <p class="text-base font-extrabold font-mono text-slate-900 tracking-tight">{{ medicine.rack_location|default:"Unassigned" }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 18h12l3-18H3zm3 4h12M9 14h6"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Unit of Measure</p>
+                <p class="text-base font-extrabold text-slate-900 tracking-tight">{{ medicine.unit.name }} ({{ medicine.unit.short_name }})</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl {% if medicine.is_low_stock %}bg-amber-50 text-amber-600{% else %}bg-emerald-50 text-emerald-600{% endif %} flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Available</p>
+                <p class="text-2xl font-extrabold {% if medicine.is_low_stock %}text-amber-600{% else %}text-emerald-600{% endif %} tracking-tight">
+                    {{ medicine.total_stock }} <span class="text-xs font-bold text-slate-500">{{ medicine.unit.short_name }}</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batches Table Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Active Batches &amp; Expiry Registry</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Dispensing is automatically optimized using First-Expired, First-Out (FEFO) rules.</p>
+            </div>
+            <span class="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold font-mono rounded-full border border-slate-200">
+                {{ batches.count }} active batch{{ batches.count|pluralize:"es" }}
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[650px]">
+                <thead class="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
+                    <tr>
+                        <th class="py-3 px-4">Batch Number</th>
+                        <th class="py-3 px-4">Expiry Date</th>
+                        {% if can_view_cost %}
+                        <th class="py-3 px-4 text-right">Purchase Cost</th>
+                        {% endif %}
+                        <th class="py-3 px-4 text-right">MRP</th>
+                        <th class="py-3 px-4 text-right">Selling Price</th>
+                        <th class="py-3 px-4 text-center">Available Units</th>
+                        {% if can_manage_stock %}
+                        <th class="py-3 px-4 text-right">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for batch in batches %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
+                            {{ batch.batch_number }}
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-semibold {% if batch.is_expired %}text-rose-600{% elif batch.is_near_expiry %}text-amber-600{% else %}text-slate-700{% endif %}">
+                                {{ batch.expiry_date|date:"M d, Y" }}
+                            </span>
+                            {% if batch.is_expired %}
+                            <span class="ml-1.5 px-2 py-0.5 rounded-full text-[9px] bg-rose-50 text-rose-600 border border-rose-200/60 font-extrabold uppercase">Expired</span>
+                            {% elif batch.is_near_expiry %}
+                            <span class="ml-1.5 px-2 py-0.5 rounded-full text-[9px] bg-amber-50 text-amber-700 border border-amber-200/60 font-extrabold uppercase">{{ batch.days_until_expiry }}d left</span>
+                            {% endif %}
+                        </td>
+                        {% if can_view_cost %}
+                        <td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-700">
+                            {{ request.user.store.currency }}{{ batch.cost_price|floatformat:2 }}
+                        </td>
+                        {% endif %}
+                        <td class="py-3.5 px-4 text-right font-mono text-slate-400 line-through text-[11px]">
+                            {{ request.user.store.currency }}{{ batch.mrp|floatformat:2 }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-mono font-bold text-emerald-600 text-sm">
+                            {{ request.user.store.currency }}{{ batch.selling_price|floatformat:2 }}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide {% if batch.quantity == 0 %}bg-rose-50 text-rose-600 border border-rose-200/60{% else %}bg-slate-100 text-slate-800 border border-slate-200{% endif %}">
+                                {{ batch.quantity }}
+                            </span>
+                        </td>
+                        {% if can_manage_stock %}
+                        <td class="py-3.5 px-4 text-right">
+                            <div class="inline-flex items-center justify-end space-x-2">
+                                <a href="{% url 'inventory:batch_edit' batch.pk %}" class="inline-flex items-center px-3 py-1 bg-blue-50 hover:bg-[#283891] text-[#283891] hover:text-white rounded-lg text-xs font-bold transition shadow-2xs">
+                                    Edit
+                                </a>
+                                <form method="POST" action="{% url 'inventory:batch_delete' batch.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="inline-flex items-center px-2.5 py-1 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-300 text-slate-500 hover:text-rose-600 rounded-lg text-xs font-bold transition shadow-2xs" onclick="return confirm('Delete batch \'{{ batch.batch_number|escapejs }}\' ({{ batch.quantity }} units)?');">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if can_view_cost %}7{% else %}6{% endif %}" class="py-12 text-center text-slate-400">
+                            <div class="max-w-xs mx-auto space-y-2">
+                                <svg class="w-10 h-10 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                </svg>
+                                <p class="text-xs font-medium text-slate-500">No batches registered for this medicine yet.</p>
+                                {% if can_manage_stock %}
+                                <div>
+                                    <a href="{% url 'inventory:batch_create' medicine.pk %}" class="text-xs font-bold text-[#283891] hover:underline">
+                                        + Add initial stock batch
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

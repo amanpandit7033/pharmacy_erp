@@ -1,0 +1,467 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}Store Analytics & P&L - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header & Period Selector -->
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                    {{ request.user.store.name }} • P&amp;L Report
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                    {{ period_label }}
+                </span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Profit &amp; Loss Analytics</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Real-time revenue, cost of goods sold (COGS), gross margins, and inventory write-offs.</p>
+        </div>
+
+        <!-- Period Filter (Calendar Date Range Picker) -->
+        <form method="GET" id="analyticsFilterForm" class="flex flex-wrap items-center gap-2 self-start xl:self-auto">
+            <input type="hidden" name="period" id="filterPeriodInput" value="{{ period }}">
+
+            <!-- Calendar Date Range Picker Component -->
+            <div class="relative" id="dateRangePickerContainer">
+                <button type="button" id="dateRangePickerToggle" aria-haspopup="dialog" aria-expanded="false" class="inline-flex items-center gap-2.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs rounded-2xl text-xs font-semibold text-slate-700 outline-none focus:border-[#283891] focus:ring-2 focus:ring-blue-100 transition cursor-pointer">
+                    <svg class="w-4 h-4 text-[#283891] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span id="dateRangeDisplayLabel" class="font-bold text-slate-800">
+                        {{ curr_start|date:"d M Y" }} &ndash; {{ curr_end|date:"d M Y" }}
+                    </span>
+                    <svg id="dateRangeChevron" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+
+                <!-- Popover Panel -->
+                <div id="dateRangePopover" class="hidden absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200/90 shadow-2xl z-50 p-4 space-y-4">
+                    <!-- Popover Header -->
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-[#283891]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <span class="text-xs font-bold text-slate-900">Filter By Date Range</span>
+                        </div>
+                        <span class="text-[10px] font-semibold text-slate-400 font-mono">{{ curr_start|date:"d M" }} - {{ curr_end|date:"d M Y" }}</span>
+                    </div>
+
+                    <!-- Quick Preset Chips -->
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Quick Presets</span>
+                        <div class="grid grid-cols-3 gap-1.5 text-xs">
+                            <button type="button" data-preset="today" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == 'today' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">Today</button>
+                            <button type="button" data-preset="7days" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == '7days' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">Last 7 Days</button>
+                            <button type="button" data-preset="this_month" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == 'this_month' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">This Month</button>
+                            <button type="button" data-preset="last_month" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == 'last_month' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">Last Month</button>
+                            <button type="button" data-preset="this_year" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == 'this_year' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">This Year</button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Range Inputs with Calendar -->
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Custom Calendar Dates</span>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label for="calStartDate" class="block text-[10px] font-bold text-slate-500 mb-1">From Date</label>
+                                <input type="date" id="calStartDate" name="start_date" value="{{ custom_start }}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#283891] focus:ring-2 focus:ring-blue-100 transition cursor-pointer">
+                            </div>
+                            <div>
+                                <label for="calEndDate" class="block text-[10px] font-bold text-slate-500 mb-1">To Date</label>
+                                <input type="date" id="calEndDate" name="end_date" value="{{ custom_end }}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#283891] focus:ring-2 focus:ring-blue-100 transition cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                        <button type="button" id="datePickerCancelBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
+                            Cancel
+                        </button>
+                        <button type="button" id="datePickerApplyBtn" class="px-4 py-1.5 rounded-xl bg-[#283891] hover:bg-blue-600 text-white text-xs font-bold shadow-sm shadow-blue-500/25 transition">
+                            Apply Range
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- P&L Financial Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Revenue Card -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gross Sales</span>
+                    {% if rev_growth_pct > 0 %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        +{{ rev_growth_pct }}%
+                    </span>
+                    {% elif rev_growth_pct < 0 %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                        </svg>
+                        {{ rev_growth_pct }}%
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200/60">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14"></path>
+                        </svg>
+                        0.0%
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="text-2xl font-extrabold text-slate-900 font-mono tracking-tight mt-1.5">
+                    {{ request.user.store.currency }}{{ curr_fin.revenue|floatformat:2 }}
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 mt-2">
+                <span>{{ curr_fin.invoices_count }} Invoices</span>
+                <span class="font-mono">AOV: {{ request.user.store.currency }}{{ curr_fin.aov|floatformat:1 }}</span>
+            </div>
+        </div>
+
+        <!-- COGS (Wholesale Cost) -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">COGS (Drug Cost)</span>
+                    <span class="text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">
+                        Cost
+                    </span>
+                </div>
+                <div class="text-2xl font-extrabold text-slate-800 font-mono tracking-tight mt-1.5">
+                    {{ request.user.store.currency }}{{ curr_fin.cogs|floatformat:2 }}
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 mt-2">
+                <span>Wholesale Cost of Sold Medicines</span>
+                <span class="font-mono">Disc: {{ request.user.store.currency }}{{ curr_fin.discount|floatformat:0 }}</span>
+            </div>
+        </div>
+
+        <!-- Gross Profit -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gross Profit</span>
+                    <span class="inline-flex items-center text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                        {{ curr_fin.gross_margin_pct }}% Margin
+                    </span>
+                </div>
+                <div class="text-2xl font-extrabold text-[#283891] font-mono tracking-tight mt-1.5">
+                    {{ request.user.store.currency }}{{ curr_fin.gross_profit|floatformat:2 }}
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 mt-2">
+                <span>Sales &minus; Wholesale Cost</span>
+                {% if profit_growth_pct >= 0 %}
+                <span class="text-emerald-600 font-semibold">+{{ profit_growth_pct }}% vs prev</span>
+                {% else %}
+                <span class="text-rose-600 font-semibold">{{ profit_growth_pct }}% vs prev</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Inventory Write-off Losses -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Disposed Loss</span>
+                    <span class="inline-flex items-center text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
+                        Expired / Scrapped
+                    </span>
+                </div>
+                <div class="text-2xl font-extrabold text-rose-600 font-mono tracking-tight mt-1.5">
+                    {{ request.user.store.currency }}{{ curr_fin.inventory_loss|floatformat:2 }}
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 mt-2">
+                <span>Disposed Batch Cost</span>
+                <span class="text-slate-400">Inventory Loss</span>
+            </div>
+        </div>
+
+        <!-- Net Estimated Profit -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-xl shadow-slate-900/10 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Net Store Profit</span>
+                    <span class="inline-flex items-center text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                        {{ curr_fin.net_margin_pct }}% Net Margin
+                    </span>
+                </div>
+                <div class="text-2xl font-extrabold text-white font-mono tracking-tight mt-1.5">
+                    {{ request.user.store.currency }}{{ curr_fin.net_profit|floatformat:2 }}
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-300 mt-2">
+                <span>Gross Profit &minus; Write-offs</span>
+                <span class="text-emerald-400 font-mono font-bold">Net Gain</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Chart: Revenue & Gross Profit -->
+    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Daily Revenue &amp; Gross Margin Trajectory</h3>
+                <p class="text-xs text-slate-500">Day-by-day sales and gross profit margins earned during {{ period_label }}.</p>
+            </div>
+            <div class="flex items-center space-x-4 text-xs font-semibold">
+                <div class="flex items-center space-x-1.5">
+                    <span class="w-3 h-3 rounded-full bg-[#283891]"></span>
+                    <span class="text-slate-600">Sales</span>
+                </div>
+                <div class="flex items-center space-x-1.5">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                    <span class="text-slate-600">Gross Profit</span>
+                </div>
+            </div>
+        </div>
+
+        {% if chart_data.points %}
+        <div class="w-full overflow-x-auto">
+            <svg class="w-full h-48" viewBox="0 0 700 180" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="storeRevArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#283891" stop-opacity="0.25"/>
+                        <stop offset="100%" stop-color="#283891" stop-opacity="0.0"/>
+                    </linearGradient>
+                </defs>
+                <line x1="20" y1="30" x2="680" y2="30" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="20" y1="80" x2="680" y2="80" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="20" y1="130" x2="680" y2="130" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3 3"/>
+
+                <path d="{{ chart_data.rev_area }}" fill="url(#storeRevArea)"/>
+                <path d="{{ chart_data.rev_line }}" fill="none" stroke="#283891" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="{{ chart_data.profit_line }}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+
+                {% for pt in chart_data.points %}
+                <circle cx="{{ pt.x }}" cy="{{ pt.y_rev }}" r="3.5" fill="#283891" stroke="white" stroke-width="1.5">
+                    <title>{{ pt.date_str }}: Sales {{ request.user.store.currency }}{{ pt.revenue|floatformat:0 }}</title>
+                </circle>
+                <circle cx="{{ pt.x }}" cy="{{ pt.y_profit }}" r="3" fill="#10b981" stroke="white" stroke-width="1.5">
+                    <title>{{ pt.date_str }}: Profit {{ request.user.store.currency }}{{ pt.profit|floatformat:0 }}</title>
+                </circle>
+                {% endfor %}
+            </svg>
+            <div class="flex justify-between text-[10px] text-slate-400 font-mono mt-1 px-3">
+                {% for d in days_data %}
+                {% if forloop.first or forloop.last or forloop.counter|divisibleby:3 %}
+                <span>{{ d.date_str }}</span>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="py-10 text-center text-xs text-slate-400">
+            No sales recorded during this period.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Top Profitable Medicines Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Top 10 Most Profitable Medicines</h3>
+                <p class="text-xs text-slate-500">Ranked by total gross profit contribution (Revenue &minus; Batch Cost Price).</p>
+            </div>
+            <span class="text-xs font-semibold text-slate-400 font-mono">Top Earnings</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50/75 border-b border-slate-100 font-bold text-slate-400 uppercase tracking-wider text-[11px]">
+                    <tr>
+                        <th class="py-3 px-4">Medicine Name</th>
+                        <th class="py-3 px-4 text-center">Units Sold</th>
+                        <th class="py-3 px-4 text-right">Revenue</th>
+                        <th class="py-3 px-4 text-right">Cost Price</th>
+                        <th class="py-3 px-4 text-right">Gross Profit</th>
+                        <th class="py-3 px-4 text-right">Profit Margin</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                    {% for med in profitable_medicines %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3 px-4 font-bold text-slate-900">
+                            {{ med.medicine_name }}
+                        </td>
+                        <td class="py-3 px-4 text-center font-mono font-semibold text-slate-700">
+                            {{ med.total_qty }}
+                        </td>
+                        <td class="py-3 px-4 text-right font-mono font-semibold text-slate-900">
+                            {{ request.user.store.currency }}{{ med.total_revenue|floatformat:2 }}
+                        </td>
+                        <td class="py-3 px-4 text-right font-mono text-slate-500">
+                            {{ request.user.store.currency }}{{ med.total_cost|floatformat:2 }}
+                        </td>
+                        <td class="py-3 px-4 text-right font-mono font-bold text-emerald-600">
+                            {{ request.user.store.currency }}{{ med.profit|floatformat:2 }}
+                        </td>
+                        <td class="py-3 px-4 text-right font-mono font-bold">
+                            <span class="{% if med.margin_pct >= 25 %}text-emerald-700{% elif med.margin_pct >= 15 %}text-blue-700{% else %}text-amber-700{% endif %}">
+                                {{ med.margin_pct }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-400">
+                            No medicine sales recorded for this period.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 2-Column Breakdown: Payment Methods & Staff Billing -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Payment Methods Card -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card">
+            <h3 class="text-sm font-bold text-slate-900 mb-1">Sales by Payment Mode</h3>
+            <p class="text-xs text-slate-500 mb-4">Cash vs UPI vs Card revenue share.</p>
+
+            <div class="space-y-3">
+                {% for pm in payment_methods %}
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-slate-700">{{ pm.payment_method }} ({{ pm.count }} bills)</span>
+                        <span class="font-mono text-slate-900">{{ request.user.store.currency }}{{ pm.total_amount|floatformat:2 }} <span class="text-slate-400 font-normal">({{ pm.pct }}%)</span></span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div class="bg-[#283891] h-full rounded-full" style="width: {{ pm.pct }}%;"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="py-4 text-center text-xs text-slate-400">No payment data recorded.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Staff Billing Performance Card -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card">
+            <h3 class="text-sm font-bold text-slate-900 mb-1">Staff Counter Performance</h3>
+            <p class="text-xs text-slate-500 mb-4">Bills created and revenue collected by team members.</p>
+
+            <div class="space-y-2.5">
+                {% for sp in staff_performance %}
+                <div class="flex items-center justify-between p-2.5 bg-slate-50/70 rounded-xl border border-slate-100">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-7 h-7 rounded-full bg-blue-100 text-[#283891] font-bold text-[11px] flex items-center justify-center">
+                            {{ sp.created_by__username|slice:":2"|upper }}
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-slate-800">{{ sp.created_by__first_name|default:sp.created_by__username }}</div>
+                            <div class="text-[10px] text-slate-400">{{ sp.bills_count }} bills &bull; Avg {{ request.user.store.currency }}{{ sp.aov|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                    <div class="text-right font-mono font-bold text-xs text-[#283891]">
+                        {{ request.user.store.currency }}{{ sp.total_sales|floatformat:2 }}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="py-4 text-center text-xs text-slate-400">No staff sales recorded.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('dateRangePickerContainer');
+    if (!container) return;
+
+    const toggleBtn = document.getElementById('dateRangePickerToggle');
+    const chevron = document.getElementById('dateRangeChevron');
+    const popover = document.getElementById('dateRangePopover');
+    const cancelBtn = document.getElementById('datePickerCancelBtn');
+    const applyBtn = document.getElementById('datePickerApplyBtn');
+    const form = document.getElementById('analyticsFilterForm');
+    const periodInput = document.getElementById('filterPeriodInput');
+    const calStart = document.getElementById('calStartDate');
+    const calEnd = document.getElementById('calEndDate');
+
+    function openPopover() {
+        popover.classList.remove('hidden');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+        chevron.classList.add('rotate-180');
+    }
+
+    function closePopover() {
+        popover.classList.add('hidden');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        chevron.classList.remove('rotate-180');
+    }
+
+    toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (popover.classList.contains('hidden')) {
+            openPopover();
+        } else {
+            closePopover();
+        }
+    });
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            closePopover();
+        });
+    }
+
+    // Quick preset click
+    container.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const preset = this.getAttribute('data-preset');
+            if (periodInput) periodInput.value = preset;
+            if (calStart) calStart.disabled = true;
+            if (calEnd) calEnd.disabled = true;
+            form.submit();
+        });
+    });
+
+    // Apply custom range click
+    if (applyBtn) {
+        applyBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (periodInput) periodInput.value = 'custom';
+            if (calStart) calStart.disabled = false;
+            if (calEnd) calEnd.disabled = false;
+            form.submit();
+        });
+    }
+
+    // Close when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!container.contains(e.target)) {
+            closePopover();
+        }
+    });
+
+    // Close on Escape
+    container.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePopover();
+            toggleBtn.focus();
+        }
+    });
+});
+</script>
+{% endblock %}

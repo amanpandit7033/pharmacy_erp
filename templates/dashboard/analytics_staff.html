@@ -1,0 +1,345 @@
+{% extends 'layouts/base_staff.html' %}
+
+{% block title %}My Sales & Counter Analytics - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header & Period Selector -->
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                    Billing Counter Analytics
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                    {{ period_label }}
+                </span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">My Sales &amp; Performance</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Track your counter sales numbers, order volume, and top dispensed items.</p>
+        </div>
+
+        <!-- Period Filter (Calendar Date Range Picker) -->
+        <form method="GET" id="analyticsFilterForm" class="flex flex-wrap items-center gap-2 self-start xl:self-auto">
+            <input type="hidden" name="period" id="filterPeriodInput" value="{{ period }}">
+
+            <!-- Calendar Date Range Picker Component -->
+            <div class="relative" id="dateRangePickerContainer">
+                <button type="button" id="dateRangePickerToggle" aria-haspopup="dialog" aria-expanded="false" class="inline-flex items-center gap-2.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs rounded-2xl text-xs font-semibold text-slate-700 outline-none focus:border-[#283891] focus:ring-2 focus:ring-blue-100 transition cursor-pointer">
+                    <svg class="w-4 h-4 text-[#283891] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span id="dateRangeDisplayLabel" class="font-bold text-slate-800">
+                        {{ curr_start|date:"d M Y" }} &ndash; {{ curr_end|date:"d M Y" }}
+                    </span>
+                    <svg id="dateRangeChevron" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+
+                <!-- Popover Panel -->
+                <div id="dateRangePopover" class="hidden absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200/90 shadow-2xl z-50 p-4 space-y-4">
+                    <!-- Popover Header -->
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-[#283891]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <span class="text-xs font-bold text-slate-900">Filter By Date Range</span>
+                        </div>
+                        <span class="text-[10px] font-semibold text-slate-400 font-mono">{{ curr_start|date:"d M" }} - {{ curr_end|date:"d M Y" }}</span>
+                    </div>
+
+                    <!-- Quick Preset Chips -->
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Quick Presets</span>
+                        <div class="grid grid-cols-3 gap-1.5 text-xs">
+                            <button type="button" data-preset="today" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == 'today' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">Today</button>
+                            <button type="button" data-preset="7days" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == '7days' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">Last 7 Days</button>
+                            <button type="button" data-preset="this_month" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == 'this_month' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">This Month</button>
+                            <button type="button" data-preset="last_month" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == 'last_month' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">Last Month</button>
+                            <button type="button" data-preset="this_year" class="preset-btn px-2.5 py-1.5 rounded-xl border border-slate-200/80 font-semibold text-slate-700 hover:border-[#283891] hover:text-[#283891] hover:bg-blue-50/50 transition text-center {% if period == 'this_year' %}bg-[#edf0fc] border-[#283891] text-[#283891] font-bold{% endif %}">This Year</button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Range Inputs with Calendar -->
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Custom Calendar Dates</span>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label for="calStartDate" class="block text-[10px] font-bold text-slate-500 mb-1">From Date</label>
+                                <input type="date" id="calStartDate" name="start_date" value="{{ custom_start }}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#283891] focus:ring-2 focus:ring-blue-100 transition cursor-pointer">
+                            </div>
+                            <div>
+                                <label for="calEndDate" class="block text-[10px] font-bold text-slate-500 mb-1">To Date</label>
+                                <input type="date" id="calEndDate" name="end_date" value="{{ custom_end }}" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#283891] focus:ring-2 focus:ring-blue-100 transition cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                        <button type="button" id="datePickerCancelBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
+                            Cancel
+                        </button>
+                        <button type="button" id="datePickerApplyBtn" class="px-4 py-1.5 rounded-xl bg-[#283891] hover:bg-blue-600 text-white text-xs font-bold shadow-sm shadow-blue-500/25 transition">
+                            Apply Range
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Personal Performance KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- My Sales Revenue -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">My Total Sales</span>
+                    {% if sales_growth_pct > 0 %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        +{{ sales_growth_pct }}%
+                    </span>
+                    {% elif sales_growth_pct < 0 %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                        </svg>
+                        {{ sales_growth_pct }}%
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200/60">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14"></path>
+                        </svg>
+                        0.0%
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="text-3xl font-extrabold text-slate-900 font-mono tracking-tight mt-2">
+                    {{ request.user.store.currency }}{{ my_sales|floatformat:2 }}
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-500 mt-3 flex justify-between">
+                <span>Previous Period:</span>
+                <span class="font-mono font-semibold">{{ request.user.store.currency }}{{ prev_sales|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        <!-- Invoices Processed -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Invoices Punched</span>
+                    <span class="inline-flex items-center text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                        Counter Volume
+                    </span>
+                </div>
+                <div class="text-3xl font-extrabold text-[#283891] font-mono tracking-tight mt-2">
+                    {{ my_count }}
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-500 mt-3 flex justify-between">
+                <span>Completed Sales</span>
+                <span class="font-semibold text-slate-700">100% Settled</span>
+            </div>
+        </div>
+
+        <!-- Average Basket Value -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-card flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Average Order Size</span>
+                    <span class="inline-flex items-center text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                        Per Bill
+                    </span>
+                </div>
+                <div class="text-3xl font-extrabold text-emerald-600 font-mono tracking-tight mt-2">
+                    {{ request.user.store.currency }}{{ my_aov|floatformat:1 }}
+                </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-500 mt-3 flex justify-between">
+                <span>Avg Revenue per Customer</span>
+                <span class="font-semibold text-slate-700">Basket Size</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Billing Activity Chart -->
+    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">My Sales Trajectory</h3>
+                <p class="text-xs text-slate-500">Timeline of bill amounts collected at your counter during {{ period_label }}.</p>
+            </div>
+        </div>
+
+        {% if chart_data.points %}
+        <div class="w-full overflow-x-auto">
+            <svg class="w-full h-44" viewBox="0 0 700 180" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="staffRevArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#283891" stop-opacity="0.25"/>
+                        <stop offset="100%" stop-color="#283891" stop-opacity="0.0"/>
+                    </linearGradient>
+                </defs>
+                <line x1="20" y1="30" x2="680" y2="30" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="20" y1="80" x2="680" y2="80" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="20" y1="130" x2="680" y2="130" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3 3"/>
+
+                <path d="{{ chart_data.rev_area }}" fill="url(#staffRevArea)"/>
+                <path d="{{ chart_data.rev_line }}" fill="none" stroke="#283891" stroke-width="2.5" stroke-linecap="round"/>
+
+                {% for pt in chart_data.points %}
+                <circle cx="{{ pt.x }}" cy="{{ pt.y_rev }}" r="3.5" fill="#283891" stroke="white" stroke-width="1.5">
+                    <title>{{ pt.date_str }}: {{ request.user.store.currency }}{{ pt.revenue|floatformat:0 }} ({{ pt.invoices_count }} bills)</title>
+                </circle>
+                {% endfor %}
+            </svg>
+            <div class="flex justify-between text-[10px] text-slate-400 font-mono mt-1 px-3">
+                {% for d in days_data %}
+                {% if forloop.first or forloop.last or forloop.counter|divisibleby:3 %}
+                <span>{{ d.date_str }}</span>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="py-8 text-center text-xs text-slate-400">
+            No bills punched during this period.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Top Dispensed Medicines by Me -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Top Medicines Dispensed at My Counter</h3>
+                <p class="text-xs text-slate-500">Medicines you sold the most during {{ period_label }}.</p>
+            </div>
+            <span class="text-xs font-semibold text-slate-400 font-mono">By Units Sold</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50/75 border-b border-slate-100 font-bold text-slate-400 uppercase tracking-wider text-[11px]">
+                    <tr>
+                        <th class="py-3 px-4">Medicine Name</th>
+                        <th class="py-3 px-4 text-center">Units Sold</th>
+                        <th class="py-3 px-4 text-right">Revenue Generated</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                    {% for med in top_medicines %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3 px-4 font-bold text-slate-900">
+                            {{ med.medicine_name }}
+                        </td>
+                        <td class="py-3 px-4 text-center font-mono font-semibold text-slate-700">
+                            {{ med.total_qty }}
+                        </td>
+                        <td class="py-3 px-4 text-right font-mono font-bold text-[#283891]">
+                            {{ request.user.store.currency }}{{ med.total_revenue|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="py-8 text-center text-slate-400">
+                            No medicines dispensed in this timeframe.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('dateRangePickerContainer');
+    if (!container) return;
+
+    const toggleBtn = document.getElementById('dateRangePickerToggle');
+    const chevron = document.getElementById('dateRangeChevron');
+    const popover = document.getElementById('dateRangePopover');
+    const cancelBtn = document.getElementById('datePickerCancelBtn');
+    const applyBtn = document.getElementById('datePickerApplyBtn');
+    const form = document.getElementById('analyticsFilterForm');
+    const periodInput = document.getElementById('filterPeriodInput');
+    const calStart = document.getElementById('calStartDate');
+    const calEnd = document.getElementById('calEndDate');
+
+    function openPopover() {
+        popover.classList.remove('hidden');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+        chevron.classList.add('rotate-180');
+    }
+
+    function closePopover() {
+        popover.classList.add('hidden');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        chevron.classList.remove('rotate-180');
+    }
+
+    toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (popover.classList.contains('hidden')) {
+            openPopover();
+        } else {
+            closePopover();
+        }
+    });
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            closePopover();
+        });
+    }
+
+    // Quick preset click
+    container.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const preset = this.getAttribute('data-preset');
+            if (periodInput) periodInput.value = preset;
+            if (calStart) calStart.disabled = true;
+            if (calEnd) calEnd.disabled = true;
+            form.submit();
+        });
+    });
+
+    // Apply custom range click
+    if (applyBtn) {
+        applyBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (periodInput) periodInput.value = 'custom';
+            if (calStart) calStart.disabled = false;
+            if (calEnd) calEnd.disabled = false;
+            form.submit();
+        });
+    }
+
+    // Close when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!container.contains(e.target)) {
+            closePopover();
+        }
+    });
+
+    // Close on Escape
+    container.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePopover();
+            toggleBtn.focus();
+        }
+    });
+});
+</script>
+{% endblock %}
