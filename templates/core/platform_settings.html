@@ -60,6 +60,13 @@
             <span>Login Page &amp; Footer</span>
         </button>
 
+        <button type="button" onclick="switchSettingsTab('smtp')" id="tabBtn-smtp" class="settings-tab-btn inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            <span>Email &amp; SMTP</span>
+        </button>
+
         <button type="button" onclick="switchSettingsTab('all')" id="tabBtn-all" class="settings-tab-btn inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 ml-auto">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
@@ -318,6 +325,195 @@
                     </div>
                 </div>
 
+                <!-- SECTION 4: Email & Outgoing SMTP Settings -->
+                <div id="section-smtp" class="settings-section bg-white rounded-[24px] shadow-card border border-slate-100 p-6 sm:p-7 space-y-6 transition-all hidden">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-[#283891] flex items-center justify-center font-bold">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold text-slate-900">Outgoing Mail (SMTP) &amp; Store Invitations</h2>
+                                <p class="text-xs text-slate-500">Configure email server to deliver credentials to newly registered store administrators.</p>
+                            </div>
+                        </div>
+
+                        <!-- SMTP Master Active Toggle -->
+                        <div class="flex items-center space-x-2">
+                            <span id="smtpStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {% if settings.smtp_is_enabled %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-600{% endif %}">
+                                {% if settings.smtp_is_enabled %}Active{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="smtp_is_enabled" id="smtpEnableToggle" value="1" {% if settings.smtp_is_enabled %}checked{% endif %} class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#283891]"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Automated Invitation Toggle -->
+                    <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex items-start space-x-3.5">
+                        <div class="pt-0.5">
+                            <input type="checkbox" name="send_welcome_email" id="sendWelcomeEmailToggle" value="1" {% if settings.send_welcome_email %}checked{% endif %} class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]">
+                        </div>
+                        <div>
+                            <label for="sendWelcomeEmailToggle" class="text-xs font-bold text-slate-900 cursor-pointer">
+                                Automatically send onboarding emails to Store Admins upon creation
+                            </label>
+                            <p class="text-[11px] text-slate-600 mt-0.5">
+                                When enabled, creating a Store Admin automatically dispatches their portal URL, username, and temporary password to their email address.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Provider Presets -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider">Quick SMTP Presets</label>
+                            <span class="text-[11px] text-slate-400">Click to autofill server &amp; port settings</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="applySmtpPreset('gmail')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-[#283891] text-xs font-bold text-slate-700 transition flex items-center space-x-1.5 shadow-2xs">
+                                <span>🔴 Gmail (587 TLS)</span>
+                            </button>
+                            <button type="button" onclick="applySmtpPreset('outlook')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-[#283891] text-xs font-bold text-slate-700 transition flex items-center space-x-1.5 shadow-2xs">
+                                <span>🔵 Outlook / 365 (587 TLS)</span>
+                            </button>
+                            <button type="button" onclick="applySmtpPreset('sendgrid')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-[#283891] text-xs font-bold text-slate-700 transition flex items-center space-x-1.5 shadow-2xs">
+                                <span>⚡ SendGrid (587 TLS)</span>
+                            </button>
+                            <button type="button" onclick="applySmtpPreset('ses')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-[#283891] text-xs font-bold text-slate-700 transition flex items-center space-x-1.5 shadow-2xs">
+                                <span>☁️ Amazon SES (587)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Server Host & Port Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="sm:col-span-2">
+                            <label for="smtpHostInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                                SMTP Server Host <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text"
+                                   name="smtp_host"
+                                   id="smtpHostInput"
+                                   value="{{ settings.smtp_host }}"
+                                   placeholder="e.g. smtp.gmail.com or smtp.sendgrid.net"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white font-mono placeholder-slate-400">
+                        </div>
+
+                        <div>
+                            <label for="smtpPortInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                                Port <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="number"
+                                   name="smtp_port"
+                                   id="smtpPortInput"
+                                   value="{{ settings.smtp_port|default:'587' }}"
+                                   placeholder="587"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white font-mono placeholder-slate-400">
+                        </div>
+                    </div>
+
+                    <!-- Auth: Username & Password -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="smtpUserInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                                SMTP Username / Email
+                            </label>
+                            <input type="text"
+                                   name="smtp_user"
+                                   id="smtpUserInput"
+                                   value="{{ settings.smtp_user }}"
+                                   placeholder="e.g. notifications@yourdomain.com"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white placeholder-slate-400">
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label for="smtpPasswordInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                    SMTP Password / App Key
+                                </label>
+                                <button type="button" onclick="toggleSmtpPasswordVisibility()" class="text-[10px] font-bold text-[#283891] hover:underline" id="togglePwBtn">
+                                    Show
+                                </button>
+                            </div>
+                            <input type="password"
+                                   name="smtp_password"
+                                   id="smtpPasswordInput"
+                                   value="{{ settings.smtp_password }}"
+                                   placeholder="••••••••••••••••"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white placeholder-slate-400 font-mono">
+                            <p class="text-[10px] text-slate-400 mt-1">For Gmail, use a 16-character Google App Password with 2FA enabled.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sender Name & Encryption Options -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="smtpFromEmailInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                                Default "From" Address
+                            </label>
+                            <input type="text"
+                                   name="smtp_default_from_email"
+                                   id="smtpFromEmailInput"
+                                   value="{{ settings.smtp_default_from_email }}"
+                                   placeholder="e.g. Azmed Support &lt;noreply@azmed.com&gt;"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white placeholder-slate-400">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5">
+                                Connection Security
+                            </label>
+                            <div class="flex items-center space-x-6 pt-1">
+                                <label class="inline-flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                    <input type="checkbox" name="smtp_use_tls" id="smtpUseTls" value="1" {% if settings.smtp_use_tls %}checked{% endif %} class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]">
+                                    <span>Use TLS (Port 587)</span>
+                                </label>
+                                <label class="inline-flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                    <input type="checkbox" name="smtp_use_ssl" id="smtpUseSsl" value="1" {% if settings.smtp_use_ssl %}checked{% endif %} class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]">
+                                    <span>Use SSL (Port 465)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- In-Page Live SMTP Tester -->
+                    <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Test Outgoing Mail Connection</h3>
+                            </div>
+                            <span class="text-[11px] text-slate-400">Live Delivery Check</span>
+                        </div>
+                        <p class="text-xs text-slate-600">Send an immediate verification email to verify your SMTP server, port, and authentication credentials.</p>
+
+                        <div class="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
+                            <input type="email"
+                                   id="smtpTestRecipient"
+                                   value="{{ request.user.email }}"
+                                   placeholder="Enter test recipient email..."
+                                   class="w-full sm:flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 outline-none focus:border-[#283891] focus:ring-2 focus:ring-blue-100 transition">
+                            
+                            <button type="button"
+                                    onclick="runSmtpTest()"
+                                    id="smtpTestBtn"
+                                    class="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition shadow-xs cursor-pointer">
+                                <svg id="smtpTestIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                                <span id="smtpTestBtnText">Send Test Email</span>
+                            </button>
+                        </div>
+
+                        <!-- Dynamic Test Result Message Banner -->
+                        <div id="smtpTestResult" class="hidden text-xs p-3.5 rounded-xl font-medium transition-all"></div>
+                    </div>
+                </div>
+
                 <!-- Bottom Save & Action Card -->
                 <div class="p-4 sm:p-5 rounded-[20px] bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
                     <div class="flex items-center space-x-2 text-xs text-slate-500">
@@ -359,6 +555,9 @@
                         </button>
                         <button type="button" onclick="switchSimulatorView('tab')" id="simBtn-tab" class="sim-view-btn px-2.5 py-1 rounded-lg transition text-slate-400 hover:text-white">
                             Browser
+                        </button>
+                        <button type="button" onclick="switchSimulatorView('smtp')" id="simBtn-smtp" class="sim-view-btn px-2.5 py-1 rounded-lg transition text-slate-400 hover:text-white">
+                            Email
                         </button>
                     </div>
                 </div>
@@ -513,6 +712,40 @@
                     </div>
                 </div>
 
+                <!-- SIMULATOR VIEW 4: Store Admin Welcome Email Simulator -->
+                <div id="simView-smtp" class="sim-panel space-y-3 hidden">
+                    <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span>Store Admin Onboarding Email</span>
+                        <span class="text-emerald-400">Live Preview</span>
+                    </div>
+
+                    <div class="rounded-xl bg-slate-900 border border-slate-700/60 p-4 space-y-3 text-xs">
+                        <div class="pb-2 border-b border-slate-800 text-slate-400 text-[11px]">
+                            <div><strong>To:</strong> storeadmin@pharmacy.com</div>
+                            <div class="mt-0.5"><strong>Subject:</strong> Welcome to {{ settings.brand_name }} - Store Admin Credentials</div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 text-slate-800 space-y-2.5 shadow-sm">
+                            <div class="p-2.5 bg-[#283891] rounded-lg text-center text-white font-extrabold text-sm tracking-wide">
+                                {{ settings.brand_name }}
+                            </div>
+                            <p class="text-[11px] text-slate-700 font-bold mb-0">Welcome aboard, Dr. Rajesh!</p>
+                            <p class="text-[10px] text-slate-500 mt-0">You are registered as Store Administrator for <strong>City Care Pharmacy (CCP-01)</strong>.</p>
+                            
+                            <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[10px] space-y-1 font-mono">
+                                <div><span class="text-slate-500 font-sans">Portal:</span> https://erp.azmobia.com</div>
+                                <div><span class="text-slate-500 font-sans">User:</span> rajesh_admin</div>
+                                <div><span class="text-slate-500 font-sans">Password:</span> ••••••••</div>
+                            </div>
+
+                            <div class="text-center pt-1">
+                                <span class="inline-block px-3 py-1 bg-[#283891] text-white font-bold rounded-lg text-[10px]">
+                                    Log In to Pharmacy ERP &rarr;
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -533,7 +766,7 @@
         }
 
         // Show/hide sections
-        const sections = ['brand', 'logo', 'login'];
+        const sections = ['brand', 'logo', 'login', 'smtp'];
         if (tabName === 'all') {
             sections.forEach(s => {
                 const el = document.getElementById(`section-${s}`);
@@ -554,6 +787,7 @@
             if (tabName === 'login') switchSimulatorView('login');
             else if (tabName === 'brand') switchSimulatorView('login');
             else if (tabName === 'logo') switchSimulatorView('sidebar');
+            else if (tabName === 'smtp') switchSimulatorView('smtp');
         }
     }
 
@@ -750,6 +984,142 @@
         if (simLoginIcon) simLoginIcon.innerHTML = defaultSvgEmblem;
         if (simSidebarIcon) simSidebarIcon.innerHTML = defaultSvgEmblem;
         if (simTabIcon) simTabIcon.innerHTML = defaultSvgEmblem;
+    }
+
+    // SMTP Toggle Status Badge Live Sync
+    const smtpEnableToggle = document.getElementById('smtpEnableToggle');
+    const smtpStatusBadge = document.getElementById('smtpStatusBadge');
+    if (smtpEnableToggle && smtpStatusBadge) {
+        smtpEnableToggle.addEventListener('change', function() {
+            if (this.checked) {
+                smtpStatusBadge.textContent = 'Active';
+                smtpStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700';
+            } else {
+                smtpStatusBadge.textContent = 'Disabled';
+                smtpStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-600';
+            }
+        });
+    }
+
+    // Toggle SMTP Password Visibility
+    function toggleSmtpPasswordVisibility() {
+        const pwInput = document.getElementById('smtpPasswordInput');
+        const btn = document.getElementById('togglePwBtn');
+        if (pwInput) {
+            if (pwInput.type === 'password') {
+                pwInput.type = 'text';
+                if (btn) btn.textContent = 'Hide';
+            } else {
+                pwInput.type = 'password';
+                if (btn) btn.textContent = 'Show';
+            }
+        }
+    }
+
+    // Quick SMTP Provider Presets
+    function applySmtpPreset(provider) {
+        const hostInput = document.getElementById('smtpHostInput');
+        const portInput = document.getElementById('smtpPortInput');
+        const tlsCheckbox = document.getElementById('smtpUseTls');
+        const sslCheckbox = document.getElementById('smtpUseSsl');
+        const fromEmailInput = document.getElementById('smtpFromEmailInput');
+        const brand = (document.getElementById('brandNameInput') ? document.getElementById('brandNameInput').value : 'Azmed') || 'Azmed';
+
+        if (provider === 'gmail') {
+            if (hostInput) hostInput.value = 'smtp.gmail.com';
+            if (portInput) portInput.value = '587';
+            if (tlsCheckbox) tlsCheckbox.checked = true;
+            if (sslCheckbox) sslCheckbox.checked = false;
+            if (fromEmailInput && !fromEmailInput.value) fromEmailInput.value = `${brand} Support <notifications@gmail.com>`;
+        } else if (provider === 'outlook') {
+            if (hostInput) hostInput.value = 'smtp.office365.com';
+            if (portInput) portInput.value = '587';
+            if (tlsCheckbox) tlsCheckbox.checked = true;
+            if (sslCheckbox) sslCheckbox.checked = false;
+        } else if (provider === 'sendgrid') {
+            if (hostInput) hostInput.value = 'smtp.sendgrid.net';
+            if (portInput) portInput.value = '587';
+            if (tlsCheckbox) tlsCheckbox.checked = true;
+            if (sslCheckbox) sslCheckbox.checked = false;
+            const userInput = document.getElementById('smtpUserInput');
+            if (userInput && !userInput.value) userInput.value = 'apikey';
+        } else if (provider === 'ses') {
+            if (hostInput) hostInput.value = 'email-smtp.us-east-1.amazonaws.com';
+            if (portInput) portInput.value = '587';
+            if (tlsCheckbox) tlsCheckbox.checked = true;
+            if (sslCheckbox) sslCheckbox.checked = false;
+        }
+    }
+
+    // Live In-Page SMTP Test AJAX Runner
+    function runSmtpTest() {
+        const recipientInput = document.getElementById('smtpTestRecipient');
+        const resultDiv = document.getElementById('smtpTestResult');
+        const btn = document.getElementById('smtpTestBtn');
+        const btnText = document.getElementById('smtpTestBtnText');
+        const btnIcon = document.getElementById('smtpTestIcon');
+
+        if (!recipientInput || !recipientInput.value.trim()) {
+            if (resultDiv) {
+                resultDiv.className = 'text-xs p-3.5 rounded-xl font-medium bg-rose-50 border border-rose-200 text-rose-800 block';
+                resultDiv.textContent = 'Please enter a recipient email address to send the test message to.';
+            }
+            if (recipientInput) recipientInput.focus();
+            return;
+        }
+
+        // Show loading state
+        btn.disabled = true;
+        btn.classList.add('opacity-75');
+        btnText.textContent = 'Testing connection...';
+
+        const formData = new FormData();
+        formData.append('test_email', recipientInput.value.trim());
+        formData.append('smtp_host', document.getElementById('smtpHostInput')?.value || '');
+        formData.append('smtp_port', document.getElementById('smtpPortInput')?.value || '');
+        formData.append('smtp_user', document.getElementById('smtpUserInput')?.value || '');
+        formData.append('smtp_password', document.getElementById('smtpPasswordInput')?.value || '');
+        formData.append('smtp_use_tls', document.getElementById('smtpUseTls')?.checked ? '1' : '0');
+        formData.append('smtp_use_ssl', document.getElementById('smtpUseSsl')?.checked ? '1' : '0');
+        formData.append('smtp_default_from_email', document.getElementById('smtpFromEmailInput')?.value || '');
+
+        // Fetch CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+        fetch("{% url 'core:test_smtp' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.classList.remove('opacity-75');
+            btnText.textContent = 'Send Test Email';
+
+            if (resultDiv) {
+                resultDiv.classList.remove('hidden');
+                if (data.success) {
+                    resultDiv.className = 'text-xs p-3.5 rounded-xl font-medium bg-emerald-50 border border-emerald-200 text-emerald-800 block';
+                    resultDiv.innerHTML = `<strong>✓ Success:</strong> ${data.message}`;
+                } else {
+                    resultDiv.className = 'text-xs p-3.5 rounded-xl font-medium bg-rose-50 border border-rose-200 text-rose-800 block';
+                    resultDiv.innerHTML = `<strong>✕ Delivery Failed:</strong> ${data.message}`;
+                }
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.classList.remove('opacity-75');
+            btnText.textContent = 'Send Test Email';
+            if (resultDiv) {
+                resultDiv.classList.remove('hidden');
+                resultDiv.className = 'text-xs p-3.5 rounded-xl font-medium bg-rose-50 border border-rose-200 text-rose-800 block';
+                resultDiv.innerHTML = `<strong>✕ Error:</strong> ${err.message || 'Network error occurred while contacting test endpoint.'}`;
+            }
+        });
     }
 </script>
 {% endblock %}

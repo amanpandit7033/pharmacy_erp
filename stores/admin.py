@@ -27,3 +27,44 @@ class StoreAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    actions = ['hard_delete_selected_stores', 'soft_delete_selected_stores', 'restore_selected_stores']
+
+    def get_queryset(self, request):
+        """Show all stores including soft-deleted ones in Django Admin."""
+        return Store.all_objects.all()
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+    def delete_model(self, request, obj):
+        """Perform permanent hard-deletion when deleting from Django Admin detail view."""
+        obj.hard_delete()
+
+    def delete_queryset(self, request, queryset):
+        """Permanently delete selected stores in bulk from Django Admin."""
+        count = queryset.count()
+        for item in queryset:
+            item.hard_delete()
+        from django.contrib import messages
+        self.message_user(request, f"Permanently deleted {count} pharmacy store(s) and associated tenant records.", messages.SUCCESS)
+
+    @admin.action(description="Permanently delete selected stores (Hard Delete)")
+    def hard_delete_selected_stores(self, request, queryset):
+        count = queryset.count()
+        for item in queryset:
+            item.hard_delete()
+        from django.contrib import messages
+        self.message_user(request, f"Permanently deleted {count} pharmacy store(s) and associated tenant records.", messages.SUCCESS)
+
+    @admin.action(description="Soft delete / Deactivate selected stores")
+    def soft_delete_selected_stores(self, request, queryset):
+        count = queryset.update(is_active=False)
+        from django.contrib import messages
+        self.message_user(request, f"Deactivated {count} pharmacy store(s).", messages.SUCCESS)
+
+    @admin.action(description="Restore selected stores (Set Active)")
+    def restore_selected_stores(self, request, queryset):
+        count = queryset.update(is_active=True)
+        from django.contrib import messages
+        self.message_user(request, f"Restored {count} pharmacy store(s).", messages.SUCCESS)
+

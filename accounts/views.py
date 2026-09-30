@@ -230,8 +230,28 @@ class StoreAdminCreateView(RoleRequiredMixin, CreateView):
     allowed_roles = [User.Role.SUPER_ADMIN]
 
     def form_valid(self, form):
-        messages.success(self.request, f"Store admin '{form.instance.username}' created for store '{form.instance.store.name}'.")
-        return super().form_valid(form)
+        raw_password = form.cleaned_data.get('password')
+        response = super().form_valid(form)
+        user = self.object
+
+        from core.emails import send_store_admin_welcome_email
+        email_sent, email_msg = send_store_admin_welcome_email(user, raw_password, request=self.request)
+        if email_sent:
+            messages.success(
+                self.request,
+                f"Store admin '{user.username}' created! A professional onboarding email with login credentials was sent to {user.email}."
+            )
+        elif user.email:
+            messages.warning(
+                self.request,
+                f"Store admin '{user.username}' created successfully, but welcome email could not be sent ({email_msg}). You can configure SMTP in Platform Settings."
+            )
+        else:
+            messages.success(
+                self.request,
+                f"Store admin '{user.username}' created for store '{user.store.name if user.store else ''}'."
+            )
+        return response
 
 
 class StoreAdminUpdateView(RoleRequiredMixin, UpdateView):
@@ -246,11 +266,69 @@ class StoreAdminUpdateView(RoleRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         pw_changed = bool(form.cleaned_data.get('new_password'))
-        msg = f"Store admin '{form.instance.username}' updated."
+        new_password = form.cleaned_data.get('new_password')
+        response = super().form_valid(form)
+        user = self.object
+
+        msg = f"Store admin '{user.username}' updated."
         if pw_changed:
             msg += " Password has been updated successfully."
+            # Optionally send updated credentials email if user has email
+            if user.email:
+                from core.emails import send_store_admin_welcome_email
+                email_sent, email_msg = send_store_admin_welcome_email(user, new_password, request=self.request)
+                if email_sent:
+                    msg += f" An updated credentials email was dispatched to {user.email}."
         messages.success(self.request, msg)
-        return super().form_valid(form)
+        return response
+
+
+class ResendStoreAdminWelcomeEmailView(RoleRequiredMixin, View):
+    """
+    Super Admin manually triggering or resending store admin welcome email.
+    Generates a fresh login password, updates user credentials, and emails it.
+    """
+    allowed_roles = [User.Role.SUPER_ADMIN]
+
+    def post(self, request, pk, *args, **kwargs):
+        admin_user = get_object_or_404(User, pk=pk, role=User.Role.STORE_ADMIN)
+        if not admin_user.email:
+            messages.error(request, f"Store admin '{admin_user.username}' does not have an email address configured.")
+            return redirect('accounts:store_admin_list')
+
+        import secrets
+        import string
+
+        # Generate a strong readable password or use provided one
+        custom_password = (request.POST.get('password') or '').strip()
+        if custom_password:
+            new_password = custom_password
+        else:
+            chars = string.ascii_letters + string.digits + "!@#$%"
+            new_password = ''.join(secrets.choice(chars) for _ in range(10))
+
+        # Update and save the active password for this store admin
+        admin_user.set_password(new_password)
+        admin_user.save(update_fields=['password'])
+
+        from core.emails import send_store_admin_welcome_email
+        email_sent, email_msg = send_store_admin_welcome_email(
+            admin_user,
+            raw_password=new_password,
+            request=request
+        )
+        if email_sent:
+            messages.success(
+                request,
+                f"New password generated ({new_password}) and credentials email sent to {admin_user.email}."
+            )
+        else:
+            messages.warning(
+                request,
+                f"Password was updated to '{new_password}', but email could not be sent: {email_msg}"
+            )
+
+        return redirect('accounts:store_admin_list')
 
 
 # Super Admin: Store Staff Management (All stores staff list)

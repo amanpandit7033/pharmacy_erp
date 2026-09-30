@@ -6,6 +6,41 @@ CHECKBOX_CLASSES = 'w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[
 
 
 class StoreForm(forms.ModelForm):
+    # Optional Primary Store Admin Onboarding
+    create_store_admin = forms.BooleanField(
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': CHECKBOX_CLASSES, 'id': 'createStoreAdminToggle'})
+    )
+    admin_first_name = forms.CharField(
+        required=False,
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Rajesh'})
+    )
+    admin_last_name = forms.CharField(
+        required=False,
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Kumar'})
+    )
+    admin_email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'admin@pharmacy.com'})
+    )
+    admin_phone = forms.CharField(
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': '+91 98765 43210'})
+    )
+    admin_username = forms.CharField(
+        required=False,
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. rajesh_care'})
+    )
+    admin_password = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Initial password (min 6 characters)'})
+    )
+
     class Meta:
         model = Store
         fields = [
@@ -26,6 +61,33 @@ class StoreForm(forms.ModelForm):
             'currency': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'is_active': forms.CheckboxInput(attrs={'class': CHECKBOX_CLASSES}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        create_admin = cleaned_data.get('create_store_admin')
+
+        # Only validate admin fields if creating a store and checkbox is checked
+        if not self.instance.pk and create_admin:
+            username = (cleaned_data.get('admin_username') or '').strip()
+            email = (cleaned_data.get('admin_email') or '').strip()
+            password = cleaned_data.get('admin_password')
+
+            if not username:
+                self.add_error('admin_username', 'Username is required to create the administrator account.')
+            else:
+                from accounts.models import User
+                if User.objects.filter(username__iexact=username).exists():
+                    self.add_error('admin_username', f"Username '{username}' is already in use. Please pick another.")
+
+            if not email:
+                self.add_error('admin_email', 'Email address is required to deliver onboarding login credentials.')
+
+            if not password:
+                self.add_error('admin_password', 'Initial password is required for the new administrator.')
+            elif len(password) < 6:
+                self.add_error('admin_password', 'Password must be at least 6 characters.')
+
+        return cleaned_data
 
 
 class StoreSettingsForm(forms.ModelForm):

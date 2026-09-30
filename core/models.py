@@ -148,6 +148,52 @@ class PlatformSetting(TimeStampedModel):
         help_text="Enable or disable footer visibility on the login page."
     )
 
+    # SMTP / Email Configuration
+    smtp_is_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable automated email dispatch (store invitations, credentials, alerts)."
+    )
+    smtp_host = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text="SMTP server host (e.g., smtp.gmail.com, smtp.office365.com, smtp.sendgrid.net)"
+    )
+    smtp_port = models.PositiveIntegerField(
+        default=587,
+        help_text="SMTP server port (typically 587 for TLS or 465 for SSL)"
+    )
+    smtp_user = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text="SMTP account username or sender email address."
+    )
+    smtp_password = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text="SMTP account password or app-specific application password."
+    )
+    smtp_use_tls = models.BooleanField(
+        default=True,
+        help_text="Use TLS connection security (Recommended for port 587)."
+    )
+    smtp_use_ssl = models.BooleanField(
+        default=False,
+        help_text="Use SSL connection security (Recommended for port 465)."
+    )
+    smtp_default_from_email = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text="Sender email appearing in 'From:' field (e.g., Azmed ERP <noreply@azmed.com>)."
+    )
+    send_welcome_email = models.BooleanField(
+        default=True,
+        help_text="Automatically send professional onboarding email with login credentials when a store admin is created."
+    )
+
     class Meta:
         verbose_name = 'Platform Setting'
         verbose_name_plural = 'Platform Settings'

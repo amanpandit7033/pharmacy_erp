@@ -119,6 +119,89 @@
                 </div>
             </div>
 
+            {% if not object %}
+            <!-- Section 4: Primary Store Administrator & Automated Email Invitation -->
+            <div class="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-100/90 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-indigo-100">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-6 h-6 rounded-lg bg-[#283891] text-white flex items-center justify-center font-bold text-xs shadow-2xs">4</div>
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Primary Store Administrator</h3>
+                            <p class="text-[11px] text-slate-500">Create the manager login and send onboarding credentials via email.</p>
+                        </div>
+                    </div>
+
+                    <label class="flex items-center space-x-2 text-xs font-bold text-[#283891] cursor-pointer select-none">
+                        <input type="checkbox" name="create_store_admin" id="createStoreAdminToggle" {% if form.create_store_admin.value != False %}checked{% endif %} class="w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]">
+                        <span>Create &amp; Invite Admin Now</span>
+                    </label>
+                </div>
+
+                <div id="adminFieldsContainer" class="space-y-4 {% if form.create_store_admin.value == False %}hidden{% endif %}">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.admin_first_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Admin First Name</label>
+                            <input type="text" name="admin_first_name" id="{{ form.admin_first_name.id_for_label }}" value="{{ form.admin_first_name.value|default:'' }}" placeholder="e.g. Rajesh" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        </div>
+
+                        <div>
+                            <label for="{{ form.admin_last_name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Admin Last Name</label>
+                            <input type="text" name="admin_last_name" id="{{ form.admin_last_name.id_for_label }}" value="{{ form.admin_last_name.value|default:'' }}" placeholder="e.g. Kumar" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.admin_email.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Admin Email Address <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="email" name="admin_email" id="{{ form.admin_email.id_for_label }}" value="{{ form.admin_email.value|default:'' }}" placeholder="admin@storebranch.com" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                            <p class="text-[10px] text-slate-500 mt-1">Credentials &amp; portal link will be emailed to this address.</p>
+                            {% if form.admin_email.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.admin_email.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.admin_phone.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Admin Phone</label>
+                            <input type="text" name="admin_phone" id="{{ form.admin_phone.id_for_label }}" value="{{ form.admin_phone.value|default:'' }}" placeholder="+91 98765 43210" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label for="{{ form.admin_username.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                                    Admin Username <span class="text-rose-500">*</span>
+                                </label>
+                                <button type="button" onclick="autoSuggestUsername()" class="text-[10px] font-bold text-[#283891] hover:underline">
+                                    Suggest from Code
+                                </button>
+                            </div>
+                            <input type="text" name="admin_username" id="{{ form.admin_username.id_for_label }}" value="{{ form.admin_username.value|default:'' }}" placeholder="e.g. rajesh_store01" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-mono font-medium outline-none transition">
+                            {% if form.admin_username.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.admin_username.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label for="{{ form.admin_password.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                                    Initial Password <span class="text-rose-500">*</span>
+                                </label>
+                                <button type="button" onclick="generateStrongAdminPassword()" class="text-[10px] font-bold text-[#283891] hover:underline">
+                                    Generate Random
+                                </button>
+                            </div>
+                            <div class="relative">
+                                <input type="password" name="admin_password" id="{{ form.admin_password.id_for_label }}" value="{{ form.admin_password.value|default:'' }}" placeholder="••••••••" class="w-full px-3.5 py-2.5 pr-14 rounded-xl border border-slate-200/90 bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-mono outline-none transition">
+                                <button type="button" onclick="toggleStoreAdminPw()" id="storeAdminPwBtn" class="absolute right-2.5 top-2.5 text-[10px] font-bold text-slate-400 hover:text-slate-700">
+                                    Show
+                                </button>
+                            </div>
+                            {% if form.admin_password.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.admin_password.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Footer Action Buttons -->
             <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
                 <a href="{% url 'stores:store_list' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
@@ -130,6 +213,86 @@
             </div>
         </form>
     </div>
+
+    {% if object %}
+    <!-- Danger Zone Card -->
+    <div class="bg-white rounded-2xl p-6 border border-rose-200/80 shadow-card">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h3 class="text-xs font-bold text-rose-600 uppercase tracking-wider">Danger Zone</h3>
+                <h4 class="text-sm font-bold text-slate-800 mt-1">Delete Pharmacy Store</h4>
+                <p class="text-xs text-slate-500 mt-0.5">Permanently remove this store, its staff users, medicine stock batches, and transactions.</p>
+            </div>
+            <form action="{% url 'stores:store_delete' object.pk %}" method="POST" onsubmit="return confirm('WARNING: Are you sure you want to PERMANENTLY delete store \'{{ object.name|escapejs }}\' and all its associated data? This action CANNOT be undone.');">
+                {% csrf_token %}
+                <input type="hidden" name="delete_type" value="permanent">
+                <button type="submit" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-xs transition active:scale-[0.98] whitespace-nowrap cursor-pointer">
+                    Delete This Store
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<script>
+    const adminToggle = document.getElementById('createStoreAdminToggle');
+    const adminContainer = document.getElementById('adminFieldsContainer');
+    if (adminToggle && adminContainer) {
+        adminToggle.addEventListener('change', function() {
+            if (this.checked) {
+                adminContainer.classList.remove('hidden');
+            } else {
+                adminContainer.classList.add('hidden');
+            }
+        });
+    }
+
+    function autoSuggestUsername() {
+        const codeInput = document.getElementById('{{ form.code.id_for_label }}');
+        const usernameInput = document.getElementById('{{ form.admin_username.id_for_label }}');
+        if (codeInput && usernameInput) {
+            const rawCode = codeInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (rawCode) {
+                usernameInput.value = `${rawCode}_admin`;
+            } else {
+                usernameInput.value = 'store_admin';
+            }
+            usernameInput.dispatchEvent(new Event('input'));
+            usernameInput.focus();
+        }
+    }
+
+    function generateStrongAdminPassword() {
+        const pwInput = document.getElementById('{{ form.admin_password.id_for_label }}');
+        if (pwInput) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+            let pass = '';
+            for (let i = 0; i < 10; i++) {
+                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            pwInput.value = pass;
+            pwInput.type = 'text';
+            const btn = document.getElementById('storeAdminPwBtn');
+            if (btn) btn.textContent = 'Hide';
+            pwInput.focus();
+        }
+    }
+
+    function toggleStoreAdminPw() {
+        const pwInput = document.getElementById('{{ form.admin_password.id_for_label }}');
+        const btn = document.getElementById('storeAdminPwBtn');
+        if (pwInput) {
+            if (pwInput.type === 'password') {
+                pwInput.type = 'text';
+                if (btn) btn.textContent = 'Hide';
+            } else {
+                pwInput.type = 'password';
+                if (btn) btn.textContent = 'Show';
+            }
+        }
+    }
+</script>
 {% endblock %}
+
 

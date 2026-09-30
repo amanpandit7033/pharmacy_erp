@@ -246,7 +246,58 @@ class PlatformSettingsView(RoleRequiredMixin, View):
                 settings_obj.logo_icon.delete(save=False)
             settings_obj.logo_icon = logo_file
 
+        # SMTP Outgoing Mail Settings
+        settings_obj.smtp_is_enabled = request.POST.get('smtp_is_enabled') in ['1', 'on', 'true', 'True']
+        settings_obj.send_welcome_email = request.POST.get('send_welcome_email') in ['1', 'on', 'true', 'True']
+        settings_obj.smtp_host = request.POST.get('smtp_host', '').strip()
+        port_raw = request.POST.get('smtp_port', '').strip()
+        settings_obj.smtp_port = int(port_raw) if port_raw.isdigit() else 587
+        settings_obj.smtp_user = request.POST.get('smtp_user', '').strip()
+        
+        # Only update password if a new one was provided, otherwise preserve existing
+        new_smtp_password = request.POST.get('smtp_password', '')
+        if new_smtp_password:
+            settings_obj.smtp_password = new_smtp_password.strip()
+
+        settings_obj.smtp_use_tls = request.POST.get('smtp_use_tls') in ['1', 'on', 'true', 'True']
+        settings_obj.smtp_use_ssl = request.POST.get('smtp_use_ssl') in ['1', 'on', 'true', 'True']
+        settings_obj.smtp_default_from_email = request.POST.get('smtp_default_from_email', '').strip()
+
         settings_obj.save()
-        messages.success(request, f"Platform settings updated! Brand name is now '{settings_obj.brand_name}'.")
+        messages.success(request, f"Platform settings and SMTP configuration updated successfully.")
         return redirect('core:platform_settings')
+
+
+class TestSmtpConnectionView(RoleRequiredMixin, View):
+    """
+    AJAX endpoint for testing the configured SMTP credentials live.
+    Accessible exclusively by Super Admin.
+    """
+    allowed_roles = [User.Role.SUPER_ADMIN]
+
+    def post(self, request, *args, **kwargs):
+        from core.emails import test_smtp_connection
+        recipient_email = request.POST.get('test_email', '').strip()
+        if not recipient_email:
+            return JsonResponse({'success': False, 'message': 'Please enter a recipient email address to test.'})
+
+        settings_obj = PlatformSetting.get_settings()
+
+        # If test request includes temporarily edited form values, test with those values
+        temp_host = request.POST.get('smtp_host', '').strip()
+        if temp_host:
+            settings_obj.smtp_host = temp_host
+            port_raw = request.POST.get('smtp_port', '').strip()
+            settings_obj.smtp_port = int(port_raw) if port_raw.isdigit() else 587
+            settings_obj.smtp_user = request.POST.get('smtp_user', '').strip()
+            temp_pass = request.POST.get('smtp_password', '').strip()
+            if temp_pass:
+                settings_obj.smtp_password = temp_pass
+            settings_obj.smtp_use_tls = request.POST.get('smtp_use_tls') in ['1', 'on', 'true', 'True']
+            settings_obj.smtp_use_ssl = request.POST.get('smtp_use_ssl') in ['1', 'on', 'true', 'True']
+            settings_obj.smtp_default_from_email = request.POST.get('smtp_default_from_email', '').strip()
+            settings_obj.smtp_is_enabled = True
+
+        success, msg = test_smtp_connection(recipient_email, platform_setting=settings_obj)
+        return JsonResponse({'success': success, 'message': msg})
 

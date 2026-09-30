@@ -19,6 +19,7 @@ urlpatterns = [
     path('store-admins/', views.StoreAdminListView.as_view(), name='store_admin_list'),
     path('store-admins/create/', views.StoreAdminCreateView.as_view(), name='store_admin_create'),
     path('store-admins/<int:pk>/edit/', views.StoreAdminUpdateView.as_view(), name='store_admin_edit'),
+    path('store-admins/<int:pk>/resend-email/', views.ResendStoreAdminWelcomeEmailView.as_view(), name='store_admin_resend_email'),
     path('store-staff/', views.AllStaffListView.as_view(), name='all_staff_list'),
 
     # Impersonation (Login as user without password)

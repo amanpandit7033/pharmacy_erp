@@ -18,6 +18,13 @@ class PlatformSettingAdmin(admin.ModelAdmin):
         ('Login Footer Settings', {
             'fields': ('show_login_footer', 'footer_text', 'footer_contact_info')
         }),
+        ('Outgoing SMTP & Email Configuration', {
+            'fields': (
+                'smtp_is_enabled', 'send_welcome_email',
+                'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password',
+                'smtp_use_tls', 'smtp_use_ssl', 'smtp_default_from_email'
+            )
+        }),
         ('Audit Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)

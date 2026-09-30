@@ -81,8 +81,52 @@ class StoreCreateView(RoleRequiredMixin, CreateView):
     allowed_roles = [User.Role.SUPER_ADMIN]
 
     def form_valid(self, form):
-        messages.success(self.request, f"Store '{form.instance.name}' created successfully.")
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        store = self.object
+
+        if form.cleaned_data.get('create_store_admin'):
+            admin_username = (form.cleaned_data.get('admin_username') or '').strip()
+            admin_email = (form.cleaned_data.get('admin_email') or '').strip()
+            admin_password = form.cleaned_data.get('admin_password')
+            first_name = (form.cleaned_data.get('admin_first_name') or '').strip()
+            last_name = (form.cleaned_data.get('admin_last_name') or '').strip()
+            admin_phone = (form.cleaned_data.get('admin_phone') or '').strip()
+
+            if admin_username and admin_password:
+                admin_user = User.objects.create_user(
+                    username=admin_username,
+                    email=admin_email,
+                    password=admin_password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone=admin_phone,
+                    role=User.Role.STORE_ADMIN,
+                    store=store
+                )
+
+                from core.emails import send_store_admin_welcome_email
+                email_sent, email_msg = send_store_admin_welcome_email(
+                    admin_user, admin_password, request=self.request
+                )
+                if email_sent:
+                    messages.success(
+                        self.request,
+                        f"Pharmacy store '{store.name}' and Primary Store Admin '{admin_user.username}' created! A professional onboarding email with login credentials has been delivered to {admin_email}."
+                    )
+                elif admin_email:
+                    messages.warning(
+                        self.request,
+                        f"Pharmacy store '{store.name}' and Store Admin '{admin_user.username}' created, but onboarding email could not be sent ({email_msg}). You can configure SMTP under Platform Settings."
+                    )
+                else:
+                    messages.success(
+                        self.request,
+                        f"Pharmacy store '{store.name}' and Store Admin '{admin_user.username}' created successfully."
+                    )
+                return response
+
+        messages.success(self.request, f"Store '{store.name}' created successfully.")
+        return response
 
 
 class StoreUpdateView(RoleRequiredMixin, UpdateView):
@@ -109,6 +153,25 @@ class StoreToggleActiveView(RoleRequiredMixin, View):
         store.save(update_fields=['is_active'])
         status_str = "activated" if store.is_active else "deactivated"
         messages.success(request, f"Store '{store.name}' has been {status_str}.")
+        return redirect('stores:store_list')
+
+
+class StoreDeleteView(RoleRequiredMixin, View):
+    allowed_roles = [User.Role.SUPER_ADMIN]
+
+    def post(self, request, pk, *args, **kwargs):
+        store = get_object_or_404(Store.all_objects.all(), pk=pk)
+        name = store.name
+        code = store.code
+        delete_type = request.POST.get('delete_type', 'permanent')
+
+        if delete_type == 'soft':
+            store.delete()
+            messages.success(request, f"Store '{name}' ({code}) has been deactivated (soft-deleted).")
+        else:
+            store.hard_delete()
+            messages.success(request, f"Store '{name}' ({code}) and all related tenant records were permanently deleted.")
+
         return redirect('stores:store_list')
 
 

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SMTP Verification Test</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="padding: 30px 15px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);">
+                    <tr>
+                        <td style="background-color: #16a34a; padding: 24px; text-align: center; color: #ffffff;">
+                            <div style="font-size: 32px; line-height: 1; margin-bottom: 8px;">✓</div>
+                            <h2 style="margin: 0; font-size: 20px; font-weight: 800;">SMTP Test Successful!</h2>
+                            <p style="margin: 4px 0 0; font-size: 13px; color: #dcfce7;">{{ brand_name }} Email Service is Active</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 28px 24px;">
+                            <p style="font-size: 14px; color: #334155; margin-top: 0;">
+                                This test email confirms that your outgoing SMTP server credentials in <strong>{{ brand_name }} Platform Settings</strong> are configured and functioning correctly.
+                            </p>
+                            <div style="background-color: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0; font-size: 12px; color: #475569; margin: 18px 0;">
+                                <div><strong>SMTP Host:</strong> {{ smtp_host }}</div>
+                                <div style="margin-top: 6px;"><strong>Port:</strong> {{ smtp_port }}</div>
+                                <div style="margin-top: 6px;"><strong>Security:</strong> {% if use_ssl %}SSL (Port 465){% elif use_tls %}TLS (Port 587){% else %}Standard (None){% endif %}</div>
+                                <div style="margin-top: 6px;"><strong>Target Recipient:</strong> {{ recipient_email }}</div>
+                            </div>
+                            <p style="font-size: 12px; color: #64748b; margin-bottom: 0;">
+                                Your system is now ready to send automated welcome emails and credentials whenever a new Store Administrator is registered.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color: #f1f5f9; padding: 14px 24px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+                            {{ footer_text|default:'© 2026 Azmed. All rights reserved.' }}
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
