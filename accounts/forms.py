@@ -45,6 +45,24 @@ class StaffCreationForm(forms.ModelForm):
     def __init__(self, *args, store=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.store = store
+        if store:
+            self.instance.store = store
+        self.instance.role = User.Role.STAFF
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.store:
+            self.instance.store = self.store
+        self.instance.role = User.Role.STAFF
+        if not self.instance.store:
+            raise forms.ValidationError("Store administrator must be assigned to an active pharmacy store to add staff.")
+        return cleaned_data
+
+    def _post_clean(self):
+        if self.store:
+            self.instance.store = self.store
+        self.instance.role = User.Role.STAFF
+        super()._post_clean()
 
     def save(self, commit=True):
         user = super().save(commit=False)
