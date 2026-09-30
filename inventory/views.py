@@ -839,63 +839,86 @@ class MasterCatalogImportCsvView(RoleRequiredMixin, View):
         skipped_count = 0
         empty_name_count = 0
 
+        rows_data = []
+        for row in reader:
+            name = find_value(row, ['name', 'brand_name', 'medicine_name', 'medicine', 'product_name'])
+            if not name:
+                empty_name_count += 1
+                continue
+
+            price_raw = find_value(row, ['price', 'mrp', 'rate', 'cost'])
+            try:
+                clean_price = price_raw.replace('$', '').replace('₹', '').replace(',', '').strip()
+                price_val = Decimal(clean_price) if clean_price else Decimal('0.00')
+            except (InvalidOperation, ValueError):
+                price_val = Decimal('0.00')
+
+            mfg = find_value(row, ['manufacturer_name', 'manufacturer', 'mfg', 'company'])
+            cat = find_value(row, ['category_name', 'category', 'type'])
+            pack = find_value(row, ['pack_size_label', 'pack_size', 'pack', 'packaging', 'unit'])
+            salt = find_value(row, ['salt_composition', 'composition', 'salts', 'salt', 'generic_name', 'generic'])
+            desc = find_value(row, ['medicine_desc', 'description', 'desc'])
+            side_effects = find_value(row, ['side_effects', 'side_effect'])
+            interactions = find_value(row, ['drug_interactions', 'interactions'])
+            discontinued_raw = find_value(row, ['is_discontinued', 'discontinued'])
+            is_disc = discontinued_raw.lower() in ['yes', 'true', '1', 'y', 'discontinued']
+
+            defaults = {
+                'price': price_val,
+                'manufacturer_name': mfg,
+                'category_name': cat,
+                'pack_size_label': pack,
+                'salt_composition': salt,
+                'medicine_desc': desc,
+                'side_effects': side_effects,
+                'drug_interactions': interactions,
+                'is_discontinued': is_disc,
+                'is_approved': True,
+                'submission_status': 'approved',
+            }
+            rows_data.append((name, defaults))
+
+        BATCH_SIZE = 500
         try:
-            with transaction.atomic():
-                for row in reader:
-                    name = find_value(row, ['name', 'brand_name', 'medicine_name', 'medicine', 'product_name'])
-                    if not name:
-                        empty_name_count += 1
-                        continue
+            for i in range(0, len(rows_data), BATCH_SIZE):
+                chunk = rows_data[i:i + BATCH_SIZE]
+                chunk_names = [name for name, _ in chunk]
 
-                    price_raw = find_value(row, ['price', 'mrp', 'rate', 'cost'])
-                    try:
-                        clean_price = price_raw.replace('$', '').replace('₹', '').replace(',', '').strip()
-                        price_val = Decimal(clean_price) if clean_price else Decimal('0.00')
-                    except (InvalidOperation, ValueError):
-                        price_val = Decimal('0.00')
+                with transaction.atomic():
+                    existing_qs = MasterMedicine.objects.filter(name__in=chunk_names)
+                    existing_map = {m.name: m for m in existing_qs}
 
-                    mfg = find_value(row, ['manufacturer_name', 'manufacturer', 'mfg', 'company'])
-                    cat = find_value(row, ['category_name', 'category', 'type'])
-                    pack = find_value(row, ['pack_size_label', 'pack_size', 'pack', 'packaging', 'unit'])
-                    salt = find_value(row, ['salt_composition', 'composition', 'salts', 'salt', 'generic_name', 'generic'])
-                    desc = find_value(row, ['medicine_desc', 'description', 'desc'])
-                    side_effects = find_value(row, ['side_effects', 'side_effect'])
-                    interactions = find_value(row, ['drug_interactions', 'interactions'])
-                    discontinued_raw = find_value(row, ['is_discontinued', 'discontinued'])
-                    is_disc = discontinued_raw.lower() in ['yes', 'true', '1', 'y', 'discontinued']
+                    to_create = []
+                    to_update = []
+                    seen_in_chunk = set()
 
-                    defaults = {
-                        'price': price_val,
-                        'manufacturer_name': mfg,
-                        'category_name': cat,
-                        'pack_size_label': pack,
-                        'salt_composition': salt,
-                        'medicine_desc': desc,
-                        'side_effects': side_effects,
-                        'drug_interactions': interactions,
-                        'is_discontinued': is_disc,
-                        'is_approved': True,
-                        'submission_status': 'approved',
-                    }
+                    for name, defaults in chunk:
+                        if name in seen_in_chunk:
+                            continue
+                        seen_in_chunk.add(name)
 
-                    if duplicate_mode == 'skip':
-                        _, created = MasterMedicine.objects.get_or_create(
-                            name=name,
-                            defaults=defaults
-                        )
-                        if created:
-                            created_count += 1
+                        if name in existing_map:
+                            if duplicate_mode == 'update':
+                                obj = existing_map[name]
+                                for field, val in defaults.items():
+                                    setattr(obj, field, val)
+                                to_update.append(obj)
+                                updated_count += 1
+                            else:
+                                skipped_count += 1
                         else:
-                            skipped_count += 1
-                    else:  # update
-                        _, created = MasterMedicine.objects.update_or_create(
-                            name=name,
-                            defaults=defaults
-                        )
-                        if created:
+                            to_create.append(MasterMedicine(name=name, **defaults))
                             created_count += 1
-                        else:
-                            updated_count += 1
+
+                    if to_create:
+                        MasterMedicine.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+                    if to_update:
+                        update_fields = [
+                            'price', 'manufacturer_name', 'category_name', 'pack_size_label',
+                            'salt_composition', 'medicine_desc', 'side_effects',
+                            'drug_interactions', 'is_discontinued', 'is_approved', 'submission_status'
+                        ]
+                        MasterMedicine.objects.bulk_update(to_update, fields=update_fields, batch_size=BATCH_SIZE)
 
             feedback = [f"Import complete: {created_count} new medicine(s) added"]
             if updated_count:
