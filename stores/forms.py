@@ -45,7 +45,8 @@ class StoreForm(forms.ModelForm):
         model = Store
         fields = [
             'name', 'code', 'logo', 'license_number', 'gst_number',
-            'phone', 'email', 'address', 'city', 'state', 'pincode', 'currency', 'is_active'
+            'phone', 'email', 'address', 'city', 'state', 'pincode', 'currency',
+            'upi_id', 'upi_payee_name', 'is_active'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
@@ -59,6 +60,8 @@ class StoreForm(forms.ModelForm):
             'state': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'pincode': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'currency': forms.TextInput(attrs={'class': INPUT_CLASSES}),
+            'upi_id': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. pharmacy@okhdfcbank'}),
+            'upi_payee_name': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Apollo Pharmacy'}),
             'is_active': forms.CheckboxInput(attrs={'class': CHECKBOX_CLASSES}),
         }
 
@@ -97,7 +100,8 @@ class StoreSettingsForm(forms.ModelForm):
         model = Store
         fields = [
             'name', 'logo', 'license_number', 'gst_number',
-            'phone', 'email', 'address', 'city', 'state', 'pincode', 'currency'
+            'phone', 'email', 'address', 'city', 'state', 'pincode', 'currency',
+            'upi_id', 'upi_payee_name'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
@@ -110,6 +114,8 @@ class StoreSettingsForm(forms.ModelForm):
             'state': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'pincode': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'currency': forms.TextInput(attrs={'class': INPUT_CLASSES}),
+            'upi_id': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. store@okhdfcbank, merchant@upi'}),
+            'upi_payee_name': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Apollo MedPlus Pharmacy'}),
         }
 
     def clean_logo(self):

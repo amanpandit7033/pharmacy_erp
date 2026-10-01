@@ -116,7 +116,7 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="h-full antialiased text-slate-800 bg-[#f4f7fb] font-sans">
-    {% if is_impersonating %}
+    {% if is_impersonating or request.session.impersonator_id %}
     <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white px-4 py-2 text-xs font-bold shadow-md flex flex-wrap items-center justify-between sticky top-0 z-50 gap-2 border-b border-orange-400">
         <div class="flex items-center space-x-2.5">
             <span class="flex h-2.5 w-2.5 relative">
@@ -127,15 +127,14 @@
                 <strong>IMPERSONATION ACTIVE:</strong> Logged in as <span class="underline underline-offset-2">{{ request.user.username }}</span> ({{ request.user.store.name|default:"Unassigned Store" }}). Password bypassed by Super Admin.
             </span>
         </div>
-        <form method="POST" action="{% url 'accounts:exit_impersonation' %}" class="inline">
-            {% csrf_token %}
-            <button type="submit" class="inline-flex items-center px-3 py-1 bg-white text-amber-900 hover:bg-amber-100 rounded-lg text-xs font-black shadow-xs transition space-x-1">
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'accounts:exit_impersonation' %}" class="inline-flex items-center px-3 py-1 bg-white text-amber-900 hover:bg-amber-100 rounded-lg text-xs font-black shadow-xs transition space-x-1 cursor-pointer">
                 <svg class="w-3.5 h-3.5 text-amber-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                 </svg>
-                <span>Exit & Return to Super Admin</span>
-            </button>
-        </form>
+                <span>Exit &amp; Return to Super Admin</span>
+            </a>
+        </div>
     </div>
     {% endif %}
     {% include 'components/messages.html' %}

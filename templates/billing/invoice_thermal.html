@@ -300,11 +300,6 @@
                     GSTIN: {{ invoice.store.gst_number }}
                 </div>
                 {% endif %}
-                {% if invoice.store.license_number %}
-                <div class="meta-text text-slate-800">
-                    Drug Lic. No: {{ invoice.store.license_number }}
-                </div>
-                {% endif %}
             </div>
 
             <div class="solid-line"></div>
@@ -781,9 +776,6 @@
             }
             if (data.gst_number) {
                 appendLine(center('GSTIN: ' + data.gst_number));
-            }
-            if (data.license_number) {
-                appendLine(center('Drug Lic. No: ' + data.license_number));
             }
 
             divider('-');

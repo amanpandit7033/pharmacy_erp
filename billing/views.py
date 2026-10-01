@@ -53,6 +53,8 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
 
         context['batches_json'] = json.dumps(batch_list)
         context['payment_methods'] = Invoice.PaymentMethod.choices
+        context['store_upi_id'] = store.upi_id or ''
+        context['store_upi_payee'] = store.upi_display_name
         return context
 
     def post(self, request, *args, **kwargs):
@@ -63,14 +65,37 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
                 payload = json.loads(request.body)
             else:
                 raw_items = request.POST.get('items_json')
+                raw_discount = str(request.POST.get('discount_amount') or '0.00').strip()
+                items_list = json.loads(raw_items) if raw_items else []
+
+                if raw_discount.endswith('%'):
+                    try:
+                        pct = Decimal(raw_discount.rstrip('%').strip() or '0')
+                        gross = Decimal('0.00')
+                        for it in items_list:
+                            u_pr = Decimal(str(it.get('unit_price') or '0'))
+                            u_qty = Decimal(str(it.get('quantity') or '0'))
+                            u_tax = Decimal(str(it.get('tax_percentage') or '0'))
+                            line_s = u_pr * u_qty
+                            line_t = (line_s * (u_tax / Decimal('100.00'))).quantize(Decimal('0.01'))
+                            gross += line_s + line_t
+                        discount_val = (gross * (pct / Decimal('100.00'))).quantize(Decimal('0.01'))
+                    except Exception:
+                        discount_val = Decimal('0.00')
+                else:
+                    try:
+                        discount_val = Decimal(raw_discount)
+                    except Exception:
+                        discount_val = Decimal('0.00')
+
                 payload = {
                     'customer_name': request.POST.get('customer_name', 'Walk-in Customer'),
                     'customer_phone': request.POST.get('customer_phone', ''),
                     'doctor_name': request.POST.get('doctor_name', ''),
                     'payment_method': request.POST.get('payment_method', Invoice.PaymentMethod.CASH),
-                    'discount_amount': Decimal(request.POST.get('discount_amount') or '0.00'),
+                    'discount_amount': discount_val,
                     'notes': request.POST.get('notes', ''),
-                    'items': json.loads(raw_items) if raw_items else []
+                    'items': items_list
                 }
 
             invoice = create_invoice(store, request.user, payload)

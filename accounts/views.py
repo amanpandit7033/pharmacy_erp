@@ -424,21 +424,35 @@ class ImpersonateUserView(RoleRequiredMixin, View):
 
 
 class ExitImpersonationView(View):
+    def get(self, request, *args, **kwargs):
+        return self._exit_impersonation(request)
+
     def post(self, request, *args, **kwargs):
+        return self._exit_impersonation(request)
+
+    def _exit_impersonation(self, request):
         impersonator_id = request.session.get('impersonator_id')
         if not impersonator_id:
+            user = getattr(request, 'user', None)
+            if user and getattr(user, 'is_authenticated', False) and (getattr(user, 'role', None) == User.Role.SUPER_ADMIN or getattr(user, 'is_superuser', False)):
+                messages.info(request, "You are already in Super Admin mode.")
+                return redirect('accounts:store_admin_list')
             messages.error(request, "No active impersonation session found.")
             return redirect('accounts:role_redirect')
 
-        original_admin = get_object_or_404(User, pk=impersonator_id, role=User.Role.SUPER_ADMIN)
+        original_admin = User.objects.filter(pk=impersonator_id).first()
+        if not original_admin:
+            messages.error(request, "Original Super Admin account not found.")
+            return redirect('accounts:login')
+
         original_admin.backend = 'django.contrib.auth.backends.ModelBackend'
         login(request, original_admin)
 
         if 'impersonator_id' in request.session:
             del request.session['impersonator_id']
-            request.session.modified = True
+        request.session.modified = True
 
-        messages.success(request, "Exited impersonation. You are back in Super Admin mode.")
+        messages.success(request, f"Exited impersonation. Welcome back, {original_admin.username} (Super Admin).")
         return redirect('accounts:store_admin_list')
 
 

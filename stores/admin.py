@@ -22,6 +22,9 @@ class StoreAdmin(admin.ModelAdmin):
         ('Location Address', {
             'fields': ('address', 'city', 'state', 'pincode')
         }),
+        ('UPI & QR Digital Payments', {
+            'fields': ('upi_id', 'upi_payee_name')
+        }),
         ('Audit Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)

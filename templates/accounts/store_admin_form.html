@@ -8,10 +8,6 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
             <div class="flex items-center space-x-2">
-                <a href="{% url 'accounts:store_admin_list' %}" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-[#283891] transition">
-                    &larr; Back to Store Admins
-                </a>
-                <span class="text-slate-300">•</span>
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
                     {% if object %}Admin Editor{% else %}Manager Provisioning{% endif %}
                 </span>

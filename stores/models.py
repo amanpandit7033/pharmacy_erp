@@ -19,6 +19,8 @@ class Store(TimeStampedModel, SoftDeleteModel):
     pincode = models.CharField(max_length=20)
     currency = models.CharField(max_length=10, default="₹", help_text="Currency symbol or ISO code")
     logo = models.ImageField(upload_to='store_logos/', blank=True, null=True, help_text="Pharmacy Store Logo for Invoices and Branding")
+    upi_id = models.CharField(max_length=100, blank=True, null=True, help_text="Store UPI ID / VPA (e.g. merchant@upi, pharmacy@okhdfcbank)")
+    upi_payee_name = models.CharField(max_length=255, blank=True, null=True, help_text="Payee Name displayed on customer UPI apps")
 
     class Meta:
         ordering = ['-created_at']
@@ -32,3 +34,7 @@ class Store(TimeStampedModel, SoftDeleteModel):
     def full_address(self):
         parts = [self.address, self.city, self.state, self.pincode]
         return ", ".join(p for p in parts if p)
+
+    @property
+    def upi_display_name(self):
+        return self.upi_payee_name.strip() if self.upi_payee_name else self.name
