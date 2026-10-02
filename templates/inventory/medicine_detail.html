@@ -7,13 +7,6 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <div class="flex items-center space-x-2 text-xs">
-                <a href="{% url 'inventory:medicine_list' %}" class="inline-flex items-center text-slate-400 hover:text-[#283891] font-bold transition">
-                    &larr; Products
-                </a>
-                <span class="text-slate-300">/</span>
-                <span class="text-slate-700 font-bold">{{ medicine.name }}</span>
-            </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5 flex items-center gap-2.5">
                 <span>{{ medicine.name }}</span>
                 {% if medicine.is_prescription_required %}
@@ -40,6 +33,10 @@
                 <span>Add Batch</span>
             </a>
             {% endif %}
+            
+            <a href="{% url 'inventory:medicine_list' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+                Back to Products List
+            </a>
         </div>
     </div>
 
@@ -121,6 +118,7 @@
                         <th class="py-3 px-4 text-right">MRP</th>
                         <th class="py-3 px-4 text-right">Selling Price</th>
                         <th class="py-3 px-4 text-center">Available Units</th>
+                        <th class="py-3 px-4 text-center">Status</th>
                         {% if can_manage_stock %}
                         <th class="py-3 px-4 text-right">Actions</th>
                         {% endif %}
@@ -131,6 +129,11 @@
                     <tr class="hover:bg-slate-50/70 transition">
                         <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
                             {{ batch.batch_number }}
+                            {% if batch.supplier %}
+                            <div class="text-[10px] text-slate-400 font-sans font-normal mt-0.5">
+                                From: <a href="{% url 'inventory:supplier_detail' batch.supplier.pk %}" class="text-[#283891] hover:underline font-semibold">{{ batch.supplier.name }}</a>
+                            </div>
+                            {% endif %}
                         </td>
                         <td class="py-3.5 px-4">
                             <span class="font-semibold {% if batch.is_expired %}text-rose-600{% elif batch.is_near_expiry %}text-amber-600{% else %}text-slate-700{% endif %}">
@@ -158,15 +161,44 @@
                                 {{ batch.quantity }}
                             </span>
                         </td>
+                        <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                            {% if batch.status == 'ACTIVE' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                Active / In Stock
+                            </span>
+                            {% elif batch.status == 'QUARANTINED' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200/60" title="{{ batch.quarantine_reason }}">
+                                Quarantined
+                            </span>
+                            {% elif batch.status == 'DISPOSED' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-rose-50 text-rose-700 border border-rose-200/60" title="{{ batch.quarantine_reason }}">
+                                Disposed
+                            </span>
+                            {% elif batch.status == 'RETURNED' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-purple-50 text-purple-700 border border-purple-200/60" title="{{ batch.quarantine_reason }}">
+                                Returned
+                            </span>
+                            {% endif %}
+                        </td>
                         {% if can_manage_stock %}
                         <td class="py-3.5 px-4 text-right">
-                            <div class="inline-flex items-center justify-end space-x-2">
-                                <a href="{% url 'inventory:batch_edit' batch.pk %}" class="inline-flex items-center px-3 py-1 bg-blue-50 hover:bg-[#283891] text-[#283891] hover:text-white rounded-lg text-xs font-bold transition shadow-2xs">
+                            <div class="inline-flex items-center justify-end space-x-1.5">
+                                {% if batch.status != 'ACTIVE' and not batch.is_expired %}
+                                <form method="POST" action="{% url 'inventory:batch_quarantine_action' batch.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="release">
+                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                    <button type="submit" title="Reactivate batch into active POS billing stock" class="inline-flex items-center px-2 py-1 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200/70 rounded-lg text-xs font-bold transition shadow-2xs">
+                                        Reactivate
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <a href="{% url 'inventory:batch_edit' batch.pk %}" class="inline-flex items-center px-2.5 py-1 bg-blue-50 hover:bg-[#283891] text-[#283891] hover:text-white rounded-lg text-xs font-bold transition shadow-2xs">
                                     Edit
                                 </a>
                                 <form method="POST" action="{% url 'inventory:batch_delete' batch.pk %}" class="inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="inline-flex items-center px-2.5 py-1 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-300 text-slate-500 hover:text-rose-600 rounded-lg text-xs font-bold transition shadow-2xs" onclick="return confirm('Delete batch \'{{ batch.batch_number|escapejs }}\' ({{ batch.quantity }} units)?');">
+                                    <button type="submit" class="inline-flex items-center px-2 py-1 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-300 text-slate-500 hover:text-rose-600 rounded-lg text-xs font-bold transition shadow-2xs" onclick="return confirm('Delete batch \'{{ batch.batch_number|escapejs }}\' ({{ batch.quantity }} units)?');">
                                         Delete
                                     </button>
                                 </form>

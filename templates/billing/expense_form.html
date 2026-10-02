@@ -1,0 +1,288 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}{% if object %}Edit Expense{% else %}Record Daily Expense{% endif %} - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-50 text-rose-700 border border-rose-200/60 shadow-2xs">
+                    {% if object %}Expense Editor{% else %}New Outflow Entry{% endif %}
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Expense: <span class="text-[#283891]">{{ object.title }}</span>{% else %}Record Daily Expense{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Log operational expenses to accurately track pharmacy operating overheads.</p>
+        </div>
+        <a href="{% url 'billing:expense_list' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+            Back to List
+        </a>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" enctype="multipart/form-data" class="space-y-5">
+            {% csrf_token %}
+
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                    Expense Title / Description *
+                </label>
+                {{ form.title }}
+                {% if form.title.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.title.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="{{ form.category.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Expense Category *
+                    </label>
+                    {{ form.category }}
+                    {% if form.category.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.category.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.amount.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Amount ({{ request.user.store.currency }}) *
+                    </label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.amount.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="{{ form.expense_date.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Expense Date *
+                    </label>
+                    {{ form.expense_date }}
+                    {% if form.expense_date.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.expense_date.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.payment_method.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Payment Mode *
+                    </label>
+                    {{ form.payment_method }}
+                    {% if form.payment_method.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.payment_method.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label for="{{ form.paid_to.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                    Paid To / Vendor / Person (Optional)
+                </label>
+                {{ form.paid_to }}
+                {% if form.paid_to.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.paid_to.errors.0 }}</p>{% endif %}
+            </div>
+
+            <!-- Modern Receipt / Invoice Attachment Section -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                    Receipt / Invoice Copy (Optional)
+                </label>
+
+                <!-- Hidden native inputs for seamless Django form submission -->
+                <input type="file" name="receipt" id="id_receipt" accept="image/png,image/jpeg,image/webp,image/jpg,application/pdf" class="hidden" onchange="handleReceiptFileSelect(this)">
+                <input type="checkbox" name="receipt-clear" id="receipt-clear_id" class="hidden">
+
+                <!-- Existing File Card (if an attachment already exists) -->
+                {% if object.receipt %}
+                <div id="existing-receipt-box" class="p-3.5 mb-3 bg-slate-50 border border-slate-200/90 rounded-2xl flex items-center justify-between gap-3 transition">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100/70 text-[#283891] flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-slate-800 truncate" title="{{ object.receipt.name }}">
+                                Current Receipt Attached
+                            </p>
+                            <a href="{{ object.receipt.url }}" target="_blank" class="inline-flex items-center text-[11px] font-bold text-[#283891] hover:underline mt-0.5 space-x-1">
+                                <span>Preview / Download Attachment</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                        <button type="button" onclick="document.getElementById('id_receipt').click()" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 shadow-2xs transition">
+                            Change File
+                        </button>
+                        <button type="button" onclick="markReceiptForRemoval()" class="px-3 py-1.5 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-xs font-bold text-rose-600 shadow-2xs transition">
+                            Remove
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Removed Receipt Notice (initially hidden) -->
+                <div id="removed-receipt-notice" class="hidden mb-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-800">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        <span>Receipt attachment marked for removal on save.</span>
+                    </div>
+                    <button type="button" onclick="undoReceiptRemoval()" class="font-bold text-amber-900 underline hover:text-amber-950">
+                        Undo
+                    </button>
+                </div>
+                {% endif %}
+
+                <!-- File Dropzone / Upload Area -->
+                <div id="receipt-dropzone" 
+                     onclick="document.getElementById('id_receipt').click()" 
+                     class="border-2 border-dashed border-slate-200 hover:border-[#283891]/50 bg-slate-50/70 hover:bg-[#edf0fc]/30 rounded-2xl p-5 text-center cursor-pointer transition group">
+                    <div class="flex flex-col items-center">
+                        <div class="w-11 h-11 rounded-2xl bg-white shadow-2xs border border-slate-100 text-slate-400 group-hover:text-[#283891] group-hover:scale-105 flex items-center justify-center transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                        </div>
+                        <div class="mt-2.5">
+                            <span class="text-xs font-bold text-[#283891] hover:underline">Click to browse</span>
+                            <span class="text-xs text-slate-500 font-medium"> or drag and drop voucher</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Supports PNG, JPG, WEBP, or PDF up to 10 MB</p>
+                    </div>
+                </div>
+
+                <!-- Selected New File Preview Box (initially hidden) -->
+                <div id="new-receipt-preview" class="hidden mt-3 p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl flex items-center justify-between">
+                    <div class="flex items-center space-x-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 font-bold">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <p id="new-receipt-filename" class="text-xs font-bold text-emerald-900 truncate">Selected file</p>
+                            <p id="new-receipt-filesize" class="text-[10px] text-emerald-600 font-medium">0 KB</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="cancelNewReceipt()" class="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-100 transition" title="Cancel selection">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                {% if form.receipt.errors %}
+                <p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.receipt.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.notes.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">
+                    Additional Notes
+                </label>
+                {{ form.notes }}
+                {% if form.notes.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.notes.errors.0 }}</p>{% endif %}
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <a href="{% url 'billing:expense_list' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    {% if object %}Update Expense{% else %}Save Expense{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function handleReceiptFileSelect(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const preview = document.getElementById('new-receipt-preview');
+        const filename = document.getElementById('new-receipt-filename');
+        const filesize = document.getElementById('new-receipt-filesize');
+        
+        filename.textContent = file.name;
+        if (file.size < 1024 * 1024) {
+            filesize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+        } else {
+            filesize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+        
+        preview.classList.remove('hidden');
+        
+        const removalNotice = document.getElementById('removed-receipt-notice');
+        if (removalNotice) removalNotice.classList.add('hidden');
+        const clearCb = document.getElementById('receipt-clear_id');
+        if (clearCb) clearCb.checked = false;
+        const existingBox = document.getElementById('existing-receipt-box');
+        if (existingBox) existingBox.classList.remove('opacity-40');
+    }
+}
+
+function cancelNewReceipt() {
+    const input = document.getElementById('id_receipt');
+    if (input) input.value = '';
+    const preview = document.getElementById('new-receipt-preview');
+    if (preview) preview.classList.add('hidden');
+}
+
+function markReceiptForRemoval() {
+    const clearCb = document.getElementById('receipt-clear_id');
+    if (clearCb) clearCb.checked = true;
+    
+    const existingBox = document.getElementById('existing-receipt-box');
+    if (existingBox) existingBox.classList.add('opacity-40');
+    
+    const notice = document.getElementById('removed-receipt-notice');
+    if (notice) notice.classList.remove('hidden');
+    
+    cancelNewReceipt();
+}
+
+function undoReceiptRemoval() {
+    const clearCb = document.getElementById('receipt-clear_id');
+    if (clearCb) clearCb.checked = false;
+    
+    const existingBox = document.getElementById('existing-receipt-box');
+    if (existingBox) existingBox.classList.remove('opacity-40');
+    
+    const notice = document.getElementById('removed-receipt-notice');
+    if (notice) notice.classList.add('hidden');
+}
+
+// Drag & drop handling
+document.addEventListener('DOMContentLoaded', () => {
+    const dropzone = document.getElementById('receipt-dropzone');
+    if (dropzone) {
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('border-[#283891]', 'bg-[#edf0fc]/50');
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('border-[#283891]', 'bg-[#edf0fc]/50');
+            });
+        });
+        dropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                const input = document.getElementById('id_receipt');
+                input.files = files;
+                handleReceiptFileSelect(input);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

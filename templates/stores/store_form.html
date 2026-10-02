@@ -1,6 +1,6 @@
 {% extends 'layouts/base_super_admin.html' %}
 
-{% block title %}{% if object %}Edit Pharmacy Store{% else %}Register Store{% endif %} - Azmed Platform{% endblock %}
+{% block title %}{% if object %}Edit Pharmacy Store{% else %}Register Store{% endif %} - {{ platform_settings.brand_name|default:'Azmed' }}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-6">

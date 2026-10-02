@@ -1,15 +1,16 @@
 import json
 from decimal import Decimal
-from django.views.generic import ListView, DetailView, TemplateView
+from django.views.generic import ListView, DetailView, TemplateView, CreateView, UpdateView
 from django.views import View
 from django.shortcuts import redirect, get_object_or_404, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, Sum, Count
 from django.http import JsonResponse
 from django.utils import timezone
-from billing.models import Invoice, InvoiceItem, Customer
+from billing.models import Invoice, InvoiceItem, Customer, Expense
+from billing.forms import ExpenseForm
 from billing.services import create_invoice, cancel_invoice
 from inventory.models import Batch, Medicine
 from accounts.models import User
@@ -253,3 +254,132 @@ class InvoiceCancelView(TenantAccessMixin, RoleRequiredMixin, View):
         except ValidationError as e:
             messages.error(request, str(e))
         return redirect('billing:invoice_detail', pk=invoice.pk)
+
+
+class ExpenseListView(TenantAccessMixin, RoleRequiredMixin, ListView):
+    """
+    Store Admin view for tracking daily operational expenses.
+    Features date filters, category breakdowns, and aggregate financial totals.
+    """
+    model = Expense
+    template_name = 'billing/expense_list.html'
+    context_object_name = 'expenses'
+    paginate_by = 25
+    allowed_roles = [User.Role.STORE_ADMIN]
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related('created_by')
+        q = self.request.GET.get('q', '').strip()
+        category = self.request.GET.get('category', '').strip()
+        payment = self.request.GET.get('payment', '').strip()
+        from_date = self.request.GET.get('from_date', '').strip()
+        to_date = self.request.GET.get('to_date', '').strip()
+
+        if q:
+            qs = qs.filter(
+                Q(title__icontains=q) |
+                Q(paid_to__icontains=q) |
+                Q(notes__icontains=q)
+            )
+        if category:
+            qs = qs.filter(category=category)
+        if payment:
+            qs = qs.filter(payment_method=payment)
+        if from_date:
+            qs = qs.filter(expense_date__gte=from_date)
+        if to_date:
+            qs = qs.filter(expense_date__lte=to_date)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        store = self.request.user.store
+        today = timezone.localdate()
+        month_start = today.replace(day=1)
+
+        store_expenses = Expense.objects.filter(store=store, is_active=True)
+
+        today_total = store_expenses.filter(expense_date=today).aggregate(
+            total=Sum('amount')
+        )['total'] or Decimal('0.00')
+
+        month_total = store_expenses.filter(
+            expense_date__gte=month_start,
+            expense_date__lte=today
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        all_time_total = store_expenses.aggregate(
+            total=Sum('amount')
+        )['total'] or Decimal('0.00')
+
+        # Filtered queryset total for currently viewed results
+        filtered_qs = self.get_queryset()
+        filtered_total = filtered_qs.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        # Category breakdown for this month
+        category_breakdown = (
+            store_expenses.filter(expense_date__gte=month_start, expense_date__lte=today)
+            .values('category')
+            .annotate(total=Sum('amount'), count=Count('id'))
+            .order_by('-total')[:5]
+        )
+        cat_display_map = dict(Expense.Category.choices)
+        top_categories = []
+        for cat in category_breakdown:
+            top_categories.append({
+                'category_code': cat['category'],
+                'category_name': cat_display_map.get(cat['category'], cat['category']),
+                'total': cat['total'],
+                'count': cat['count'],
+            })
+
+        context['today_total'] = today_total
+        context['month_total'] = month_total
+        context['all_time_total'] = all_time_total
+        context['filtered_total'] = filtered_total
+        context['top_categories'] = top_categories
+        context['categories'] = Expense.Category.choices
+        context['payment_methods'] = Expense.PaymentMethod.choices
+        return context
+
+
+class ExpenseCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):
+    """Store Admin creates a new operational daily expense entry."""
+    model = Expense
+    form_class = ExpenseForm
+    template_name = 'billing/expense_form.html'
+    allowed_roles = [User.Role.STORE_ADMIN]
+    success_url = reverse_lazy('billing:expense_list')
+
+    def form_valid(self, form):
+        form.instance.store = self.request.user.store
+        form.instance.created_by = self.request.user
+        messages.success(self.request, f"Expense '{form.instance.title}' of {self.request.user.store.currency}{form.instance.amount} recorded successfully.")
+        return super().form_valid(form)
+
+
+class ExpenseUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
+    """Store Admin edits an existing operational expense entry."""
+    model = Expense
+    form_class = ExpenseForm
+    template_name = 'billing/expense_form.html'
+    allowed_roles = [User.Role.STORE_ADMIN]
+    success_url = reverse_lazy('billing:expense_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Expense '{form.instance.title}' updated successfully.")
+        return super().form_valid(form)
+
+
+class ExpenseDeleteView(TenantAccessMixin, RoleRequiredMixin, View):
+    """Store Admin removes an expense entry."""
+    allowed_roles = [User.Role.STORE_ADMIN]
+
+    def post(self, request, pk, *args, **kwargs):
+        expense = get_object_or_404(Expense, pk=pk, store=request.user.store)
+        title = expense.title
+        expense.delete()
+        messages.success(request, f"Expense '{title}' deleted successfully.")
+        return redirect('billing:expense_list')
+

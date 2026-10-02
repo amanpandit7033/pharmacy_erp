@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, Invoice, InvoiceItem
+from .models import Customer, Invoice, InvoiceItem, Expense
 
 
 @admin.register(Customer)
@@ -54,3 +54,12 @@ class InvoiceItemAdmin(admin.ModelAdmin):
     list_filter = ('store', 'invoice__status', 'invoice__payment_method')
     search_fields = ('medicine_name', 'batch_number', 'invoice__invoice_number')
     readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ('title', 'category', 'amount', 'expense_date', 'payment_method', 'paid_to', 'store', 'created_by')
+    list_filter = ('store', 'category', 'payment_method', 'expense_date')
+    search_fields = ('title', 'paid_to', 'notes')
+    readonly_fields = ('created_at', 'updated_at')
+

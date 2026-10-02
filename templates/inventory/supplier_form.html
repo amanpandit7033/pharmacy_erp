@@ -1,0 +1,121 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}Register Medicine Supplier{% endif %} - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    {% if object %}Supplier Editor{% else %}Distributor Onboarding{% endif %}
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+                {% if object %}Edit Supplier: <span class="text-[#283891]">{{ object.name }}</span>{% else %}Register Medicine Supplier{% endif %}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Onboard pharmaceutical distributors and agencies to track purchase invoices and batch procurements.</p>
+        </div>
+        <a href="{% url 'inventory:supplier_list' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+            Back
+        </a>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-card">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Section 1: Business Details -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Distributor &amp; Business Identity</h3>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Supplier / Agency Name *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.contact_person.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Contact Person / Representative</label>
+                            {{ form.contact_person }}
+                            {% if form.contact_person.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.contact_person.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.phone.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Phone Number</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.phone.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Taxation & Licenses -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-indigo-50 text-[#283891] flex items-center justify-center font-bold text-xs">2</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Tax &amp; Drug License Compliance</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.gst_number.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">GSTIN / Tax ID</label>
+                        {{ form.gst_number }}
+                        <span class="text-[10px] text-slate-400 block mt-1">15-digit GST identification number</span>
+                        {% if form.gst_number.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.gst_number.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.dl_number.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Drug License (DL) Number</label>
+                        {{ form.dl_number }}
+                        <span class="text-[10px] text-slate-400 block mt-1">Form 20B/21B wholesale license</span>
+                        {% if form.dl_number.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.dl_number.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Location & Payment Terms -->
+            <div>
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-100">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">3</div>
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Address &amp; Commercial Terms</h3>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="{{ form.address.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Warehouse / Office Address</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.address.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.notes.id_for_label }}" class="block text-xs font-bold text-slate-700 mb-1.5">Payment Terms &amp; Notes</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}<p class="text-[10px] text-rose-500 mt-1 font-semibold">{{ form.notes.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <a href="{% url 'inventory:supplier_list' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition text-center">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition active:scale-[0.98]">
+                    {% if object %}Update Supplier{% else %}Save Supplier{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

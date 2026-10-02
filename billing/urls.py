@@ -10,4 +10,11 @@ urlpatterns = [
     path('invoices/<int:pk>/print/', views.InvoicePrintView.as_view(), name='invoice_print'),
     path('invoices/<int:pk>/thermal/', views.InvoiceThermalPrintView.as_view(), name='invoice_thermal'),
     path('invoices/<int:pk>/cancel/', views.InvoiceCancelView.as_view(), name='invoice_cancel'),
+
+    # Daily Expenses Tracking (Store Admin)
+    path('expenses/', views.ExpenseListView.as_view(), name='expense_list'),
+    path('expenses/create/', views.ExpenseCreateView.as_view(), name='expense_create'),
+    path('expenses/<int:pk>/edit/', views.ExpenseUpdateView.as_view(), name='expense_edit'),
+    path('expenses/<int:pk>/delete/', views.ExpenseDeleteView.as_view(), name='expense_delete'),
 ]
+

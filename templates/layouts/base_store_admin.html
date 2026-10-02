@@ -184,6 +184,30 @@
                     </div>
                 </a>
 
+                <!-- Daily Expenses -->
+                <a href="{% url 'billing:expense_list' %}" title="Daily Expenses" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'billing/expenses' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'billing/expenses' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Daily Expenses</span>
+                    </div>
+                </a>
+
+                <!-- Medicine Suppliers -->
+                <a href="{% url 'inventory:supplier_list' %}" title="Medicine Suppliers" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'inventory/suppliers' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'inventory/suppliers' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Suppliers</span>
+                    </div>
+                </a>
+
                 <!-- Analytics Report / P&L -->
                 <a href="{% url 'dashboard:analytics_report' %}" title="Analytics & P&L" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if request.resolver_match.url_name == 'analytics_report' %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
                     <div class="flex items-center space-x-2.5">

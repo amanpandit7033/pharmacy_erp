@@ -9,12 +9,13 @@ from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Sum, Count, F, Value
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Greatest
+from django.contrib.postgres.search import TrigramSimilarity, TrigramWordSimilarity
 from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 from django.utils import timezone
 
-from inventory.models import Medicine, Batch, Category, Unit, Manufacturer, MasterMedicine
-from inventory.forms import MedicineForm, BatchForm, CategoryForm, UnitForm, MasterMedicineForm
+from inventory.models import Medicine, Batch, Category, Unit, Manufacturer, MasterMedicine, Supplier
+from inventory.forms import MedicineForm, BatchForm, CategoryForm, UnitForm, MasterMedicineForm, SupplierForm
 from accounts.models import User
 from core.mixins import RoleRequiredMixin, TenantAccessMixin
 
@@ -43,13 +44,35 @@ class MedicineListView(TenantAccessMixin, RoleRequiredMixin, ListView):
         rx_filter = self.request.GET.get('rx', '').strip()
         sort_by = self.request.GET.get('sort', 'latest').strip()
 
+        self.is_fuzzy_search = False
+        self.suggested_medicine = ''
+
         if q:
-            qs = qs.filter(
+            exact_qs = qs.filter(
                 Q(name__icontains=q) |
                 Q(generic_name__icontains=q) |
                 Q(sku__icontains=q) |
                 Q(rack_location__icontains=q)
             )
+            if exact_qs.exists():
+                qs = exact_qs
+            else:
+                fuzzy_qs = qs.annotate(
+                    sim_name_word=TrigramWordSimilarity(q, 'name'),
+                    sim_name_full=TrigramSimilarity('name', q),
+                    sim_gen=TrigramWordSimilarity(q, 'generic_name'),
+                ).annotate(
+                    sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_gen'))
+                ).filter(
+                    sim_score__gte=0.20
+                ).order_by('-sim_score')
+
+                if fuzzy_qs.exists():
+                    self.is_fuzzy_search = True
+                    self.suggested_medicine = fuzzy_qs.first().name
+                    qs = fuzzy_qs
+                else:
+                    qs = exact_qs
         if cat:
             qs = qs.filter(category_id=cat)
         if unit_id:
@@ -67,7 +90,9 @@ class MedicineListView(TenantAccessMixin, RoleRequiredMixin, ListView):
             qs = qs.filter(total_qty=0)
 
         # Sorting: Default is latest added medicine first (-created_at, -id)
-        if sort_by == 'oldest':
+        if self.is_fuzzy_search and sort_by == 'latest':
+            pass  # Retain similarity ranking for typo matches
+        elif sort_by == 'oldest':
             qs = qs.order_by('created_at', 'id')
         elif sort_by == 'name_asc':
             qs = qs.order_by('name')
@@ -90,6 +115,8 @@ class MedicineListView(TenantAccessMixin, RoleRequiredMixin, ListView):
         context['can_manage_stock'] = (self.request.user.role == User.Role.STORE_ADMIN)
         context['can_view_cost'] = (self.request.user.role == User.Role.STORE_ADMIN)
         context['total_products_count'] = Medicine.objects.filter(store=store).count()
+        context['is_fuzzy_search'] = getattr(self, 'is_fuzzy_search', False)
+        context['suggested_medicine'] = getattr(self, 'suggested_medicine', '')
         return context
 
 
@@ -204,6 +231,11 @@ class BatchCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):
             initial['selling_price'] = self.request.GET.get('selling_price')
         return initial
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['store'] = self.request.user.store
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['medicine'] = self.medicine
@@ -224,6 +256,11 @@ class BatchUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
     form_class = BatchForm
     template_name = 'inventory/batch_form.html'
     allowed_roles = [User.Role.STORE_ADMIN]
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['store'] = self.request.user.store
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -410,6 +447,147 @@ class UnitDeleteView(TenantAccessMixin, RoleRequiredMixin, View):
         return redirect('inventory:unit_list')
 
 
+# Supplier & Medicine Procurement Tracking (Store Admin)
+class SupplierListView(TenantAccessMixin, RoleRequiredMixin, ListView):
+    """
+    Store Admin view for managing medicine suppliers and tracking spending.
+    """
+    model = Supplier
+    template_name = 'inventory/supplier_list.html'
+    context_object_name = 'suppliers'
+    paginate_by = 20
+    allowed_roles = [User.Role.STORE_ADMIN]
+
+    def get_queryset(self):
+        qs = Supplier.objects.filter(store=self.request.user.store, is_active=True).annotate(
+            total_spent=Coalesce(Sum(F('batches__cost_price') * F('batches__quantity'), filter=Q(batches__is_active=True)), Value(Decimal('0.00'))),
+            batches_count=Count('batches', filter=Q(batches__is_active=True), distinct=True)
+        )
+        q = self.request.GET.get('q', '').strip()
+        sort = self.request.GET.get('sort', 'name_asc').strip()
+
+        if q:
+            qs = qs.filter(
+                Q(name__icontains=q) |
+                Q(contact_person__icontains=q) |
+                Q(phone__icontains=q) |
+                Q(gst_number__icontains=q) |
+                Q(dl_number__icontains=q)
+            )
+
+        if sort == 'spent_desc':
+            qs = qs.order_by('-total_spent', 'name')
+        elif sort == 'batches_desc':
+            qs = qs.order_by('-batches_count', 'name')
+        elif sort == 'latest':
+            qs = qs.order_by('-created_at')
+        elif sort == 'name_desc':
+            qs = qs.order_by('-name')
+        else:
+            qs = qs.order_by('name')
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        store = self.request.user.store
+        all_store_suppliers = Supplier.objects.filter(store=store, is_active=True)
+        
+        # Calculate total procurement spending across all batches linked to suppliers
+        total_spent_agg = Batch.objects.filter(
+            store=store,
+            is_active=True,
+            supplier__isnull=False
+        ).aggregate(
+            total_procured=Sum(F('cost_price') * F('quantity')),
+            batches_count=Count('id')
+        )
+
+        context['total_suppliers_count'] = all_store_suppliers.count()
+        context['total_procurement_spent'] = total_spent_agg['total_procured'] or Decimal('0.00')
+        context['total_batches_supplied'] = total_spent_agg['batches_count'] or 0
+        return context
+
+
+class SupplierDetailView(TenantAccessMixin, RoleRequiredMixin, DetailView):
+    """
+    Detailed supplier dossier showing contact info, license numbers,
+    and complete ledger of procured batches and spending.
+    """
+    model = Supplier
+    template_name = 'inventory/supplier_detail.html'
+    context_object_name = 'supplier'
+    allowed_roles = [User.Role.STORE_ADMIN]
+
+    def get_queryset(self):
+        return Supplier.objects.filter(store=self.request.user.store)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        batches_qs = self.object.batches.filter(is_active=True).select_related(
+            'medicine', 'medicine__unit', 'medicine__category'
+        ).order_by('-purchase_date', '-created_at')
+
+        summary_agg = batches_qs.aggregate(
+            total_spent=Sum(F('cost_price') * F('quantity')),
+            total_units=Sum('quantity'),
+            batch_count=Count('id')
+        )
+
+        context['batches'] = batches_qs
+        context['total_spent'] = summary_agg['total_spent'] or Decimal('0.00')
+        context['total_units'] = summary_agg['total_units'] or 0
+        context['batch_count'] = summary_agg['batch_count'] or 0
+        return context
+
+
+class SupplierCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):
+    """Store Admin creates a new medicine supplier / distributor."""
+    model = Supplier
+    form_class = SupplierForm
+    template_name = 'inventory/supplier_form.html'
+    success_url = reverse_lazy('inventory:supplier_list')
+    allowed_roles = [User.Role.STORE_ADMIN]
+
+    def form_valid(self, form):
+        form.instance.store = self.request.user.store
+        messages.success(self.request, f"Supplier '{form.instance.name}' added successfully.")
+        return super().form_valid(form)
+
+
+class SupplierUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
+    """Store Admin edits supplier information."""
+    model = Supplier
+    form_class = SupplierForm
+    template_name = 'inventory/supplier_form.html'
+    success_url = reverse_lazy('inventory:supplier_list')
+    allowed_roles = [User.Role.STORE_ADMIN]
+
+    def get_queryset(self):
+        return Supplier.objects.filter(store=self.request.user.store)
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Supplier '{form.instance.name}' updated successfully.")
+        return super().form_valid(form)
+
+
+class SupplierDeleteView(TenantAccessMixin, RoleRequiredMixin, View):
+    """Store Admin removes or deactivates a supplier."""
+    allowed_roles = [User.Role.STORE_ADMIN]
+
+    def post(self, request, pk, *args, **kwargs):
+        supplier = get_object_or_404(Supplier, pk=pk, store=request.user.store)
+        name = supplier.name
+        batch_count = supplier.batches.filter(is_active=True).count()
+        if batch_count > 0:
+            supplier.is_active = False
+            supplier.save(update_fields=['is_active'])
+            messages.success(request, f"Supplier '{name}' was deactivated (archived) as {batch_count} medicine batch(es) are associated with it.")
+        else:
+            supplier.delete()
+            messages.success(request, f"Supplier '{name}' removed successfully.")
+        return redirect('inventory:supplier_list')
+
 
 # Master Medicine Catalog (Option A)
 class MasterCatalogListView(RoleRequiredMixin, ListView):
@@ -427,12 +605,34 @@ class MasterCatalogListView(RoleRequiredMixin, ListView):
         store_status = self.request.GET.get('store_status', '').strip()
         sort = self.request.GET.get('sort', 'name_asc').strip()
 
+        self.is_fuzzy_search = False
+        self.suggested_medicine = ''
+
         if q:
-            qs = qs.filter(
+            exact_qs = qs.filter(
                 Q(name__icontains=q) |
                 Q(salt_composition__icontains=q) |
                 Q(manufacturer_name__icontains=q)
             )
+            if exact_qs.exists():
+                qs = exact_qs
+            else:
+                fuzzy_qs = qs.annotate(
+                    sim_name_word=TrigramWordSimilarity(q, 'name'),
+                    sim_name_full=TrigramSimilarity('name', q),
+                    sim_salt=TrigramWordSimilarity(q, 'salt_composition'),
+                ).annotate(
+                    sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_salt'))
+                ).filter(
+                    sim_score__gte=0.25
+                ).order_by('-sim_score')
+
+                if fuzzy_qs.exists():
+                    self.is_fuzzy_search = True
+                    self.suggested_medicine = fuzzy_qs.first().name
+                    qs = fuzzy_qs
+                else:
+                    qs = exact_qs
         if cat:
             qs = qs.filter(category_name__iexact=cat)
         if mfg:
@@ -445,7 +645,9 @@ class MasterCatalogListView(RoleRequiredMixin, ListView):
             elif store_status == 'not_in_store':
                 qs = qs.exclude(name__in=store_med_names)
 
-        if sort == 'price_low':
+        if self.is_fuzzy_search and sort == 'name_asc':
+            pass  # Retain similarity ranking for typo matches
+        elif sort == 'price_low':
             qs = qs.order_by('price')
         elif sort == 'price_high':
             qs = qs.order_by('-price')
@@ -474,6 +676,8 @@ class MasterCatalogListView(RoleRequiredMixin, ListView):
         context['is_super_admin'] = (
             self.request.user.is_authenticated and (self.request.user.role == User.Role.SUPER_ADMIN or self.request.user.is_superuser)
         )
+        context['is_fuzzy_search'] = getattr(self, 'is_fuzzy_search', False)
+        context['suggested_medicine'] = getattr(self, 'suggested_medicine', '')
         return context
 
 
@@ -490,6 +694,17 @@ class MasterMedicineSearchApiView(RoleRequiredMixin, View):
         ).filter(
             Q(name__icontains=q) | Q(salt_composition__icontains=q)
         )[:15]
+
+        if not medicines.exists():
+            medicines = MasterMedicine.objects.filter(is_approved=True).annotate(
+                sim_name_word=TrigramWordSimilarity(q, 'name'),
+                sim_name_full=TrigramSimilarity('name', q),
+                sim_salt=TrigramWordSimilarity(q, 'salt_composition'),
+            ).annotate(
+                sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_salt'))
+            ).filter(
+                sim_score__gte=0.25
+            ).order_by('-sim_score')[:15]
 
         data = []
         for m in medicines:

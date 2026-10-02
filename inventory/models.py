@@ -40,6 +40,35 @@ class Unit(TenantModel):
         return f"{self.name} ({self.short_name})"
 
 
+class Supplier(TenantModel):
+    name = models.CharField(max_length=200)
+    contact_person = models.CharField(max_length=150, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    gst_number = models.CharField(max_length=30, blank=True, verbose_name="GSTIN / Tax ID")
+    dl_number = models.CharField(max_length=50, blank=True, verbose_name="Drug License No.")
+    address = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def total_purchases_amount(self):
+        """Total spent on medicines purchased from this supplier."""
+        total = self.batches.filter(is_active=True).aggregate(
+            spent=models.Sum(models.F('cost_price') * models.F('quantity'))
+        )['spent']
+        return total or Decimal('0.00')
+
+    @property
+    def total_batches_count(self):
+        return self.batches.filter(is_active=True).count()
+
+
 class Medicine(TenantModel):
     name = models.CharField(max_length=255, db_index=True)
     generic_name = models.CharField(max_length=255, blank=True, db_index=True)
@@ -78,6 +107,24 @@ class Batch(TenantModel):
         RETURNED = 'RETURNED', 'Returned to Supplier'
 
     medicine = models.ForeignKey(Medicine, on_delete=models.CASCADE, related_name='batches')
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='batches'
+    )
+    supplier_invoice_number = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Supplier invoice or bill reference number"
+    )
+    purchase_date = models.DateField(
+        default=timezone.localdate,
+        null=True,
+        blank=True,
+        help_text="Date when batch was procured"
+    )
     batch_number = models.CharField(max_length=100, db_index=True)
     manufacturing_date = models.DateField(null=True, blank=True)
     expiry_date = models.DateField(db_index=True)

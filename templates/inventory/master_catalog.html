@@ -116,6 +116,21 @@
         </form>
     </div>
 
+    {% if is_fuzzy_search %}
+    <!-- Typo-Tolerant Suggestion Banner -->
+    <div class="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 text-blue-900 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shadow-2xs">
+        <div class="flex items-center space-x-2.5">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide bg-[#283891] text-white">
+                Typo Auto-Corrected
+            </span>
+            <span>No exact matches found for &ldquo;<span class="font-bold text-slate-800">{{ request.GET.q }}</span>&rdquo;. Showing closest catalog formulations matching &ldquo;<span class="font-extrabold text-[#283891]">{{ suggested_medicine }}</span>&rdquo;.</span>
+        </div>
+        <a href="?q={{ suggested_medicine }}" class="font-bold text-[#283891] hover:underline flex items-center space-x-1 shrink-0">
+            <span>Filter exact &rarr;</span>
+        </a>
+    </div>
+    {% endif %}
+
     <!-- Medicine Results List -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
         <div class="overflow-x-auto">

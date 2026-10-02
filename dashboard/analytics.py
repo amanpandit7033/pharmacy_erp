@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum, Count, F, Q
 
-from billing.models import Invoice, InvoiceItem
+from billing.models import Invoice, InvoiceItem, Expense
 from inventory.models import Batch
 
 
@@ -126,8 +126,20 @@ def compute_financials(invoices_qs, store=None, date_range=None):
     )
     inventory_loss = disposed_agg['total_loss'] or Decimal('0.00')
 
-    # Net Estimated Profit
-    net_profit = gross_profit - inventory_loss
+    # Daily Operational Expenses
+    expense_q = Q(is_active=True)
+    if store:
+        expense_q &= Q(store=store)
+    if date_range:
+        expense_q &= Q(expense_date__gte=date_range[0], expense_date__lte=date_range[1])
+
+    expense_agg = Expense.objects.filter(expense_q).aggregate(
+        total_exp=Sum('amount')
+    )
+    operational_expenses = expense_agg['total_exp'] or Decimal('0.00')
+
+    # Net Estimated Profit (Gross Profit - Inventory Losses - Operating Expenses)
+    net_profit = gross_profit - inventory_loss - operational_expenses
     net_margin_pct = round(float((net_profit / revenue) * 100), 1) if revenue > 0 else 0.0
 
     return {
@@ -140,6 +152,7 @@ def compute_financials(invoices_qs, store=None, date_range=None):
         'gross_profit': gross_profit,
         'gross_margin_pct': gross_margin_pct,
         'inventory_loss': inventory_loss,
+        'operational_expenses': operational_expenses,
         'net_profit': net_profit,
         'net_margin_pct': net_margin_pct,
     }

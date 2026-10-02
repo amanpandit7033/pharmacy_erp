@@ -297,30 +297,142 @@
     const grandTotalDisplay = document.getElementById('grandTotalDisplay');
     const itemsJsonInput = document.getElementById('itemsJsonInput');
 
+    // Intelligent Typo-Tolerant Search for POS Counter
+    function levenshteinDistance(s1, s2) {
+        if (s1 === s2) return 0;
+        if (!s1.length) return s2.length;
+        if (!s2.length) return s1.length;
+        const v0 = new Array(s2.length + 1);
+        const v1 = new Array(s2.length + 1);
+        for (let i = 0; i <= s2.length; i++) v0[i] = i;
+        for (let i = 0; i < s1.length; i++) {
+            v1[0] = i + 1;
+            for (let j = 0; j < s2.length; j++) {
+                const cost = s1[i] === s2[j] ? 0 : 1;
+                v1[j + 1] = Math.min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost);
+            }
+            for (let j = 0; j <= s2.length; j++) v0[j] = v1[j];
+        }
+        return v0[s2.length];
+    }
+
+    function tokenizeWords(str) {
+        if (!str) return [];
+        return str.replace(/([a-zA-Z]+)(\d+)/g, '$1 $2')
+                  .replace(/(\d+)([a-zA-Z]+)/g, '$1 $2')
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]/g, ' ')
+                  .split(/\s+/)
+                  .filter(w => w.length > 0);
+    }
+
+    function matchBatchWithTypoTolerance(b, rawQuery, queryTokens, cleanQueryCompact) {
+        const medName = (b.medicine_name || '').toLowerCase();
+        const genName = (b.generic_name || '').toLowerCase();
+        const batchNo = (b.batch_number || '').toLowerCase();
+        const combined = `${medName} ${genName} ${batchNo}`;
+        const combinedCompact = combined.replace(/[^a-z0-9]/g, '');
+
+        // 1. Direct substring match (Exact)
+        if (medName.includes(rawQuery) || genName.includes(rawQuery) || batchNo.includes(rawQuery)) {
+            const priorityBonus = medName.startsWith(rawQuery) ? 0.3 : (medName.includes(rawQuery) ? 0.2 : 0.1);
+            return { score: 1.0 + priorityBonus, isTypoMatch: false };
+        }
+
+        // 2. Compact alphanumeric match (e.g. "dolo650" matching "dolo 650mg")
+        if (cleanQueryCompact.length >= 3 && combinedCompact.includes(cleanQueryCompact)) {
+            return { score: 0.96, isTypoMatch: false };
+        }
+
+        // 3. Multi-token match (all words present, e.g. "dolo 650")
+        if (queryTokens.length > 0 && queryTokens.every(tok => combined.includes(tok) || combinedCompact.includes(tok))) {
+            return { score: 0.94, isTypoMatch: false };
+        }
+
+        // 4. Fuzzy typo matching across words (Levenshtein distance)
+        if (queryTokens.length === 0) return { score: 0, isTypoMatch: false };
+        const candidateWords = tokenizeWords(combined);
+        if (candidateWords.length === 0) return { score: 0, isTypoMatch: false };
+
+        let totalTokenScore = 0;
+        let matchedAnyFuzzy = false;
+
+        for (const qTok of queryTokens) {
+            let bestWordScore = 0;
+            for (const cWord of candidateWords) {
+                if (cWord === qTok || cWord.includes(qTok)) {
+                    bestWordScore = Math.max(bestWordScore, 1.0);
+                    break;
+                }
+                const maxLen = Math.max(qTok.length, cWord.length);
+                if (maxLen <= 2) {
+                    if (qTok === cWord) bestWordScore = Math.max(bestWordScore, 1.0);
+                    continue;
+                }
+                const maxAllowedDistance = qTok.length <= 4 ? 1 : (qTok.length <= 7 ? 2 : 3);
+                const dist = levenshteinDistance(qTok, cWord);
+                if (dist <= maxAllowedDistance) {
+                    const sim = 1.0 - (dist / maxLen);
+                    if (sim > bestWordScore) {
+                        bestWordScore = sim;
+                    }
+                }
+            }
+            if (bestWordScore >= 0.65) {
+                totalTokenScore += bestWordScore;
+                if (bestWordScore < 1.0) matchedAnyFuzzy = true;
+            } else {
+                return { score: 0, isTypoMatch: false };
+            }
+        }
+
+        const avgScore = totalTokenScore / queryTokens.length;
+        if (avgScore >= 0.70) {
+            return { score: avgScore * 0.85, isTypoMatch: matchedAnyFuzzy };
+        }
+
+        return { score: 0, isTypoMatch: false };
+    }
+
     // Search filter
     searchInput.addEventListener('input', function(e) {
-        const query = e.target.value.toLowerCase().trim();
-        if (!query) {
+        const rawQuery = e.target.value.toLowerCase().trim();
+        if (!rawQuery) {
             searchResults.classList.add('hidden');
             return;
         }
 
-        const filtered = availableBatches.filter(b => 
-            b.medicine_name.toLowerCase().includes(query) ||
-            b.generic_name.toLowerCase().includes(query) ||
-            b.batch_number.toLowerCase().includes(query)
-        );
+        const queryTokens = tokenizeWords(rawQuery);
+        const cleanQueryCompact = rawQuery.replace(/[^a-z0-9]/g, '');
 
-        if (filtered.length === 0) {
+        const scoredResults = [];
+        for (let i = 0; i < availableBatches.length; i++) {
+            const b = availableBatches[i];
+            const match = matchBatchWithTypoTolerance(b, rawQuery, queryTokens, cleanQueryCompact);
+            if (match.score > 0) {
+                scoredResults.push({ batch: b, score: match.score, isTypoMatch: match.isTypoMatch });
+            }
+        }
+
+        scoredResults.sort((a, b) => b.score - a.score);
+
+        if (scoredResults.length === 0) {
             searchResults.innerHTML = '<div class="p-4 text-xs text-slate-400 text-center font-medium">No matching medicines with available stock.</div>';
         } else {
-            searchResults.innerHTML = filtered.slice(0, 10).map(b => `
+            searchResults.innerHTML = scoredResults.slice(0, 10).map(({ batch: b, isTypoMatch }) => `
                 <div onclick="addToCart(${b.id})" class="p-3.5 hover:bg-blue-50/60 cursor-pointer flex justify-between items-center transition">
                     <div>
-                        <div class="font-bold text-slate-900 text-xs">${b.medicine_name} <span class="text-slate-400 font-normal">(${b.unit})</span></div>
-                        <div class="text-[11px] text-slate-500 mt-0.5">Batch: <span class="font-mono font-semibold text-slate-700">${b.batch_number}</span> | Exp: ${b.expiry_date} | Rack: ${b.rack || 'N/A'}</div>
+                        <div class="font-bold text-slate-900 text-xs flex items-center space-x-1.5 flex-wrap">
+                            <span>${escapeHtml(b.medicine_name)}</span>
+                            <span class="text-slate-400 font-normal">(${escapeHtml(b.unit)})</span>
+                            ${isTypoMatch ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Typo match</span>' : ''}
+                        </div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">
+                            Batch: <span class="font-mono font-semibold text-slate-700">${escapeHtml(b.batch_number)}</span> | Exp: ${escapeHtml(b.expiry_date)} | Rack: ${escapeHtml(b.rack || 'N/A')}
+                            ${b.generic_name ? `<span class="text-slate-400 block text-[10px] truncate max-w-sm mt-0.5">${escapeHtml(b.generic_name)}</span>` : ''}
+                        </div>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right shrink-0 ml-3">
                         <div class="font-bold text-[#283891] text-xs">${currency}${b.selling_price}</div>
                         <div class="text-[10px] text-slate-400 font-medium">Stock: ${b.available_qty}</div>
                     </div>

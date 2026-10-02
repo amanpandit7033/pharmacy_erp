@@ -1,6 +1,6 @@
 {% extends 'layouts/base_super_admin.html' %}
 
-{% block title %}Pharmacy Stores - Azmed Platform{% endblock %}
+{% block title %}Pharmacy Stores - {{ platform_settings.brand_name|default:'Azmed' }}{% endblock %}
 
 {% block content %}
 <div class="space-y-6">

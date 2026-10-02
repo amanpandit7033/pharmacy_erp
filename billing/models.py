@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from core.models import TenantModel
 
 
@@ -99,4 +100,49 @@ class InvoiceItem(TenantModel):
         if self.batch and self.batch.medicine:
             return self.batch.medicine.generic_name or ""
         return ""
+
+
+class Expense(TenantModel):
+    class Category(models.TextChoices):
+        RENT = 'RENT', 'Store Rent'
+        SALARY = 'SALARY', 'Staff Salary / Wages'
+        ELECTRICITY = 'ELECTRICITY', 'Electricity Bill'
+        UTILITIES = 'UTILITIES', 'Utilities & Water'
+        TEA_SNACKS = 'TEA_SNACKS', 'Tea & Refreshments'
+        PACKAGING = 'PACKAGING', 'Bags & Packaging Materials'
+        STATIONERY = 'STATIONERY', 'Stationery & Printing'
+        MAINTENANCE = 'MAINTENANCE', 'Repairs & Maintenance'
+        TRANSPORT = 'TRANSPORT', 'Freight & Transport'
+        MARKETING = 'MARKETING', 'Marketing & Promotion'
+        SOFTWARE = 'SOFTWARE', 'Software & Internet'
+        MISC = 'MISC', 'Miscellaneous / Other'
+
+    class PaymentMethod(models.TextChoices):
+        CASH = 'CASH', 'Cash'
+        UPI = 'UPI', 'UPI / QR'
+        BANK_TRANSFER = 'BANK_TRANSFER', 'Bank Transfer / NEFT'
+        CARD = 'CARD', 'Credit / Debit Card'
+        CHEQUE = 'CHEQUE', 'Cheque'
+
+    category = models.CharField(max_length=30, choices=Category.choices, default=Category.MISC, db_index=True)
+    title = models.CharField(max_length=200, help_text="Short description of the expense")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    expense_date = models.DateField(default=timezone.localdate, db_index=True)
+    payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.CASH)
+    paid_to = models.CharField(max_length=150, blank=True, help_text="Vendor, employee, or payee")
+    receipt = models.FileField(upload_to='expenses/receipts/', blank=True, null=True, help_text="Optional bill or receipt copy")
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='logged_expenses'
+    )
+
+    class Meta:
+        ordering = ['-expense_date', '-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.get_category_display()}) - {self.amount}"
 

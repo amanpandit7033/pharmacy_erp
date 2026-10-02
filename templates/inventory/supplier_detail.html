@@ -1,0 +1,204 @@
+{% extends 'layouts/base_store_admin.html' %}
+
+{% block title %}{{ supplier.name }} - Supplier Dossier - {{ request.user.store.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-50 text-[#283891] border border-blue-200/60 shadow-2xs">
+                    Supplier Profile
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1.5">{{ supplier.name }}</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Procurement ledger, spending history, and supplied medicine batches.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'inventory:supplier_edit' supplier.pk %}" class="inline-flex items-center px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition">
+                <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                </svg>
+                Edit Supplier
+            </a>
+            <a href="{% url 'inventory:medicine_list' %}" class="inline-flex items-center px-4 py-2 bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold rounded-xl shadow-sm shadow-[#283891]/25 transition">
+                + Add Batch Intake
+            </a>
+            <a href="{% url 'inventory:supplier_list' %}" class="inline-flex items-center px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition">
+                Back to List
+            </a>
+        </div>
+        
+    </div>
+
+    <!-- Spending & Procurement Metrics Strip -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 text-[#283891] flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Amount Spent</p>
+                <p class="text-2xl font-extrabold text-[#283891] tracking-tight">
+                    {{ request.user.store.currency }}{{ total_spent|floatformat:2 }}
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Batches Sourced</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ batch_count }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-card flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Stock Units In Inventory</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ total_units }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sourcing & Contact Details Card -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-card space-y-4">
+        <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider pb-2 border-b border-slate-100">
+            Supplier Compliance &amp; Contact Information
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase">Contact Person</p>
+                <p class="text-xs font-bold text-slate-800 mt-0.5">{{ supplier.contact_person|default:"Not specified" }}</p>
+                
+                <p class="text-[11px] font-bold text-slate-400 uppercase mt-3">Phone Number</p>
+                <p class="text-xs font-bold text-slate-800 mt-0.5">{{ supplier.phone|default:"Not provided" }}</p>
+
+                <p class="text-[11px] font-bold text-slate-400 uppercase mt-3">Email Address</p>
+                <p class="text-xs font-bold text-slate-800 mt-0.5">{{ supplier.email|default:"Not provided" }}</p>
+            </div>
+
+            <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase">GSTIN / Tax ID</p>
+                <p class="text-xs font-mono font-bold text-slate-800 mt-0.5">{{ supplier.gst_number|default:"Not registered" }}</p>
+
+                <p class="text-[11px] font-bold text-slate-400 uppercase mt-3">Drug License (DL) Number</p>
+                <p class="text-xs font-mono font-bold text-slate-800 mt-0.5">{{ supplier.dl_number|default:"Not provided" }}</p>
+
+                <p class="text-[11px] font-bold text-slate-400 uppercase mt-3">Onboarded Since</p>
+                <p class="text-xs font-bold text-slate-800 mt-0.5">{{ supplier.created_at|date:"d M Y" }}</p>
+            </div>
+
+            <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase">Warehouse / Office Address</p>
+                <p class="text-xs text-slate-600 mt-0.5 whitespace-pre-line">{{ supplier.address|default:"No address recorded." }}</p>
+
+                {% if supplier.notes %}
+                <p class="text-[11px] font-bold text-slate-400 uppercase mt-3">Terms &amp; Notes</p>
+                <p class="text-xs text-slate-600 mt-0.5 whitespace-pre-line">{{ supplier.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Procured Batches Table Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Medicine Procurement Ledger</h2>
+                <p class="text-xs text-slate-500 mt-0.5">All stock batches sourced from {{ supplier.name }} with purchasing rates and quantities.</p>
+            </div>
+            <span class="px-3 py-1 bg-blue-50 text-[#283891] text-xs font-extrabold rounded-full border border-blue-200/60 self-start sm:self-auto">
+                {{ batches|length }} Batch{{ batches|length|pluralize:"es" }}
+            </span>
+        </div>
+
+        {% if batches %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[750px]">
+                <thead class="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
+                    <tr>
+                        <th class="py-3 px-4">Medicine</th>
+                        <th class="py-3 px-4">Batch Number</th>
+                        <th class="py-3 px-4">Invoice # / Date</th>
+                        <th class="py-3 px-4 text-right">Cost Price</th>
+                        <th class="py-3 px-4 text-center">Quantity</th>
+                        <th class="py-3 px-4 text-right">Total Spent</th>
+                        <th class="py-3 px-4 text-center">Expiry</th>
+                        <th class="py-3 px-4 text-center">Status</th>
+                        <th class="py-3 px-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for b in batches %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3.5 px-4">
+                            <a href="{% url 'inventory:medicine_detail' b.medicine.pk %}" class="font-extrabold text-slate-900 hover:text-[#283891] transition">
+                                {{ b.medicine.name }}
+                            </a>
+                            <p class="text-[10px] text-slate-400 font-medium">{{ b.medicine.category.name|default:"General" }} &bull; {{ b.medicine.unit.short_name }}</p>
+                        </td>
+                        <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
+                            {{ b.batch_number }}
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-bold text-slate-800">{{ b.supplier_invoice_number|default:"-" }}</span>
+                            <p class="text-[10px] text-slate-400">{{ b.purchase_date|date:"d M Y"|default:"-" }}</p>
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-bold text-slate-800">
+                            {{ request.user.store.currency }}{{ b.cost_price }}
+                        </td>
+                        <td class="py-3.5 px-4 text-center font-extrabold text-slate-900">
+                            {{ b.quantity }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-extrabold text-[#283891]">
+                            {% widthratio b.cost_price 1 b.quantity as batch_total %}
+                            {{ request.user.store.currency }}{{ b.cost_price|floatformat:2 }} &times; {{ b.quantity }}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="font-semibold {% if b.is_expired %}text-rose-600{% elif b.is_near_expiry %}text-amber-600{% else %}text-slate-700{% endif %}">
+                                {{ b.expiry_date|date:"M Y" }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide
+                                {% if b.status == 'ACTIVE' %}bg-emerald-50 text-emerald-700 border border-emerald-200/60
+                                {% elif b.status == 'RETURNED' %}bg-purple-50 text-purple-700 border border-purple-200/60
+                                {% elif b.status == 'QUARANTINED' %}bg-amber-50 text-amber-700 border border-amber-200/60
+                                {% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+                                {{ b.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <a href="{% url 'inventory:batch_edit' b.pk %}" class="p-1.5 rounded-lg text-slate-400 hover:text-[#283891] hover:bg-slate-100 transition inline-block" title="Edit Batch">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-12 px-4 text-center">
+            <p class="text-xs text-slate-400">No medicine batches currently linked to this supplier.</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">When adding or editing batches for any medicine, select {{ supplier.name }} as the supplier.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

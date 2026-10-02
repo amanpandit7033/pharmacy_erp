@@ -31,6 +31,13 @@ urlpatterns = [
     path('units/<int:pk>/edit/', views.UnitUpdateView.as_view(), name='unit_edit'),
     path('units/<int:pk>/delete/', views.UnitDeleteView.as_view(), name='unit_delete'),
 
+    # Suppliers & Medicine Procurement Tracking (Store Admin)
+    path('suppliers/', views.SupplierListView.as_view(), name='supplier_list'),
+    path('suppliers/create/', views.SupplierCreateView.as_view(), name='supplier_create'),
+    path('suppliers/<int:pk>/', views.SupplierDetailView.as_view(), name='supplier_detail'),
+    path('suppliers/<int:pk>/edit/', views.SupplierUpdateView.as_view(), name='supplier_edit'),
+    path('suppliers/<int:pk>/delete/', views.SupplierDeleteView.as_view(), name='supplier_delete'),
+
     # Master Indian Medicine Catalog (250k+)
     path('master-catalog/', views.MasterCatalogListView.as_view(), name='master_catalog'),
     path('master-catalog/search/', views.MasterMedicineSearchApiView.as_view(), name='master_catalog_search'),

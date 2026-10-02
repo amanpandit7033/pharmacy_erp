@@ -1,8 +1,24 @@
 from django import forms
-from inventory.models import Medicine, Batch, Category, Manufacturer, Unit, MasterMedicine
+from inventory.models import Medicine, Batch, Category, Manufacturer, Unit, MasterMedicine, Supplier
 
 INPUT_CLASSES = 'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-[#283891] focus:ring-2 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition bg-white'
 CHECKBOX_CLASSES = 'w-4 h-4 text-[#283891] rounded border-slate-300 focus:ring-[#283891]'
+
+
+class SupplierForm(forms.ModelForm):
+    class Meta:
+        model = Supplier
+        fields = ['name', 'contact_person', 'phone', 'email', 'gst_number', 'dl_number', 'address', 'notes']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Apollo Healthcare Distributors'}),
+            'contact_person': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Rajesh Kumar'}),
+            'phone': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. +91 98765 43210'}),
+            'email': forms.EmailInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. orders@supplier.com'}),
+            'gst_number': forms.TextInput(attrs={'class': INPUT_CLASSES + ' uppercase', 'placeholder': 'e.g. 27AAAAA0000A1Z5'}),
+            'dl_number': forms.TextInput(attrs={'class': INPUT_CLASSES + ' uppercase', 'placeholder': 'e.g. 20B/21B-12345'}),
+            'address': forms.Textarea(attrs={'rows': 2, 'class': INPUT_CLASSES, 'placeholder': 'Warehouse/office address...'}),
+            'notes': forms.Textarea(attrs={'rows': 2, 'class': INPUT_CLASSES, 'placeholder': 'Payment terms, credit limit, delivery schedules...'}),
+        }
 
 
 class MedicineForm(forms.ModelForm):
@@ -45,12 +61,16 @@ class BatchForm(forms.ModelForm):
     class Meta:
         model = Batch
         fields = [
-            'batch_number', 'manufacturing_date', 'expiry_date',
+            'batch_number', 'supplier', 'supplier_invoice_number', 'purchase_date',
+            'manufacturing_date', 'expiry_date',
             'cost_price', 'mrp', 'selling_price', 'tax_percentage', 'quantity',
             'status', 'quarantine_reason'
         ]
         widgets = {
             'batch_number': forms.TextInput(attrs={'class': INPUT_CLASSES + ' uppercase font-mono'}),
+            'supplier': forms.Select(attrs={'class': INPUT_CLASSES}),
+            'supplier_invoice_number': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. INV-2024-884'}),
+            'purchase_date': forms.DateInput(attrs={'type': 'date', 'class': INPUT_CLASSES}),
             'manufacturing_date': forms.DateInput(attrs={'type': 'date', 'class': INPUT_CLASSES}),
             'expiry_date': forms.DateInput(attrs={'type': 'date', 'class': INPUT_CLASSES}),
             'cost_price': forms.NumberInput(attrs={'step': '0.01', 'class': INPUT_CLASSES}),
@@ -62,8 +82,15 @@ class BatchForm(forms.ModelForm):
             'quarantine_reason': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Optional reason if quarantined, disposed, or returned'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, store=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if 'supplier' in self.fields:
+            self.fields['supplier'].required = False
+            self.fields['supplier'].empty_label = "-- Select Supplier (Optional) --"
+            if store:
+                self.fields['supplier'].queryset = Supplier.objects.filter(store=store, is_active=True)
+            elif self.instance and hasattr(self.instance, 'store') and self.instance.store:
+                self.fields['supplier'].queryset = Supplier.objects.filter(store=self.instance.store, is_active=True)
         if 'status' in self.fields:
             self.fields['status'].required = False
             if not self.instance.pk and not self.initial.get('status'):

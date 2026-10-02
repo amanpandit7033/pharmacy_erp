@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Category, Manufacturer, Unit, Medicine, Batch, MasterMedicine
+from .models import Category, Manufacturer, Unit, Supplier, Medicine, Batch, MasterMedicine
+
+
+@admin.register(Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    list_display = ('name', 'store', 'contact_person', 'phone', 'email', 'gst_number', 'is_active', 'created_at')
+    list_filter = ('store', 'is_active')
+    search_fields = ('name', 'contact_person', 'phone', 'email', 'gst_number', 'dl_number')
+    readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(Category)
