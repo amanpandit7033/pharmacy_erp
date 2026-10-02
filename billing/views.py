@@ -7,11 +7,12 @@ from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Sum, Count
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from billing.models import Invoice, InvoiceItem, Customer, Expense
 from billing.forms import ExpenseForm
 from billing.services import create_invoice, cancel_invoice
+from billing.pdf import generate_invoice_pdf
 from inventory.models import Batch, Medicine
 from accounts.models import User
 from billing.utils import amount_to_words
@@ -90,7 +91,7 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
                         discount_val = Decimal('0.00')
 
                 payload = {
-                    'customer_name': request.POST.get('customer_name', 'Walk-in Customer'),
+                    'customer_name': request.POST.get('customer_name', 'Customer'),
                     'customer_phone': request.POST.get('customer_phone', ''),
                     'doctor_name': request.POST.get('doctor_name', ''),
                     'payment_method': request.POST.get('payment_method', Invoice.PaymentMethod.CASH),
@@ -191,27 +192,20 @@ class InvoiceDetailView(TenantAccessMixin, RoleRequiredMixin, DetailView):
         return context
 
 
-class InvoicePrintView(TenantAccessMixin, RoleRequiredMixin, DetailView):
-    model = Invoice
-    template_name = 'billing/invoice_print.html'
-    context_object_name = 'invoice'
-    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        items = list(self.object.items.select_related('batch__medicine__unit').all())
-        context['items'] = items
-        context['total_quantity'] = sum(item.quantity for item in items)
-        
-        # Target 10 rows for optimal single-page A4 print fit
-        target_rows = 10
-        if len(items) < target_rows:
-            context['blank_rows'] = range(target_rows - len(items))
-        else:
-            context['blank_rows'] = []
-            
-        context['amount_in_words'] = amount_to_words(self.object.total_amount)
-        return context
+class InvoicePDFView(View):
+    """
+    Renders and serves a binary PDF for the invoice with Content-Type: application/pdf.
+    Accessible without session auth so WhatsApp Gateway (waba.azmobia.com) can download media.
+    """
+    def get(self, request, pk, *args, **kwargs):
+        invoice = get_object_or_404(Invoice, pk=pk)
+        pdf_bytes = generate_invoice_pdf(invoice)
+        filename = f"{invoice.invoice_number}.pdf"
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        response['Content-Length'] = len(pdf_bytes)
+        return response
 
 
 class InvoiceThermalPrintView(TenantAccessMixin, RoleRequiredMixin, DetailView):
@@ -390,6 +384,11 @@ class InvoiceWhatsAppSendView(TenantAccessMixin, RoleRequiredMixin, View):
 
     def post(self, request, pk, *args, **kwargs):
         invoice = get_object_or_404(Invoice, pk=pk, store=request.user.store)
+        phone = request.POST.get('customer_phone', '').strip()
+        if phone:
+            invoice.customer_phone = phone
+            invoice.save(update_fields=['customer_phone'])
+
         from billing.whatsapp import send_invoice_whatsapp
         success, message = send_invoice_whatsapp(invoice, request=request)
         

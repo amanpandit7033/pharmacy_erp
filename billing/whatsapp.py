@@ -50,20 +50,41 @@ def send_invoice_whatsapp(invoice, request=None) -> tuple[bool, str]:
         return False, f"Customer phone number '{invoice.customer_phone}' is missing or invalid."
 
     # 3. Resolve Media URL & Filename
-    # Construct absolute URL to printable invoice (fallback to domain if request is None)
+    # Construct absolute URL to downloadable invoice PDF
     base_url = "https://erp.azmobia.com"
     if request:
-        base_url = request.build_absolute_uri('/')[:-1]
+        host = request.get_host().lower()
+        if '127.0.0.1' in host or 'localhost' in host:
+            # On local dev, waba.azmobia.com cannot reach 127.0.0.1,
+            # and production erp.azmobia.com does not have this local invoice ID.
+            # Fall back to a valid public sample PDF so local developer testing succeeds!
+            header_media_url = "https://pdfobject.com/pdf/sample.pdf"
+        else:
+            base_url = request.build_absolute_uri('/')[:-1]
+            header_media_url = f"{base_url}/billing/invoices/{invoice.pk}/pdf/"
+    else:
+        header_media_url = f"{base_url}/billing/invoices/{invoice.pk}/pdf/"
     
-    header_media_url = f"{base_url}/billing/invoices/{invoice.pk}/print/"
     filename = f"{invoice.invoice_number}.pdf"
 
     # 4. Prepare Variables
-    customer_name = (invoice.customer_name or "Valued Customer").strip()
+    # Template:
+    # Dear *{{1}}*,
+    # Thank you for your purchase from *{{2}}*.
+    # Your invoice is now ready and attached for your reference.
+    # Invoice No: *{{3}}*
+    # Invoice Amount: *{{4}}/-*
+    # Invoice Date: *{{5}}*
+    # Thank you for your business and trust.
+    customer_name = (invoice.customer_name or "Customer").strip()
+    if customer_name.lower() in ["walk-in customer", "walk in customer", "walk-in", "walkin", "valued customer"]:
+        customer_name = "Customer"
     store_name = (store.name or "Pharmacy").strip()
-    invoice_no = invoice.invoice_number
+    invoice_no = str(invoice.invoice_number).strip()
+    invoice_amount = f"{invoice.total_amount:.2f}"
+    invoice_date = invoice.created_at.strftime("%d-%m-%Y") if invoice.created_at else ""
 
-    variables = [customer_name, store_name, invoice_no]
+    variables = [customer_name, store_name, invoice_no, invoice_amount, invoice_date]
 
     # 5. Build Payload
     api_url = (platform_settings.waba_api_url or "http://waba.azmobia.com/api/v1/messages/send-template/").strip()

@@ -251,7 +251,7 @@
                 </div>
 
                 <!-- Switch to Standard A4 Bill -->
-                <a href="{% url 'billing:invoice_print' invoice.pk %}" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition flex items-center space-x-1">
+                <a href="{% url 'billing:invoice_pdf' invoice.pk %}" target="_blank" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition flex items-center space-x-1">
                     <span>A4 PDF</span>
                 </a>
 

@@ -8,13 +8,16 @@ from inventory.models import Batch
 
 
 def generate_invoice_number(store):
-    """Generates unique invoice sequence per store: CODE-INV-YYYYMMDD-XXXX."""
-    today = timezone.localdate().strftime('%Y%m%d')
-    prefix = f"{store.code}-INV-{today}-"
+    """
+    Generates clean sequential invoice number per store:
+    Format: {store.code}-INV-{0001}
+    Example: APL01-INV-0001
+    """
+    prefix = f"{store.code}-INV-"
     last_invoice = Invoice.all_objects.filter(
         store=store,
         invoice_number__startswith=prefix
-    ).order_by('-invoice_number').first()
+    ).order_by('-id').first()
 
     if last_invoice:
         try:
@@ -53,7 +56,7 @@ def create_invoice(store, user, data):
     discount_amount = Decimal(str(data.get('discount_amount') or '0.00'))
 
     # Manage Customer record
-    customer_name = (data.get('customer_name') or 'Walk-in Customer').strip()
+    customer_name = (data.get('customer_name') or 'Customer').strip()
     customer_phone = (data.get('customer_phone') or '').strip()
     doctor_name = (data.get('doctor_name') or '').strip()
 
