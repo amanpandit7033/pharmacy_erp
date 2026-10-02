@@ -48,30 +48,44 @@ class MedicineListView(TenantAccessMixin, RoleRequiredMixin, ListView):
         self.suggested_medicine = ''
 
         if q:
-            exact_qs = qs.filter(
+            q_clean = q.strip('. -_')
+            exact_filter = (
                 Q(name__icontains=q) |
                 Q(generic_name__icontains=q) |
                 Q(sku__icontains=q) |
                 Q(rack_location__icontains=q)
             )
+            if q_clean and q_clean != q:
+                exact_filter |= (
+                    Q(name__icontains=q_clean) |
+                    Q(generic_name__icontains=q_clean) |
+                    Q(sku__icontains=q_clean) |
+                    Q(rack_location__icontains=q_clean)
+                )
+
+            exact_qs = qs.filter(exact_filter)
             if exact_qs.exists():
                 qs = exact_qs
             else:
-                fuzzy_qs = qs.annotate(
-                    sim_name_word=TrigramWordSimilarity(q, 'name'),
-                    sim_name_full=TrigramSimilarity('name', q),
-                    sim_gen=TrigramWordSimilarity(q, 'generic_name'),
-                ).annotate(
-                    sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_gen'))
-                ).filter(
-                    sim_score__gte=0.20
-                ).order_by('-sim_score')
+                try:
+                    search_term = q_clean if q_clean else q
+                    fuzzy_qs = qs.annotate(
+                        sim_name_word=TrigramWordSimilarity(search_term, 'name'),
+                        sim_name_full=TrigramSimilarity('name', search_term),
+                        sim_gen=TrigramWordSimilarity(search_term, 'generic_name'),
+                    ).annotate(
+                        sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_gen'))
+                    ).filter(
+                        sim_score__gte=0.20
+                    ).order_by('-sim_score')
 
-                if fuzzy_qs.exists():
-                    self.is_fuzzy_search = True
-                    self.suggested_medicine = fuzzy_qs.first().name
-                    qs = fuzzy_qs
-                else:
+                    if fuzzy_qs.exists():
+                        self.is_fuzzy_search = True
+                        self.suggested_medicine = fuzzy_qs.first().name
+                        qs = fuzzy_qs
+                    else:
+                        qs = exact_qs
+                except Exception:
                     qs = exact_qs
         if cat:
             qs = qs.filter(category_id=cat)
@@ -609,29 +623,42 @@ class MasterCatalogListView(RoleRequiredMixin, ListView):
         self.suggested_medicine = ''
 
         if q:
-            exact_qs = qs.filter(
+            q_clean = q.strip('. -_')
+            exact_filter = (
                 Q(name__icontains=q) |
                 Q(salt_composition__icontains=q) |
                 Q(manufacturer_name__icontains=q)
             )
+            if q_clean and q_clean != q:
+                exact_filter |= (
+                    Q(name__icontains=q_clean) |
+                    Q(salt_composition__icontains=q_clean) |
+                    Q(manufacturer_name__icontains=q_clean)
+                )
+
+            exact_qs = qs.filter(exact_filter)
             if exact_qs.exists():
                 qs = exact_qs
             else:
-                fuzzy_qs = qs.annotate(
-                    sim_name_word=TrigramWordSimilarity(q, 'name'),
-                    sim_name_full=TrigramSimilarity('name', q),
-                    sim_salt=TrigramWordSimilarity(q, 'salt_composition'),
-                ).annotate(
-                    sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_salt'))
-                ).filter(
-                    sim_score__gte=0.25
-                ).order_by('-sim_score')
+                try:
+                    search_term = q_clean if q_clean else q
+                    fuzzy_qs = qs.annotate(
+                        sim_name_word=TrigramWordSimilarity(search_term, 'name'),
+                        sim_name_full=TrigramSimilarity('name', search_term),
+                        sim_salt=TrigramWordSimilarity(search_term, 'salt_composition'),
+                    ).annotate(
+                        sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_salt'))
+                    ).filter(
+                        sim_score__gte=0.25
+                    ).order_by('-sim_score')
 
-                if fuzzy_qs.exists():
-                    self.is_fuzzy_search = True
-                    self.suggested_medicine = fuzzy_qs.first().name
-                    qs = fuzzy_qs
-                else:
+                    if fuzzy_qs.exists():
+                        self.is_fuzzy_search = True
+                        self.suggested_medicine = fuzzy_qs.first().name
+                        qs = fuzzy_qs
+                    else:
+                        qs = exact_qs
+                except Exception:
                     qs = exact_qs
         if cat:
             qs = qs.filter(category_name__iexact=cat)
@@ -689,22 +716,29 @@ class MasterMedicineSearchApiView(RoleRequiredMixin, View):
         if not q or len(q) < 2:
             return JsonResponse({'results': []})
 
+        q_clean = q.strip('. -_')
+        exact_filter = Q(name__icontains=q) | Q(salt_composition__icontains=q)
+        if q_clean and q_clean != q:
+            exact_filter |= Q(name__icontains=q_clean) | Q(salt_composition__icontains=q_clean)
+
         medicines = MasterMedicine.objects.filter(
             is_approved=True
-        ).filter(
-            Q(name__icontains=q) | Q(salt_composition__icontains=q)
-        )[:15]
+        ).filter(exact_filter)[:15]
 
         if not medicines.exists():
-            medicines = MasterMedicine.objects.filter(is_approved=True).annotate(
-                sim_name_word=TrigramWordSimilarity(q, 'name'),
-                sim_name_full=TrigramSimilarity('name', q),
-                sim_salt=TrigramWordSimilarity(q, 'salt_composition'),
-            ).annotate(
-                sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_salt'))
-            ).filter(
-                sim_score__gte=0.25
-            ).order_by('-sim_score')[:15]
+            try:
+                search_term = q_clean if q_clean else q
+                medicines = MasterMedicine.objects.filter(is_approved=True).annotate(
+                    sim_name_word=TrigramWordSimilarity(search_term, 'name'),
+                    sim_name_full=TrigramSimilarity('name', search_term),
+                    sim_salt=TrigramWordSimilarity(search_term, 'salt_composition'),
+                ).annotate(
+                    sim_score=Greatest(F('sim_name_word'), F('sim_name_full'), F('sim_salt'))
+                ).filter(
+                    sim_score__gte=0.25
+                ).order_by('-sim_score')[:15]
+            except Exception:
+                medicines = []
 
         data = []
         for m in medicines:
