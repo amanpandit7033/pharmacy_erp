@@ -72,13 +72,21 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'core.middleware.PWASessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# PWA vs Browser Session Isolation Settings
+PWA_SESSION_COOKIE_NAME = 'pwa_sessionid'
+PWA_SESSION_COOKIE_AGE = 31536000  # 1 year persistent session for PWA
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_SAVE_EVERY_REQUEST = True
+
 
 ROOT_URLCONF = 'config.urls'
 

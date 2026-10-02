@@ -11,8 +11,12 @@ def root_redirect(request):
     return redirect('accounts:login')
 
 
+from core.views import PWAManifestView, PWAServiceWorkerView
+
 urlpatterns = [
     path('', root_redirect, name='root'),
+    path('manifest.json', PWAManifestView.as_view(), name='pwa_manifest'),
+    path('sw.js', PWAServiceWorkerView.as_view(), name='pwa_sw'),
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls', namespace='accounts')),
     path('stores/', include('stores.urls', namespace='stores')),

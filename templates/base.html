@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ platform_settings.brand_name|default:'Azmed' }} - Pharmacy ERP & CRM{% endblock %}</title>
+    <title>{% block title %}{{ platform_settings.brand_name|default:'Azmobia' }} - Pharmacy ERP & CRM{% endblock %}</title>
+    <meta name="theme-color" content="#283891">
+    <link rel="manifest" href="{% url 'pwa_manifest' %}?v=azmed">
     {% if platform_settings.logo_icon %}
     <link rel="icon" type="image/png" href="{{ platform_settings.logo_icon.url }}">
+    <link rel="apple-touch-icon" href="{{ platform_settings.logo_icon.url }}">
     {% endif %}
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
@@ -141,5 +144,26 @@
     {% block root_content %}{% endblock %}
     {% block extra_scripts %}{% endblock %}
     {% include 'components/auto_suggest.html' %}
+    <script>
+        // PWA Standalone Mode Detection & Service Worker Registration
+        (function() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            if (isStandalone) {
+                // Ensure session isolation cookie is present inside standalone window
+                if (!document.cookie.includes('app_mode=pwa')) {
+                    document.cookie = "app_mode=pwa; path=/; max-age=31536000; SameSite=Lax";
+                }
+            }
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register("{% url 'pwa_sw' %}?v=clean", { scope: '/' })
+                        .then(function(reg) {
+                            reg.update();
+                        })
+                        .catch(function(err) {});
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

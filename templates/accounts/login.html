@@ -51,7 +51,7 @@
         </div>
 
         <!-- Login Form -->
-        <form method="POST" action="{% url 'accounts:login' %}" class="space-y-4" id="loginForm">
+        <form method="POST" action="{% url 'accounts:login' %}{% if request.GET.client %}?client={{ request.GET.client|urlencode }}{% endif %}" class="space-y-4" id="loginForm">
             {% csrf_token %}
 
             {% if form.non_field_errors %}

@@ -8,10 +8,6 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <div class="flex items-center space-x-2 text-xs">
-                <a href="{% url 'billing:invoice_list' %}" class="inline-flex items-center text-slate-400 hover:text-[#283891] font-bold transition">
-                    &larr; All Invoices
-                </a>
-                <span class="text-slate-300">/</span>
                 <span class="text-slate-700 font-mono font-bold">{{ invoice.invoice_number }}</span>
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">Invoice Details</h1>
@@ -34,10 +30,14 @@
             <form action="{% url 'billing:invoice_cancel' invoice.pk %}" method="post" class="inline" onsubmit="return confirm('Are you sure you want to cancel this bill? Stock will be atomically refunded back to batches.')">
                 {% csrf_token %}
                 <button type="submit" class="px-4 py-2.5 bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-xl transition">
-                    Cancel Bill &amp; Refund Stock
+                    Cancel Bill
                 </button>
             </form>
             {% endif %}
+            
+            <a href="{% url 'billing:invoice_list' %}" class="self-start sm:self-auto text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-2xs transition">
+                Back
+            </a>
         </div>
     </div>
 

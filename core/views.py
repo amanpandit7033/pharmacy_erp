@@ -301,3 +301,62 @@ class TestSmtpConnectionView(RoleRequiredMixin, View):
         success, msg = test_smtp_connection(recipient_email, platform_setting=settings_obj)
         return JsonResponse({'success': success, 'message': msg})
 
+
+class PWAManifestView(View):
+    """
+    Dynamically generates the PWA manifest.json.
+    Configures start_url with client=pwa to trigger session isolation.
+    """
+    def get(self, request, *args, **kwargs):
+        settings_obj = PlatformSetting.get_settings()
+        brand_name = settings_obj.brand_name or "Azmed Pharmacy ERP"
+        
+        icons = []
+        if settings_obj.logo_icon:
+            icons.append({
+                "src": settings_obj.logo_icon.url,
+                "sizes": "192x192 512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+            })
+
+        manifest = {
+            "id": "/?client=pwa",
+            "name": brand_name,
+            "short_name": brand_name[:12],
+            "description": f"{brand_name} Management & POS System",
+            "start_url": "/?client=pwa",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#f4f7fb",
+            "theme_color": "#283891",
+            "orientation": "any",
+            "icons": icons
+        }
+        response = JsonResponse(manifest, content_type='application/manifest+json')
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
+
+
+class PWAServiceWorkerView(View):
+    """
+    Serves a clean sw.js for PWA installation without network interception.
+    Does not tamper with fetch events, guaranteeing zero CSS, CDN, or logout issues.
+    """
+    def get(self, request, *args, **kwargs):
+        from django.http import HttpResponse
+        sw_code = """// Pharmacy ERP Lightweight Service Worker
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+});
+"""
+        response = HttpResponse(sw_code, content_type='application/javascript')
+        response['Service-Worker-Allowed'] = '/'
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
+
+
