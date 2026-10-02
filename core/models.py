@@ -194,6 +194,33 @@ class PlatformSetting(TimeStampedModel):
         help_text="Automatically send professional onboarding email with login credentials when a store admin is created."
     )
 
+    # WhatsApp Cloud API (WABA) Configuration
+    waba_is_enabled = models.BooleanField(
+        default=True,
+        help_text="Enable automated WhatsApp invoice dispatch."
+    )
+    waba_api_url = models.CharField(
+        max_length=255,
+        default='http://waba.azmobia.com/api/v1/messages/send-template/',
+        help_text="WhatsApp Cloud API endpoint URL."
+    )
+    waba_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text="Default master WABA API Key for the platform."
+    )
+    waba_template_name = models.CharField(
+        max_length=100,
+        default='welcome_message',
+        help_text="Default approved Meta template name for invoices."
+    )
+    waba_language = models.CharField(
+        max_length=20,
+        default='en_US',
+        help_text="Default template language code (e.g., en_US, en, hi)."
+    )
+
     class Meta:
         verbose_name = 'Platform Setting'
         verbose_name_plural = 'Platform Settings'

@@ -46,7 +46,8 @@ class StoreForm(forms.ModelForm):
         fields = [
             'name', 'code', 'logo', 'license_number', 'gst_number',
             'phone', 'email', 'address', 'city', 'state', 'pincode', 'currency',
-            'upi_id', 'upi_payee_name', 'is_active'
+            'upi_id', 'upi_payee_name', 'is_active',
+            'whatsapp_service_type', 'whatsapp_api_key'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
@@ -63,6 +64,8 @@ class StoreForm(forms.ModelForm):
             'upi_id': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. pharmacy@okhdfcbank'}),
             'upi_payee_name': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Apollo Pharmacy'}),
             'is_active': forms.CheckboxInput(attrs={'class': CHECKBOX_CLASSES}),
+            'whatsapp_service_type': forms.Select(attrs={'class': INPUT_CLASSES, 'id': 'whatsappServiceTypeSelect'}),
+            'whatsapp_api_key': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Enter Client WABA Bearer API Key', 'id': 'whatsappApiKeyInput'}),
         }
 
     def clean(self):
@@ -101,7 +104,7 @@ class StoreSettingsForm(forms.ModelForm):
         fields = [
             'name', 'logo', 'license_number', 'gst_number',
             'phone', 'email', 'address', 'city', 'state', 'pincode', 'currency',
-            'upi_id', 'upi_payee_name'
+            'upi_id', 'upi_payee_name', 'whatsapp_service_type', 'whatsapp_api_key'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
@@ -116,6 +119,8 @@ class StoreSettingsForm(forms.ModelForm):
             'currency': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'upi_id': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. store@okhdfcbank, merchant@upi'}),
             'upi_payee_name': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Apollo MedPlus Pharmacy'}),
+            'whatsapp_service_type': forms.Select(attrs={'class': INPUT_CLASSES, 'id': 'whatsappServiceTypeSelect'}),
+            'whatsapp_api_key': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Enter Client WABA Bearer API Key', 'id': 'whatsappApiKeyInput'}),
         }
 
     def clean_logo(self):

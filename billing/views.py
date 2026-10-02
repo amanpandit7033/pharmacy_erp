@@ -383,3 +383,22 @@ class ExpenseDeleteView(TenantAccessMixin, RoleRequiredMixin, View):
         messages.success(request, f"Expense '{title}' deleted successfully.")
         return redirect('billing:expense_list')
 
+
+class InvoiceWhatsAppSendView(TenantAccessMixin, RoleRequiredMixin, View):
+    """Dispatches invoice template message to customer WhatsApp via waba.azmobia.com."""
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
+
+    def post(self, request, pk, *args, **kwargs):
+        invoice = get_object_or_404(Invoice, pk=pk, store=request.user.store)
+        from billing.whatsapp import send_invoice_whatsapp
+        success, message = send_invoice_whatsapp(invoice, request=request)
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+            return JsonResponse({'success': success, 'message': message})
+            
+        if success:
+            messages.success(request, message)
+        else:
+            messages.warning(request, message)
+        return redirect('billing:invoice_detail', pk=pk)
+

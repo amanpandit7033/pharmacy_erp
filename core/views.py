@@ -263,8 +263,23 @@ class PlatformSettingsView(RoleRequiredMixin, View):
         settings_obj.smtp_use_ssl = request.POST.get('smtp_use_ssl') in ['1', 'on', 'true', 'True']
         settings_obj.smtp_default_from_email = request.POST.get('smtp_default_from_email', '').strip()
 
+        # WhatsApp Cloud API (WABA) Settings
+        settings_obj.waba_is_enabled = request.POST.get('waba_is_enabled') in ['1', 'on', 'true', 'True']
+        waba_api_url = request.POST.get('waba_api_url', '').strip()
+        if waba_api_url:
+            settings_obj.waba_api_url = waba_api_url
+        new_waba_api_key = request.POST.get('waba_api_key', '')
+        if new_waba_api_key:
+            settings_obj.waba_api_key = new_waba_api_key.strip()
+        waba_template = request.POST.get('waba_template_name', '').strip()
+        if waba_template:
+            settings_obj.waba_template_name = waba_template
+        waba_lang = request.POST.get('waba_language', '').strip()
+        if waba_lang:
+            settings_obj.waba_language = waba_lang
+
         settings_obj.save()
-        messages.success(request, f"Platform settings and SMTP configuration updated successfully.")
+        messages.success(request, f"Platform settings and configurations updated successfully.")
         return redirect('core:platform_settings')
 
 

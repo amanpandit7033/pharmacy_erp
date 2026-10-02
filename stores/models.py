@@ -22,6 +22,30 @@ class Store(TimeStampedModel, SoftDeleteModel):
     upi_id = models.CharField(max_length=100, blank=True, null=True, help_text="Store UPI ID / VPA (e.g. merchant@upi, pharmacy@okhdfcbank)")
     upi_payee_name = models.CharField(max_length=255, blank=True, null=True, help_text="Payee Name displayed on customer UPI apps")
 
+    class WhatsAppGatewayType(models.TextChoices):
+        DEFAULT = 'default', 'Platform Default'
+        OWN = 'own', "Client's Own API Key"
+
+    whatsapp_service_type = models.CharField(
+        max_length=20,
+        choices=WhatsAppGatewayType.choices,
+        default=WhatsAppGatewayType.DEFAULT,
+        help_text="WhatsApp Sending Mode: Platform Default or Client's Own API Key"
+    )
+    whatsapp_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Client's custom WABA API Key (used when mode is Client's Own)"
+    )
+
+    def get_whatsapp_api_key(self):
+        """Returns the appropriate WhatsApp API key based on sending type."""
+        if self.whatsapp_service_type == self.WhatsAppGatewayType.OWN and self.whatsapp_api_key:
+            return self.whatsapp_api_key.strip()
+        from core.models import PlatformSetting
+        return PlatformSetting.get_settings().waba_api_key.strip()
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = "Pharmacy Store"
