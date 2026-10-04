@@ -7,7 +7,7 @@ from django.db.models import Sum, Count, F, Q
 from accounts.models import User
 from stores.models import Store
 from inventory.models import Medicine, Batch
-from billing.models import Invoice, InvoiceItem
+from billing.models import Invoice, InvoiceItem, Expense
 from core.mixins import RoleRequiredMixin
 from dashboard.analytics import (
     parse_date_range, compute_financials, compute_growth_pct,
