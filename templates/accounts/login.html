@@ -21,7 +21,18 @@
         <div class="flex justify-center">
             <div class="w-14 h-14 flex items-center justify-center">
                 {% if platform_settings.logo_icon %}
-                <img src="{{ platform_settings.logo_icon.url }}" alt="{{ platform_settings.brand_name|default:'Azmed' }}" class="w-12 h-12 rounded-2xl object-contain aspect-square shadow-2xs">
+                <img src="{{ platform_settings.logo_icon.url }}" alt="{{ platform_settings.brand_name|default:'Azmed' }}" class="w-12 h-12 rounded-2xl object-contain aspect-square shadow-2xs" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                <div class="hidden">
+                    <svg class="w-12 h-12" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                        <circle cx="26" cy="18" r="3.2" fill="white"/>
+                        <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                        <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+                        <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                        <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+                        <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+                    </svg>
+                </div>
                 {% else %}
                 <svg class="w-12 h-12" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <!-- Top Circle -->

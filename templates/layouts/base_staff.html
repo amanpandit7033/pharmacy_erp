@@ -63,7 +63,18 @@
                 <div class="flex items-center space-x-3 overflow-hidden cursor-pointer" onclick="toggleSidebar()" title="Toggle Sidebar">
                     <div class="w-10 h-10 flex-shrink-0 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-center shadow-2xs overflow-hidden">
                         {% if platform_settings.logo_icon %}
-                        <img src="{{ platform_settings.logo_icon.url }}" alt="{{ platform_settings.brand_name|default:'Azmed' }}" class="w-8 h-8 rounded-lg object-contain aspect-square">
+                        <img src="{{ platform_settings.logo_icon.url }}" alt="{{ platform_settings.brand_name|default:'Azmed' }}" class="w-8 h-8 rounded-lg object-contain aspect-square" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                        <div class="hidden">
+                            <svg class="w-8 h-8" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="26" cy="18" r="9.5" fill="#283891"/>
+                                <circle cx="26" cy="18" r="3.2" fill="white"/>
+                                <circle cx="17.5" cy="32.5" r="9.5" fill="#283891"/>
+                                <circle cx="17.5" cy="32.5" r="3.2" fill="white"/>
+                                <circle cx="34.5" cy="32.5" r="9.5" fill="#39b54a"/>
+                                <circle cx="34.5" cy="32.5" r="3.2" fill="white"/>
+                                <circle cx="26" cy="27.5" r="3.5" fill="white"/>
+                            </svg>
+                        </div>
                         {% else %}
                         <svg class="w-8 h-8" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="26" cy="18" r="9.5" fill="#283891"/>
