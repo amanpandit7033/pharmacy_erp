@@ -182,9 +182,12 @@ class InvoiceDetailView(TenantAccessMixin, RoleRequiredMixin, DetailView):
     context_object_name = 'invoice'
     allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
+    def get_queryset(self):
+        return super().get_queryset().select_related('store', 'created_by')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['items'] = self.object.items.all()
+        context['items'] = self.object.items.all().select_related('batch', 'batch__medicine')
         context['can_cancel'] = (
             self.request.user.role == User.Role.STORE_ADMIN and
             self.object.status == Invoice.Status.PAID
@@ -294,18 +297,14 @@ class ExpenseListView(TenantAccessMixin, RoleRequiredMixin, ListView):
 
         store_expenses = Expense.objects.filter(store=store, is_active=True)
 
-        today_total = store_expenses.filter(expense_date=today).aggregate(
-            total=Sum('amount')
-        )['total'] or Decimal('0.00')
-
-        month_total = store_expenses.filter(
-            expense_date__gte=month_start,
-            expense_date__lte=today
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-        all_time_total = store_expenses.aggregate(
-            total=Sum('amount')
-        )['total'] or Decimal('0.00')
+        expense_totals = store_expenses.aggregate(
+            today_total=Sum('amount', filter=Q(expense_date=today)),
+            month_total=Sum('amount', filter=Q(expense_date__gte=month_start, expense_date__lte=today)),
+            all_time_total=Sum('amount'),
+        )
+        today_total = expense_totals['today_total'] or Decimal('0.00')
+        month_total = expense_totals['month_total'] or Decimal('0.00')
+        all_time_total = expense_totals['all_time_total'] or Decimal('0.00')
 
         # Filtered queryset total for currently viewed results
         filtered_qs = self.get_queryset()

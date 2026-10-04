@@ -10,6 +10,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
+node_modules/
 
 # Django local database
 db.sqlite3

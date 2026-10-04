@@ -239,7 +239,7 @@
                             {% endif %}
                         </td>
                         <td class="py-3.5 px-4 text-center">
-                            {% with stock=med.total_stock %}
+                            {% with stock=med.total_qty %}
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide
                                 {% if stock == 0 %}bg-rose-50 text-rose-600 border border-rose-200/60
                                 {% elif stock <= med.min_stock_level %}bg-amber-50 text-amber-700 border border-amber-200/60

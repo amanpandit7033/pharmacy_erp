@@ -59,6 +59,8 @@ class Supplier(TenantModel):
     @property
     def total_purchases_amount(self):
         """Total spent on medicines purchased from this supplier."""
+        if hasattr(self, 'total_spent') and self.total_spent is not None:
+            return self.total_spent
         total = self.batches.filter(is_active=True).aggregate(
             spent=models.Sum(models.F('cost_price') * models.F('quantity'))
         )['spent']
@@ -66,6 +68,8 @@ class Supplier(TenantModel):
 
     @property
     def total_batches_count(self):
+        if hasattr(self, 'batches_count') and self.batches_count is not None:
+            return self.batches_count
         return self.batches.filter(is_active=True).count()
 
 
@@ -90,6 +94,8 @@ class Medicine(TenantModel):
     @property
     def total_stock(self):
         """Sum of available quantity in all active and non-quarantined batches."""
+        if hasattr(self, 'total_qty') and self.total_qty is not None:
+            return self.total_qty
         return self.batches.filter(is_active=True, status=Batch.Status.ACTIVE).aggregate(
             total=models.Sum('quantity')
         )['total'] or 0

@@ -40,7 +40,7 @@
             </div>
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Categories</p>
-                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ categories.count }}</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ categories|length }}</p>
             </div>
         </div>
 
@@ -78,7 +78,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
             </svg>
             <span>Medicine Categories</span>
-            <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ categories.count }}</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ categories|length }}</span>
         </a>
         <a href="{% url 'inventory:unit_list' %}" class="px-4 py-2 bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold transition flex items-center space-x-2">
             <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,8 +155,8 @@
                             {{ cat.description|default:"—" }}
                         </td>
                         <td class="px-5 py-4 text-center">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold {% if cat.medicines.count > 0 %}bg-blue-50 text-[#283891]{% else %}bg-slate-100 text-slate-500{% endif %}">
-                                {{ cat.medicines.count }} medicines
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold {% if cat.med_count > 0 %}bg-blue-50 text-[#283891]{% else %}bg-slate-100 text-slate-500{% endif %}">
+                                {{ cat.med_count }} medicines
                             </span>
                         </td>
                         <td class="px-5 py-4 text-right">

@@ -1,0 +1,27 @@
+{
+  "name": "pharmacy_erp",
+  "version": "1.0.0",
+  "description": "A modern, production-ready multi-tenant Pharmacy Enterprise Resource Planning (ERP) and Point of Sale (POS) system built with Django and Tailwind CSS. Tailored for independent retail pharmacies and multi-store pharmacy chains.",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/tailwind.min.css --minify",
+    "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/tailwind.min.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amanpandit7033/pharmacy_erp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/amanpandit7033/pharmacy_erp/issues"
+  },
+  "homepage": "https://github.com/amanpandit7033/pharmacy_erp#readme",
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.11",
+    "@tailwindcss/typography": "^0.5.20",
+    "tailwindcss": "^3.4.17"
+  }
+}

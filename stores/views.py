@@ -3,7 +3,7 @@ from django.views import View
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Count
 
 from stores.models import Store
 from stores.forms import StoreForm, StoreSettingsForm
@@ -64,9 +64,14 @@ class StoreListView(RoleRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         all_qs = Store.all_objects.all()
-        context['total_stores_count'] = all_qs.count()
-        context['active_stores_count'] = all_qs.filter(is_active=True).count()
-        context['inactive_stores_count'] = all_qs.filter(is_active=False).count()
+        counts = all_qs.aggregate(
+            total=Count('id'),
+            active=Count('id', filter=Q(is_active=True)),
+            inactive=Count('id', filter=Q(is_active=False))
+        )
+        context['total_stores_count'] = counts['total'] or 0
+        context['active_stores_count'] = counts['active'] or 0
+        context['inactive_stores_count'] = counts['inactive'] or 0
         context['available_states'] = (
             all_qs.exclude(state='').values_list('state', flat=True).distinct().order_by('state')
         )

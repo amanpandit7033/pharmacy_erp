@@ -687,16 +687,37 @@ class MasterCatalogListView(RoleRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.request.user.is_authenticated and hasattr(self.request.user, 'store') and self.request.user.store:
-            existing_names = set(
-                Medicine.objects.filter(store=self.request.user.store).values_list('name', flat=True)
+        from django.core.cache import cache
+
+        page_medicines = context.get('master_medicines') or []
+        page_med_names = [m.name for m in page_medicines]
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'store') and self.request.user.store and page_med_names:
+            context['existing_medicine_names'] = set(
+                Medicine.objects.filter(store=self.request.user.store, name__in=page_med_names).values_list('name', flat=True)
             )
-            context['existing_medicine_names'] = existing_names
         else:
             context['existing_medicine_names'] = set()
 
-        context['total_master_count'] = MasterMedicine.objects.filter(is_approved=True).count()
-        context['pending_contributions_count'] = MasterMedicine.objects.filter(submission_status='pending').count()
+        q = self.request.GET.get('q', '').strip()
+        cat = self.request.GET.get('category', '').strip()
+        mfg = self.request.GET.get('mfg', '').strip()
+        store_status = self.request.GET.get('store_status', '').strip()
+
+        if not (q or cat or mfg or store_status) and 'paginator' in context:
+            total_master = context['paginator'].count
+        else:
+            total_master = cache.get_or_set(
+                'master_catalog_total_approved',
+                lambda: MasterMedicine.objects.filter(is_approved=True).count(),
+                300
+            )
+        context['total_master_count'] = total_master
+
+        context['pending_contributions_count'] = cache.get_or_set(
+            'master_catalog_pending_count',
+            lambda: MasterMedicine.objects.filter(submission_status='pending').count(),
+            300
+        )
         context['can_manage_stock'] = (
             self.request.user.is_authenticated and self.request.user.role == User.Role.STORE_ADMIN
         )
@@ -831,9 +852,14 @@ class MasterContributionsListView(RoleRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['pending_count'] = MasterMedicine.objects.filter(submission_status='pending').count()
-        context['approved_count'] = MasterMedicine.objects.filter(submission_status='approved', submitted_by_store__isnull=False).count()
-        context['rejected_count'] = MasterMedicine.objects.filter(submission_status='rejected').count()
+        counts = MasterMedicine.objects.aggregate(
+            pending=Count('id', filter=Q(submission_status='pending')),
+            approved=Count('id', filter=Q(submission_status='approved', submitted_by_store__isnull=False)),
+            rejected=Count('id', filter=Q(submission_status='rejected')),
+        )
+        context['pending_count'] = counts['pending'] or 0
+        context['approved_count'] = counts['approved'] or 0
+        context['rejected_count'] = counts['rejected'] or 0
         context['current_status'] = self.request.GET.get('status', 'pending')
         return context
 
@@ -1282,38 +1308,26 @@ class ExpiryWatchListView(TenantAccessMixin, RoleRequiredMixin, ListView):
 
         all_store_batches = Batch.objects.filter(store=store, is_active=True)
 
-        # 1. Expired batches count and estimated loss value
-        expired_qs = all_store_batches.filter(
-            expiry_date__lte=today,
-            quantity__gt=0
-        ).exclude(status__in=[Batch.Status.DISPOSED, Batch.Status.RETURNED])
-        expired_count = expired_qs.count()
-        expired_loss_value = sum((b.quantity * b.cost_price for b in expired_qs), Decimal('0.00'))
-
-        # 2. Critical (< 30 days)
-        days_30_qs = all_store_batches.filter(
-            expiry_date__gt=today,
-            expiry_date__lte=d30,
-            quantity__gt=0,
-            status=Batch.Status.ACTIVE
+        # Consolidated single aggregate query for all expiry risk buckets
+        risk_metrics = all_store_batches.aggregate(
+            expired_count=Count('id', filter=Q(expiry_date__lte=today, quantity__gt=0) & ~Q(status__in=[Batch.Status.DISPOSED, Batch.Status.RETURNED])),
+            expired_loss=Sum(F('quantity') * F('cost_price'), filter=Q(expiry_date__lte=today, quantity__gt=0) & ~Q(status__in=[Batch.Status.DISPOSED, Batch.Status.RETURNED])),
+            days_30_count=Count('id', filter=Q(expiry_date__gt=today, expiry_date__lte=d30, quantity__gt=0, status=Batch.Status.ACTIVE)),
+            days_30_qty=Sum('quantity', filter=Q(expiry_date__gt=today, expiry_date__lte=d30, quantity__gt=0, status=Batch.Status.ACTIVE)),
+            days_90_count=Count('id', filter=Q(expiry_date__gt=d30, expiry_date__lte=d90, quantity__gt=0, status=Batch.Status.ACTIVE)),
+            days_90_qty=Sum('quantity', filter=Q(expiry_date__gt=d30, expiry_date__lte=d90, quantity__gt=0, status=Batch.Status.ACTIVE)),
+            quarantined_count=Count('id', filter=Q(status=Batch.Status.QUARANTINED)),
+            quarantined_qty=Sum('quantity', filter=Q(status=Batch.Status.QUARANTINED)),
         )
-        days_30_count = days_30_qs.count()
-        days_30_qty = days_30_qs.aggregate(total=Sum('quantity'))['total'] or 0
 
-        # 3. Warning (31 - 90 days)
-        days_90_qs = all_store_batches.filter(
-            expiry_date__gt=d30,
-            expiry_date__lte=d90,
-            quantity__gt=0,
-            status=Batch.Status.ACTIVE
-        )
-        days_90_count = days_90_qs.count()
-        days_90_qty = days_90_qs.aggregate(total=Sum('quantity'))['total'] or 0
-
-        # 4. Quarantined Batches
-        quarantined_qs = all_store_batches.filter(status=Batch.Status.QUARANTINED)
-        quarantined_count = quarantined_qs.count()
-        quarantined_qty = quarantined_qs.aggregate(total=Sum('quantity'))['total'] or 0
+        expired_count = risk_metrics['expired_count'] or 0
+        expired_loss_value = risk_metrics['expired_loss'] or Decimal('0.00')
+        days_30_count = risk_metrics['days_30_count'] or 0
+        days_30_qty = risk_metrics['days_30_qty'] or 0
+        days_90_count = risk_metrics['days_90_count'] or 0
+        days_90_qty = risk_metrics['days_90_qty'] or 0
+        quarantined_count = risk_metrics['quarantined_count'] or 0
+        quarantined_qty = risk_metrics['quarantined_qty'] or 0
 
         # Total at-risk count
         all_risk_count = expired_count + days_30_count + days_90_count + quarantined_count

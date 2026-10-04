@@ -21,11 +21,20 @@ class SuperAdminDashboardView(RoleRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['total_stores'] = Store.all_objects.count()
-        context['active_stores'] = Store.objects.count()
-        context['inactive_stores'] = Store.all_objects.filter(is_active=False).count()
-        context['total_store_admins'] = User.objects.filter(role=User.Role.STORE_ADMIN).count()
-        context['total_staff'] = User.objects.filter(role=User.Role.STAFF).count()
+        store_stats = Store.all_objects.aggregate(
+            total=Count('id'),
+            active=Count('id', filter=Q(is_active=True)),
+            inactive=Count('id', filter=Q(is_active=False))
+        )
+        user_stats = User.objects.aggregate(
+            store_admins=Count('id', filter=Q(role=User.Role.STORE_ADMIN)),
+            staff=Count('id', filter=Q(role=User.Role.STAFF))
+        )
+        context['total_stores'] = store_stats['total'] or 0
+        context['active_stores'] = store_stats['active'] or 0
+        context['inactive_stores'] = store_stats['inactive'] or 0
+        context['total_store_admins'] = user_stats['store_admins'] or 0
+        context['total_staff'] = user_stats['staff'] or 0
         context['recent_stores'] = Store.all_objects.order_by('-created_at')[:5]
         return context
 
@@ -43,38 +52,32 @@ class StoreAdminDashboardView(RoleRequiredMixin, TemplateView):
         prev_month_end = month_start - timezone.timedelta(days=1)
         prev_month_start = prev_month_end.replace(day=1)
 
-        # 1. Invoices & Sales Metrics
-        invoices_today = Invoice.objects.filter(store=store, created_at__date=today, status=Invoice.Status.PAID)
-        today_sales = invoices_today.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
-        today_bills_count = invoices_today.count()
-
-        invoices_yesterday = Invoice.objects.filter(store=store, created_at__date=yesterday, status=Invoice.Status.PAID)
-        yesterday_sales = invoices_yesterday.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
-        if yesterday_sales > 0:
-            today_growth_pct = round(float((today_sales - yesterday_sales) / yesterday_sales * 100), 1)
-        else:
-            today_growth_pct = 100.0 if today_sales > 0 else 0.0
-
-        invoices_month = Invoice.objects.filter(store=store, created_at__date__gte=month_start, status=Invoice.Status.PAID)
-        month_sales = invoices_month.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
-        month_bills_count = invoices_month.count()
-
-        invoices_prev_month = Invoice.objects.filter(
-            store=store,
-            created_at__date__gte=prev_month_start,
-            created_at__date__lte=prev_month_end,
-            status=Invoice.Status.PAID
+        # 1. Invoices & Sales Metrics (Consolidated single aggregate query)
+        sales_metrics = Invoice.objects.filter(store=store, status=Invoice.Status.PAID).aggregate(
+            today_sales=Sum('total_amount', filter=Q(created_at__date=today)),
+            today_bills_count=Count('id', filter=Q(created_at__date=today)),
+            yesterday_sales=Sum('total_amount', filter=Q(created_at__date=yesterday)),
+            month_sales=Sum('total_amount', filter=Q(created_at__date__gte=month_start)),
+            month_bills_count=Count('id', filter=Q(created_at__date__gte=month_start)),
+            prev_month_sales=Sum('total_amount', filter=Q(created_at__date__gte=prev_month_start, created_at__date__lte=prev_month_end)),
         )
-        prev_month_sales = invoices_prev_month.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
-        if prev_month_sales > 0:
-            month_growth_pct = round(float((month_sales - prev_month_sales) / prev_month_sales * 100), 1)
-        else:
-            month_growth_pct = 100.0 if month_sales > 0 else 0.0
+        today_sales = sales_metrics['today_sales'] or Decimal('0.00')
+        today_bills_count = sales_metrics['today_bills_count'] or 0
+        yesterday_sales = sales_metrics['yesterday_sales'] or Decimal('0.00')
+        today_growth_pct = round(float((today_sales - yesterday_sales) / yesterday_sales * 100), 1) if yesterday_sales > 0 else (100.0 if today_sales > 0 else 0.0)
 
-        # 2. Inventory valuation
-        active_batches = Batch.objects.filter(store=store, is_active=True, quantity__gt=0)
-        cost_val = sum((b.cost_price * b.quantity for b in active_batches), Decimal('0.00'))
-        retail_val = sum((b.selling_price * b.quantity for b in active_batches), Decimal('0.00'))
+        month_sales = sales_metrics['month_sales'] or Decimal('0.00')
+        month_bills_count = sales_metrics['month_bills_count'] or 0
+        prev_month_sales = sales_metrics['prev_month_sales'] or Decimal('0.00')
+        month_growth_pct = round(float((month_sales - prev_month_sales) / prev_month_sales * 100), 1) if prev_month_sales > 0 else (100.0 if month_sales > 0 else 0.0)
+
+        # 2. Inventory valuation (Single SQL aggregate)
+        val_agg = Batch.objects.filter(store=store, is_active=True, quantity__gt=0).aggregate(
+            cost_val=Sum(F('cost_price') * F('quantity')),
+            retail_val=Sum(F('selling_price') * F('quantity'))
+        )
+        cost_val = val_agg['cost_val'] or Decimal('0.00')
+        retail_val = val_agg['retail_val'] or Decimal('0.00')
         margin_pct = round(float((retail_val - cost_val) / retail_val * 100), 1) if retail_val > 0 else 0.0
 
         # 3. Catalog & Team metrics
@@ -101,11 +104,16 @@ class StoreAdminDashboardView(RoleRequiredMixin, TemplateView):
 
         store_staff_count = User.objects.filter(store=store, role=User.Role.STAFF, is_active=True).count()
 
-        # 4. Customer and Channel Breakdown
+        # 4. Customer and Channel Breakdown (Single SQL aggregate)
         all_store_invoices = Invoice.objects.filter(store=store)
-        total_customers = all_store_invoices.values('customer_name').distinct().count()
-        prescription_count = all_store_invoices.exclude(doctor_name='').count()
-        walkin_count = all_store_invoices.filter(doctor_name='').count()
+        channel_metrics = all_store_invoices.aggregate(
+            total_customers=Count('customer_name', distinct=True),
+            prescription_count=Count('id', filter=~Q(doctor_name='')),
+            walkin_count=Count('id', filter=Q(doctor_name='')),
+        )
+        total_customers = channel_metrics['total_customers'] or 0
+        prescription_count = channel_metrics['prescription_count'] or 0
+        walkin_count = channel_metrics['walkin_count'] or 0
 
         # 5. Top Selling Medicines (from real InvoiceItem data)
         best_selling_medicines = list(
@@ -122,18 +130,32 @@ class StoreAdminDashboardView(RoleRequiredMixin, TemplateView):
         # 6. Recent Invoices
         recent_invoices = all_store_invoices.select_related('created_by').order_by('-created_at')[:6]
 
-        # 7. Last 7 Days Performance & Chart Points
+        # 7. Last 7 Days Performance & Chart Points (Single grouped SQL query)
+        seven_days_ago = today - timezone.timedelta(days=6)
+        daily_invs = {
+            row['created_at__date']: row
+            for row in Invoice.objects.filter(
+                store=store,
+                created_at__date__gte=seven_days_ago,
+                created_at__date__lte=today,
+                status=Invoice.Status.PAID
+            ).values('created_at__date').annotate(
+                total=Sum('total_amount'),
+                count=Count('id')
+            )
+        }
+
         trend_days = []
         for i in range(6, -1, -1):
             d = today - timezone.timedelta(days=i)
-            day_invs = Invoice.objects.filter(store=store, created_at__date=d, status=Invoice.Status.PAID)
-            day_total = day_invs.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+            row = daily_invs.get(d, {})
+            day_total = row.get('total') or Decimal('0.00')
             trend_days.append({
                 'date': d,
                 'date_str': d.strftime('%d %b'),
                 'day_name': d.strftime('%a'),
                 'sales': float(day_total),
-                'count': day_invs.count()
+                'count': row.get('count', 0)
             })
 
         max_sales = max([t['sales'] for t in trend_days] + [1.0])
@@ -209,9 +231,14 @@ class StaffDashboardView(RoleRequiredMixin, TemplateView):
         user = self.request.user
         today = timezone.localdate()
 
-        my_invoices_today = Invoice.objects.filter(store=store, created_by=user, created_at__date=today, status=Invoice.Status.PAID)
-        context['my_today_sales'] = my_invoices_today.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
-        context['my_today_count'] = my_invoices_today.count()
+        my_metrics = Invoice.objects.filter(
+            store=store, created_by=user, created_at__date=today, status=Invoice.Status.PAID
+        ).aggregate(
+            total=Sum('total_amount'),
+            count=Count('id')
+        )
+        context['my_today_sales'] = my_metrics['total'] or Decimal('0.00')
+        context['my_today_count'] = my_metrics['count'] or 0
 
         context['total_medicines'] = Medicine.objects.filter(store=store, is_active=True).count()
         context['recent_invoices'] = Invoice.objects.filter(store=store, created_by=user).order_by('-created_at')[:5]
@@ -259,26 +286,47 @@ class AnalyticsReportView(RoleRequiredMixin, TemplateView):
         return context
 
     def _generate_daily_points(self, start_date, end_date, store=None):
+        inv_filter = Q(status=Invoice.Status.PAID, created_at__date__gte=start_date, created_at__date__lte=end_date)
+        item_filter = Q(invoice__status=Invoice.Status.PAID, invoice__created_at__date__gte=start_date, invoice__created_at__date__lte=end_date)
+        if store:
+            inv_filter &= Q(store=store)
+            item_filter &= Q(invoice__store=store)
+
+        inv_stats = {
+            item['created_at__date']: item
+            for item in Invoice.objects.filter(inv_filter).values('created_at__date').annotate(
+                revenue=Sum('total_amount'),
+                discount=Sum('discount_amount'),
+                count=Count('id')
+            )
+        }
+
+        cogs_stats = {
+            item['invoice__created_at__date']: item['cogs'] or Decimal('0.00')
+            for item in InvoiceItem.objects.filter(item_filter).values('invoice__created_at__date').annotate(
+                cogs=Sum(F('quantity') * F('batch__cost_price'))
+            )
+        }
+
         days_data = []
         delta_days = (end_date - start_date).days
         step = 1 if delta_days <= 30 else max(1, delta_days // 20)
 
         d = start_date
         while d <= end_date:
-            day_inv_filter = Q(status=Invoice.Status.PAID, created_at__date=d)
-            if store:
-                day_inv_filter &= Q(store=store)
-
-            day_invs = Invoice.objects.filter(day_inv_filter)
-            day_fin = compute_financials(day_invs, store=store, date_range=(d, d))
+            inv = inv_stats.get(d, {})
+            rev = inv.get('revenue') or Decimal('0.00')
+            disc = inv.get('discount') or Decimal('0.00')
+            cogs = cogs_stats.get(d, Decimal('0.00'))
+            gross_profit = rev - cogs - disc
 
             days_data.append({
                 'date': d,
                 'date_str': d.strftime('%d %b'),
                 'day_name': d.strftime('%a'),
-                'revenue': float(day_fin['revenue']),
-                'profit': float(day_fin['gross_profit']),
-                'invoices_count': day_fin['invoices_count'],
+                'revenue': float(rev),
+                'profit': float(gross_profit),
+                'invoices_count': inv.get('count', 0),
             })
             d += timedelta(days=step)
 
@@ -315,40 +363,122 @@ class AnalyticsReportView(RoleRequiredMixin, TemplateView):
         profit_growth_pct = compute_growth_pct(curr_fin['gross_profit'], prev_fin['gross_profit'])
         net_profit_growth_pct = compute_growth_pct(curr_fin['net_profit'], prev_fin['net_profit'])
 
-        # Store-by-Store Growth & Down Performance Matrix
+        # Store-by-Store Growth & Down Performance Matrix (Bulk aggregated)
         stores_analytics = []
         growing_stores = []
         down_stores = []
         at_risk_stores = []
         stable_stores = []
 
+        curr_store_invs = {
+            row['store_id']: row
+            for row in Invoice.objects.filter(
+                status=Invoice.Status.PAID,
+                created_at__date__gte=curr_start,
+                created_at__date__lte=curr_end
+            ).values('store_id').annotate(
+                revenue=Sum('total_amount'),
+                tax=Sum('tax_amount'),
+                discount=Sum('discount_amount'),
+                count=Count('id')
+            )
+        }
+
+        prev_store_invs = {
+            row['store_id']: row
+            for row in Invoice.objects.filter(
+                status=Invoice.Status.PAID,
+                created_at__date__gte=prev_start,
+                created_at__date__lte=prev_end
+            ).values('store_id').annotate(
+                revenue=Sum('total_amount'),
+                count=Count('id')
+            )
+        }
+
+        curr_store_cogs = {
+            row['invoice__store_id']: row['cogs'] or Decimal('0.00')
+            for row in InvoiceItem.objects.filter(
+                invoice__status=Invoice.Status.PAID,
+                invoice__created_at__date__gte=curr_start,
+                invoice__created_at__date__lte=curr_end
+            ).values('invoice__store_id').annotate(
+                cogs=Sum(F('quantity') * F('batch__cost_price'))
+            )
+        }
+        prev_store_cogs = {
+            row['invoice__store_id']: row['cogs'] or Decimal('0.00')
+            for row in InvoiceItem.objects.filter(
+                invoice__status=Invoice.Status.PAID,
+                invoice__created_at__date__gte=prev_start,
+                invoice__created_at__date__lte=prev_end
+            ).values('invoice__store_id').annotate(
+                cogs=Sum(F('quantity') * F('batch__cost_price'))
+            )
+        }
+
+        curr_store_losses = {
+            row['store_id']: row['loss'] or Decimal('0.00')
+            for row in Batch.objects.filter(
+                status=Batch.Status.DISPOSED,
+                updated_at__date__gte=curr_start,
+                updated_at__date__lte=curr_end
+            ).values('store_id').annotate(
+                loss=Sum(F('quantity') * F('cost_price'))
+            )
+        }
+
+        curr_store_exp = {
+            row['store_id']: row['exp'] or Decimal('0.00')
+            for row in Expense.objects.filter(
+                is_active=True,
+                expense_date__gte=curr_start,
+                expense_date__lte=curr_end
+            ).values('store_id').annotate(
+                exp=Sum('amount')
+            )
+        }
+
         for st in all_stores:
-            st_curr_inv = Invoice.objects.filter(store=st, status=Invoice.Status.PAID, created_at__date__gte=curr_start, created_at__date__lte=curr_end)
-            st_prev_inv = Invoice.objects.filter(store=st, status=Invoice.Status.PAID, created_at__date__gte=prev_start, created_at__date__lte=prev_end)
+            c_inv = curr_store_invs.get(st.id, {})
+            p_inv = prev_store_invs.get(st.id, {})
 
-            st_curr_fin = compute_financials(st_curr_inv, store=st, date_range=(curr_start, curr_end))
-            st_prev_fin = compute_financials(st_prev_inv, store=st, date_range=(prev_start, prev_end))
+            st_rev = c_inv.get('revenue') or Decimal('0.00')
+            st_prev_rev = p_inv.get('revenue') or Decimal('0.00')
+            st_disc = c_inv.get('discount') or Decimal('0.00')
+            st_count = c_inv.get('count') or 0
+            st_aov = (st_rev / st_count) if st_count > 0 else Decimal('0.00')
 
-            st_rev_growth = compute_growth_pct(st_curr_fin['revenue'], st_prev_fin['revenue'])
-            st_profit_growth = compute_growth_pct(st_curr_fin['gross_profit'], st_prev_fin['gross_profit'])
+            st_cogs = curr_store_cogs.get(st.id, Decimal('0.00'))
+            st_prev_cogs = prev_store_cogs.get(st.id, Decimal('0.00'))
+
+            st_gross_profit = st_rev - st_cogs - st_disc
+            st_prev_profit = st_prev_rev - st_prev_cogs
+            st_margin_pct = round(float((st_gross_profit / st_rev) * 100), 1) if st_rev > 0 else 0.0
+
+            st_loss = curr_store_losses.get(st.id, Decimal('0.00'))
+            st_exp = curr_store_exp.get(st.id, Decimal('0.00'))
+            st_net_profit = st_gross_profit - st_loss - st_exp
+
+            st_rev_growth = compute_growth_pct(st_rev, st_prev_rev)
+            st_profit_growth = compute_growth_pct(st_gross_profit, st_prev_profit)
 
             classification = classify_store_performance(
                 st_rev_growth, st_profit_growth,
-                st_curr_fin['net_profit'], st_curr_fin['inventory_loss'],
-                st_curr_fin['gross_profit']
+                st_net_profit, st_loss, st_gross_profit
             )
 
             store_row = {
                 'store': st,
-                'revenue': st_curr_fin['revenue'],
-                'prev_revenue': st_prev_fin['revenue'],
-                'cogs': st_curr_fin['cogs'],
-                'gross_profit': st_curr_fin['gross_profit'],
-                'gross_margin_pct': st_curr_fin['gross_margin_pct'],
-                'inventory_loss': st_curr_fin['inventory_loss'],
-                'net_profit': st_curr_fin['net_profit'],
-                'invoices_count': st_curr_fin['invoices_count'],
-                'aov': st_curr_fin['aov'],
+                'revenue': st_rev,
+                'prev_revenue': st_prev_rev,
+                'cogs': st_cogs,
+                'gross_profit': st_gross_profit,
+                'gross_margin_pct': st_margin_pct,
+                'inventory_loss': st_loss,
+                'net_profit': st_net_profit,
+                'invoices_count': st_count,
+                'aov': st_aov,
                 'rev_growth_pct': st_rev_growth,
                 'profit_growth_pct': st_profit_growth,
                 'trend': classification,

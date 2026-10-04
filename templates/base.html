@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-[#f4f7fb]">
 <head>
@@ -10,112 +11,12 @@
     <link rel="icon" type="image/png" href="{{ platform_settings.logo_icon.url }}">
     <link rel="apple-touch-icon" href="{{ platform_settings.logo_icon.url }}">
     {% endif %}
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#edf0fc',
-                            100: '#dce1f9',
-                            200: '#c1ccf5',
-                            300: '#99acee',
-                            400: '#5a72df',
-                            500: '#283891', // Azmobia signature deep navy / cobalt blue
-                            600: '#1f2d7a',
-                            700: '#182260',
-                            800: '#121a48',
-                            900: '#0e1438',
-                        },
-                        azgreen: {
-                            50: '#effaf1',
-                            100: '#d7f4dc',
-                            200: '#b2e8bb',
-                            300: '#83d793',
-                            400: '#55c46b',
-                            500: '#39b54a', // Azmobia signal leaf green
-                            600: '#2fa03e',
-                            700: '#248232',
-                            800: '#1c6628',
-                            900: '#154e1e',
-                        },
-                        blue: {
-                            50: '#edf0fc',
-                            100: '#dce1f9',
-                            200: '#c1ccf5',
-                            300: '#99acee',
-                            400: '#5a72df',
-                            500: '#283891', // Azmobia signature blue
-                            600: '#1f2d7a',
-                            700: '#182260',
-                            800: '#121a48',
-                            900: '#0e1438',
-                        },
-                        surface: {
-                            DEFAULT: '#ffffff',
-                            muted: '#f4f7fb',
-                            subtle: '#f8fafc',
-                        }
-                    },
-
-                    boxShadow: {
-                        'card': '0 2px 14px 0 rgba(15, 23, 42, 0.04)',
-                        'card-hover': '0 8px 24px -4px rgba(15, 23, 42, 0.08)',
-                        'dropdown': '0 10px 30px -5px rgba(15, 23, 42, 0.08)',
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            background-color: #f4f7fb;
-        }
-        /* Custom thin scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 9999px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        /* Completely hide scrollbars on sidebar while preserving smooth scrolling */
-        #mainSidebar,
-        #mainSidebar *,
-        .no-scrollbar,
-        .no-scrollbar * {
-            -ms-overflow-style: none !important; /* IE and Edge */
-            scrollbar-width: none !important; /* Firefox */
-        }
-        #mainSidebar::-webkit-scrollbar,
-        #mainSidebar *::-webkit-scrollbar,
-        .no-scrollbar::-webkit-scrollbar,
-        .no-scrollbar *::-webkit-scrollbar {
-            display: none !important;
-            width: 0 !important;
-            height: 0 !important;
-        }
-    </style>
+    <!-- Local Precompiled Tailwind CSS -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="h-full antialiased text-slate-800 bg-[#f4f7fb] font-sans">

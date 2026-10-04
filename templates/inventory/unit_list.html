@@ -40,7 +40,7 @@
             </div>
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Units</p>
-                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ units.count }}</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ units|length }}</p>
             </div>
         </div>
 
@@ -84,7 +84,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 18h12l3-18H3zm3 4h12M9 14h6"></path>
             </svg>
             <span>Units of Measure</span>
-            <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ units.count }}</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ units|length }}</span>
         </a>
     </div>
 
@@ -157,8 +157,8 @@
                             </span>
                         </td>
                         <td class="px-5 py-4 text-center">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold {% if u.medicines.count > 0 %}bg-blue-50 text-[#283891]{% else %}bg-slate-100 text-slate-500{% endif %}">
-                                {{ u.medicines.count }} medicines
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold {% if u.med_count > 0 %}bg-blue-50 text-[#283891]{% else %}bg-slate-100 text-slate-500{% endif %}">
+                                {{ u.med_count }} medicines
                             </span>
                         </td>
                         <td class="px-5 py-4 text-right">
