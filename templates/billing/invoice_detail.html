@@ -44,6 +44,14 @@
                 <span>Send on WhatsApp</span>
             </button>
             {% endif %}
+            {% if invoice.status == 'PAID' %}
+            <a href="{% url 'billing:invoice_edit' invoice.pk %}" class="inline-flex items-center px-4 py-2.5 bg-blue-50 border border-blue-200 hover:bg-[#283891] text-[#283891] hover:text-white text-xs font-bold rounded-xl shadow-2xs transition space-x-1.5" title="Edit bill medicines, prices, quantities, or customer info">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                <span>Edit Bill</span>
+            </a>
+            {% endif %}
             {% if can_cancel %}
             <form action="{% url 'billing:invoice_cancel' invoice.pk %}" method="post" class="inline" onsubmit="return confirm('Are you sure you want to cancel this bill? Stock will be atomically refunded back to batches.')">
                 {% csrf_token %}
@@ -109,7 +117,7 @@
     </div>
 
     <!-- Customer & Prescriber Info -->
-    <div class="bg-white rounded-2xl p-6 shadow-card border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs">
+    <div class="bg-white rounded-2xl p-6 shadow-card border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 text-xs">
         <div>
             <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Customer Name</span>
             <span class="font-extrabold text-slate-900 text-sm mt-1 block">{{ invoice.customer_name }}</span>
@@ -117,6 +125,10 @@
         <div>
             <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Contact Phone</span>
             <span class="font-medium text-slate-600 text-xs mt-1 block font-mono">{{ invoice.customer_phone|default:"Walk-in Customer" }}</span>
+        </div>
+        <div>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Customer Address</span>
+            <span class="font-medium text-slate-700 text-xs mt-1 block">{{ invoice.customer_address|default:"-" }}</span>
         </div>
         <div>
             <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Doctor / Prescriber</span>

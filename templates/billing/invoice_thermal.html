@@ -311,6 +311,12 @@
                     <span class="text-slate-700">Patient</span>
                     <span class="text-black font-semibold">{{ invoice.customer_name|default:"Walk-in Customer" }}</span>
                 </div>
+                {% if invoice.customer_address %}
+                <div class="flex justify-between text-[6.5px]">
+                    <span class="text-slate-700">Address</span>
+                    <span class="text-black text-right truncate max-w-[150px]">{{ invoice.customer_address }}</span>
+                </div>
+                {% endif %}
             </div>
 
             <div class="dashed-line"></div>

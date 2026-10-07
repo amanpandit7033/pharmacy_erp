@@ -1,22 +1,36 @@
 {% extends role_base_layout %}
 {% load static %}
 
-{% block title %}POS Billing - {{ request.user.store.name }}{% endblock %}
+{% block title %}{% if is_edit_mode %}Edit Bill #{{ invoice.invoice_number }}{% else %}POS Billing{% endif %} - {{ request.user.store.name }}{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-            <h1 class="text-xl font-bold text-slate-900 tracking-tight">Point of Sale (POS)</h1>
-            <p class="text-xs text-slate-500 mt-0.5">Quick billing terminal for {{ request.user.store.name }}.</p>
+            <div class="flex items-center space-x-2">
+                <h1 class="text-xl font-bold text-slate-900 tracking-tight">{% if is_edit_mode %}Edit Bill #{{ invoice.invoice_number }}{% else %}Point of Sale (POS){% endif %}</h1>
+                {% if is_edit_mode %}
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200">
+                    Editing Mode
+                </span>
+                {% endif %}
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">{% if is_edit_mode %}Modify medicines, quantities, discount, or customer information for this bill.{% else %}Quick billing terminal for {{ request.user.store.name }}.{% endif %}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+            {% if is_edit_mode %}
+            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition shadow-sm flex items-center space-x-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                <span>Back to Invoice</span>
+            </a>
+            {% else %}
             <span class="px-3 py-1.5 bg-blue-50 border border-blue-100 text-[#283891] text-xs font-mono font-bold rounded-xl">
                 Terminal: {{ request.user.username }}
             </span>
             <a href="{% url 'billing:invoice_list' %}" class="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition shadow-sm">
                 Bill History
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -96,24 +110,29 @@
                     <p class="text-[11px] text-slate-400 mt-0.5">Enter details to complete transaction.</p>
                 </div>
 
-                <form id="posForm" method="POST" action="{% url 'billing:pos' %}">
+                <form id="posForm" method="POST" action="{% if is_edit_mode %}{% url 'billing:invoice_edit' invoice.pk %}{% else %}{% url 'billing:pos' %}{% endif %}">
                     {% csrf_token %}
                     <input type="hidden" name="items_json" id="itemsJsonInput">
 
                     <div class="space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">Customer Name</label>
-                            <input type="text" name="customer_name" id="customerName" value="Customer" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                            <input type="text" name="customer_name" id="customerName" value="{% if is_edit_mode %}{{ invoice.customer_name }}{% else %}Customer{% endif %}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">Customer Phone</label>
-                            <input type="text" name="customer_phone" id="customerPhone" placeholder="Mobile number" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                            <input type="text" name="customer_phone" id="customerPhone" value="{% if is_edit_mode %}{{ invoice.customer_phone }}{% endif %}" placeholder="Mobile number" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Customer Address</label>
+                            <input type="text" name="customer_address" id="customerAddress" value="{% if is_edit_mode %}{{ invoice.customer_address }}{% endif %}" placeholder="Street / Locality / City (Optional)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">Prescribing Doctor</label>
-                            <input type="text" name="doctor_name" id="doctorName" placeholder="Dr. Name (Optional)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                            <input type="text" name="doctor_name" id="doctorName" value="{% if is_edit_mode %}{{ invoice.doctor_name }}{% endif %}" placeholder="Dr. Name (Optional)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
@@ -121,14 +140,14 @@
                                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Payment Mode</label>
                                 <select name="payment_method" id="paymentMethodSelect" onchange="handlePaymentMethodChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
                                     {% for code, label in payment_methods %}
-                                    <option value="{{ code }}" {% if code == 'UPI' %}data-is-upi="1"{% endif %}>{{ label }}</option>
+                                    <option value="{{ code }}" {% if is_edit_mode and invoice.payment_method == code %}selected{% elif not is_edit_mode and code == 'CASH' %}selected{% endif %} {% if code == 'UPI' %}data-is-upi="1"{% endif %}>{{ label }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
 
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Discount ({{ request.user.store.currency }})</label>
-                                <input type="text" name="discount_amount" id="discountInput" placeholder="0.00 or 12%" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
+                                <input type="text" name="discount_amount" id="discountInput" value="{% if is_edit_mode and invoice.discount_amount > 0 %}{{ invoice.discount_amount }}{% endif %}" placeholder="0.00 or 12%" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs text-slate-800 font-medium outline-none transition">
                             </div>
                         </div>
 
@@ -228,7 +247,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            <span>Complete & Print Bill</span>
+                            <span>{% if is_edit_mode %}Save Changes &amp; Update Bill{% else %}Complete &amp; Print Bill{% endif %}</span>
                         </button>
                     </div>
                 </form>
@@ -282,7 +301,7 @@
 <script>
     const availableBatches = {{ batches_json|safe }};
     const currency = "{{ request.user.store.currency }}";
-    let cart = [];
+    let cart = {{ initial_cart_json|default:'[]'|safe }};
 
     const searchInput = document.getElementById('medSearch');
     const searchResults = document.getElementById('searchResults');
@@ -946,6 +965,11 @@
     // Check if initial selection is UPI
     if (paymentMethodSelect && paymentMethodSelect.value === 'UPI') {
         handlePaymentMethodChange();
+    }
+
+    // Render cart immediately if pre-loaded in edit mode
+    if (cart && cart.length > 0) {
+        renderCart();
     }
 </script>
 {% endblock %}

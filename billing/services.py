@@ -58,18 +58,23 @@ def create_invoice(store, user, data):
     # Manage Customer record
     customer_name = (data.get('customer_name') or 'Customer').strip()
     customer_phone = (data.get('customer_phone') or '').strip()
+    customer_address = (data.get('customer_address') or '').strip()
     doctor_name = (data.get('doctor_name') or '').strip()
 
     customer = None
     if customer_phone:
-        customer, _ = Customer.objects.get_or_create(
+        customer, created = Customer.objects.get_or_create(
             store=store,
             phone=customer_phone,
             defaults={
                 'name': customer_name,
+                'address': customer_address,
                 'doctor_name': doctor_name,
             }
         )
+        if not created and customer_address and not customer.address:
+            customer.address = customer_address
+            customer.save(update_fields=['address'])
 
     invoice_number = generate_invoice_number(store)
 
@@ -79,6 +84,7 @@ def create_invoice(store, user, data):
         customer=customer,
         customer_name=customer_name,
         customer_phone=customer_phone,
+        customer_address=customer_address,
         doctor_name=doctor_name,
         created_by=user,
         payment_method=data.get('payment_method', Invoice.PaymentMethod.CASH),
@@ -180,4 +186,150 @@ def cancel_invoice(invoice, user):
     invoice.status = Invoice.Status.CANCELLED
     invoice.notes = (invoice.notes + f"\n[Cancelled by {user.username} on {timezone.localtime().strftime('%Y-%m-%d %I:%M %p')}]").strip()
     invoice.save(update_fields=['status', 'notes'])
+    return invoice
+
+
+@transaction.atomic
+def update_invoice(invoice, user, data):
+    """
+    Edits an existing invoice. Atomically restores previous batch stock,
+    validates new items, deducts updated batch stock, replaces line items,
+    and updates customer and invoice totals.
+    """
+    if invoice.status == Invoice.Status.CANCELLED:
+        raise ValidationError("Cancelled invoices cannot be edited.")
+
+    items_data = data.get('items', [])
+    if not items_data:
+        raise ValidationError("Invoice must contain at least one medicine item.")
+
+    discount_amount = Decimal(str(data.get('discount_amount') or '0.00'))
+    store = invoice.store
+
+    # 1. Atomically restore previously deducted batch stock
+    for old_item in invoice.items.select_related('batch'):
+        if old_item.batch_id:
+            old_batch = Batch.objects.select_for_update().get(id=old_item.batch_id, store=store)
+            old_batch.quantity += old_item.quantity
+            old_batch.save(update_fields=['quantity'])
+
+    # 2. Clear old invoice items
+    invoice.items.all().delete()
+
+    # 3. Process new items and deduct stock
+    subtotal = Decimal('0.00')
+    tax_total = Decimal('0.00')
+
+    for item in items_data:
+        batch_id = item.get('batch_id')
+        qty = int(item.get('quantity') or 0)
+        if qty <= 0:
+            raise ValidationError("Quantity must be greater than zero.")
+
+        if batch_id:
+            batch = Batch.objects.select_for_update().get(id=batch_id, store=store)
+
+            if batch.status != Batch.Status.ACTIVE:
+                raise ValidationError(
+                    f"Batch '{batch.batch_number}' for '{batch.medicine.name}' is {batch.get_status_display()} and cannot be sold."
+                )
+            if batch.is_expired:
+                raise ValidationError(
+                    f"Batch '{batch.batch_number}' for '{batch.medicine.name}' expired on {batch.expiry_date} and cannot be sold."
+                )
+
+            if batch.quantity < qty:
+                raise ValidationError(
+                    f"Insufficient stock for '{batch.medicine.name}' (Batch {batch.batch_number}). "
+                    f"Requested: {qty}, Available: {batch.quantity}."
+                )
+
+            batch.quantity -= qty
+            batch.save(update_fields=['quantity'])
+
+            unit_price = Decimal(str(item.get('unit_price') or batch.selling_price))
+            tax_pct = Decimal(str(item.get('tax_percentage') or batch.tax_percentage or '0.00'))
+            med_name = batch.medicine.name
+            batch_num = batch.batch_number
+            exp_date = batch.expiry_date
+        else:
+            batch = None
+            med_name = (item.get('medicine_name') or 'Custom Item').strip()
+            batch_num = (item.get('batch_number') or '').strip()
+            exp_date = None
+            unit_price = Decimal(str(item.get('unit_price') or '0.00'))
+            tax_pct = Decimal(str(item.get('tax_percentage') or '0.00'))
+
+        line_subtotal = unit_price * qty
+        line_tax = (line_subtotal * (tax_pct / Decimal('100.00'))).quantize(Decimal('0.01'))
+        line_total = line_subtotal + line_tax
+
+        subtotal += line_subtotal
+        tax_total += line_tax
+
+        InvoiceItem.objects.create(
+            store=store,
+            invoice=invoice,
+            batch=batch,
+            medicine_name=med_name,
+            batch_number=batch_num,
+            expiry_date=exp_date,
+            quantity=qty,
+            unit_price=unit_price,
+            tax_percentage=tax_pct,
+            tax_amount=line_tax,
+            total_price=line_total
+        )
+
+    # 4. Manage Customer record
+    customer_name = (data.get('customer_name') or invoice.customer_name or 'Customer').strip()
+    customer_phone = (data.get('customer_phone') or '').strip()
+    customer_address = (data.get('customer_address') or '').strip()
+    doctor_name = (data.get('doctor_name') or '').strip()
+
+    customer = None
+    if customer_phone:
+        customer, created = Customer.objects.get_or_create(
+            store=store,
+            phone=customer_phone,
+            defaults={
+                'name': customer_name,
+                'address': customer_address,
+                'doctor_name': doctor_name,
+            }
+        )
+        if not created:
+            update_fields = []
+            if customer_name and customer.name != customer_name:
+                customer.name = customer_name
+                update_fields.append('name')
+            if customer_address and customer.address != customer_address:
+                customer.address = customer_address
+                update_fields.append('address')
+            if doctor_name and customer.doctor_name != doctor_name:
+                customer.doctor_name = doctor_name
+                update_fields.append('doctor_name')
+            if update_fields:
+                customer.save(update_fields=update_fields)
+
+    # 5. Update Invoice fields
+    invoice.customer = customer
+    invoice.customer_name = customer_name
+    invoice.customer_phone = customer_phone
+    invoice.customer_address = customer_address
+    invoice.doctor_name = doctor_name
+    if 'payment_method' in data and data['payment_method']:
+        invoice.payment_method = data['payment_method']
+    invoice.discount_amount = discount_amount
+    invoice.subtotal = subtotal
+    invoice.tax_amount = tax_total
+    invoice.total_amount = max(Decimal('0.00'), (subtotal + tax_total - discount_amount))
+    if 'notes' in data and data['notes']:
+        invoice.notes = data['notes']
+
+    audit_note = f"\n[Edited by {user.username} on {timezone.localtime().strftime('%Y-%m-%d %I:%M %p')}]"
+    if audit_note not in invoice.notes:
+        invoice.notes = (invoice.notes + audit_note).strip()
+
+    invoice.save()
     return invoice

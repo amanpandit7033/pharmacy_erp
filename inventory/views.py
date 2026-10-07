@@ -126,7 +126,7 @@ class MedicineListView(TenantAccessMixin, RoleRequiredMixin, ListView):
         store = self.request.user.store
         context['categories'] = Category.objects.filter(store=store).order_by('name')
         context['units'] = Unit.objects.filter(store=store).order_by('name')
-        context['can_manage_stock'] = (self.request.user.role == User.Role.STORE_ADMIN)
+        context['can_manage_stock'] = (self.request.user.role in [User.Role.STORE_ADMIN, User.Role.STAFF])
         context['can_view_cost'] = (self.request.user.role == User.Role.STORE_ADMIN)
         context['total_products_count'] = Medicine.objects.filter(store=store).count()
         context['is_fuzzy_search'] = getattr(self, 'is_fuzzy_search', False)
@@ -143,7 +143,7 @@ class MedicineDetailView(TenantAccessMixin, RoleRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['batches'] = self.object.batches.filter(is_active=True).order_by('expiry_date')
-        context['can_manage_stock'] = (self.request.user.role == User.Role.STORE_ADMIN)
+        context['can_manage_stock'] = (self.request.user.role in [User.Role.STORE_ADMIN, User.Role.STAFF])
         context['can_view_cost'] = (self.request.user.role == User.Role.STORE_ADMIN)
         return context
 
@@ -152,7 +152,7 @@ class MedicineCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):
     model = Medicine
     form_class = MedicineForm
     template_name = 'inventory/medicine_form.html'
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -196,7 +196,7 @@ class MedicineUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
     model = Medicine
     form_class = MedicineForm
     template_name = 'inventory/medicine_form.html'
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -212,7 +212,7 @@ class MedicineUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
 
 
 class MedicineDeleteView(TenantAccessMixin, RoleRequiredMixin, View):
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def post(self, request, pk, *args, **kwargs):
         med = get_object_or_404(Medicine, pk=pk, store=request.user.store)
@@ -227,7 +227,7 @@ class BatchCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):
     model = Batch
     form_class = BatchForm
     template_name = 'inventory/batch_form.html'
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def dispatch(self, request, *args, **kwargs):
         self.medicine = get_object_or_404(
@@ -269,7 +269,7 @@ class BatchUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
     model = Batch
     form_class = BatchForm
     template_name = 'inventory/batch_form.html'
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -290,7 +290,7 @@ class BatchUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
 
 
 class BatchDeleteView(TenantAccessMixin, RoleRequiredMixin, View):
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def post(self, request, pk, *args, **kwargs):
         batch = get_object_or_404(Batch, pk=pk, store=request.user.store)
@@ -307,7 +307,7 @@ class CategoryListView(TenantAccessMixin, RoleRequiredMixin, ListView):
     model = Category
     template_name = 'inventory/category_list.html'
     context_object_name = 'categories'
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def get_queryset(self):
         qs = Category.objects.filter(store=self.request.user.store).annotate(
@@ -343,7 +343,7 @@ class CategoryCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):
     form_class = CategoryForm
     template_name = 'inventory/category_form.html'
     success_url = reverse_lazy('inventory:category_list')
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def form_valid(self, form):
         form.instance.store = self.request.user.store
@@ -356,7 +356,7 @@ class CategoryUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
     form_class = CategoryForm
     template_name = 'inventory/category_form.html'
     success_url = reverse_lazy('inventory:category_list')
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def get_queryset(self):
         return Category.objects.filter(store=self.request.user.store)
@@ -383,7 +383,7 @@ class UnitListView(TenantAccessMixin, RoleRequiredMixin, ListView):
     model = Unit
     template_name = 'inventory/unit_list.html'
     context_object_name = 'units'
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def get_queryset(self):
         qs = Unit.objects.filter(store=self.request.user.store).annotate(
@@ -419,7 +419,7 @@ class UnitCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):
     form_class = UnitForm
     template_name = 'inventory/unit_form.html'
     success_url = reverse_lazy('inventory:unit_list')
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def form_valid(self, form):
         form.instance.store = self.request.user.store
@@ -432,7 +432,7 @@ class UnitUpdateView(TenantAccessMixin, RoleRequiredMixin, UpdateView):
     form_class = UnitForm
     template_name = 'inventory/unit_form.html'
     success_url = reverse_lazy('inventory:unit_list')
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def get_queryset(self):
         return Unit.objects.filter(store=self.request.user.store)
@@ -719,7 +719,7 @@ class MasterCatalogListView(RoleRequiredMixin, ListView):
             300
         )
         context['can_manage_stock'] = (
-            self.request.user.is_authenticated and self.request.user.role == User.Role.STORE_ADMIN
+            self.request.user.is_authenticated and self.request.user.role in [User.Role.STORE_ADMIN, User.Role.STAFF]
         )
         context['is_super_admin'] = (
             self.request.user.is_authenticated and (self.request.user.role == User.Role.SUPER_ADMIN or self.request.user.is_superuser)
@@ -777,7 +777,7 @@ class MasterMedicineSearchApiView(RoleRequiredMixin, View):
 
 
 class ImportMasterMedicineView(RoleRequiredMixin, View):
-    allowed_roles = [User.Role.STORE_ADMIN]
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
 
     def post(self, request, pk, *args, **kwargs):
         master = get_object_or_404(MasterMedicine, pk=pk)

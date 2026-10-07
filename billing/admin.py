@@ -24,7 +24,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         'payment_method', 'status', 'total_amount', 'created_by', 'created_at'
     )
     list_filter = ('store', 'status', 'payment_method', 'created_at')
-    search_fields = ('invoice_number', 'customer_name', 'customer_phone', 'doctor_name')
+    search_fields = ('invoice_number', 'customer_name', 'customer_phone', 'customer_address', 'doctor_name')
     inlines = [InvoiceItemInline]
     readonly_fields = ('created_at', 'updated_at')
     date_hierarchy = 'created_at'
@@ -33,7 +33,7 @@ class InvoiceAdmin(admin.ModelAdmin):
             'fields': ('store', 'invoice_number', 'created_by', 'status')
         }),
         ('Customer & Doctor Information', {
-            'fields': ('customer', 'customer_name', 'customer_phone', 'doctor_name')
+            'fields': ('customer', 'customer_name', 'customer_phone', 'customer_address', 'doctor_name')
         }),
         ('Payment & Financials', {
             'fields': ('payment_method', 'subtotal', 'tax_amount', 'discount_amount', 'total_amount')

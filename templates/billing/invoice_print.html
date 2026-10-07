@@ -197,6 +197,12 @@
                         <span class="text-slate-500 font-semibold">Phone / Mobile:</span>
                         <span class="font-mono text-slate-800 font-semibold">{{ invoice.customer_phone|default:"Walk-in Customer" }}</span>
                     </div>
+                    {% if invoice.customer_address %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold">Address:</span>
+                        <span class="text-slate-800 font-medium text-[11px] truncate max-w-[200px]">{{ invoice.customer_address }}</span>
+                    </div>
+                    {% endif %}
                     <div class="flex items-center justify-between">
                         <span class="text-slate-500 font-semibold">Prescribing Doctor:</span>
                         <span class="text-slate-800 font-bold">{{ invoice.doctor_name|default:"Self / OTC Dispense" }}</span>

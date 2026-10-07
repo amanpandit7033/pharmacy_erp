@@ -40,6 +40,7 @@ class Invoice(TenantModel):
     )
     customer_name = models.CharField(max_length=255, help_text="Walk-in or registered customer name")
     customer_phone = models.CharField(max_length=20, blank=True)
+    customer_address = models.TextField(blank=True, default='')
     doctor_name = models.CharField(max_length=255, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

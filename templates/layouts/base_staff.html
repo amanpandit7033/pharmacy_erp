@@ -150,15 +150,27 @@
                     </div>
                 </a>
 
-                <!-- Check Stock -->
-                <a href="{% url 'inventory:medicine_list' %}" title="Check Stock" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'medicines' in request.path or 'batches' in request.path and 'expiry-watch' not in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                <!-- Products & Stock Inventory -->
+                <a href="{% url 'inventory:medicine_list' %}" title="Products & Stock" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'medicines' in request.path or 'batches' in request.path and 'expiry-watch' not in request.path and request.resolver_match.url_name != 'medicine_create' %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
                     <div class="flex items-center space-x-2.5">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'medicines' in request.path or 'batches' in request.path and 'expiry-watch' not in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'medicines' in request.path or 'batches' in request.path and 'expiry-watch' not in request.path and request.resolver_match.url_name != 'medicine_create' %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                             </svg>
                         </div>
-                        <span class="sidebar-text">Medicine Lookup</span>
+                        <span class="sidebar-text">Products &amp; Stock</span>
+                    </div>
+                </a>
+
+                <!-- Categories & Units -->
+                <a href="{% url 'inventory:category_list' %}" title="Categories & Units" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'categories' in request.path or 'units' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'categories' in request.path or 'units' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Categories &amp; Units</span>
                     </div>
                 </a>
 

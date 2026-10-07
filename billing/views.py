@@ -11,7 +11,7 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from billing.models import Invoice, InvoiceItem, Customer, Expense
 from billing.forms import ExpenseForm
-from billing.services import create_invoice, cancel_invoice
+from billing.services import create_invoice, cancel_invoice, update_invoice
 from billing.pdf import generate_invoice_pdf
 from inventory.models import Batch, Medicine
 from accounts.models import User
@@ -93,6 +93,7 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
                 payload = {
                     'customer_name': request.POST.get('customer_name', 'Customer'),
                     'customer_phone': request.POST.get('customer_phone', ''),
+                    'customer_address': request.POST.get('customer_address', ''),
                     'doctor_name': request.POST.get('doctor_name', ''),
                     'payment_method': request.POST.get('payment_method', Invoice.PaymentMethod.CASH),
                     'discount_amount': discount_val,
@@ -251,6 +252,150 @@ class InvoiceCancelView(TenantAccessMixin, RoleRequiredMixin, View):
         except ValidationError as e:
             messages.error(request, str(e))
         return redirect('billing:invoice_detail', pk=invoice.pk)
+
+
+class InvoiceEditView(TenantAccessMixin, RoleRequiredMixin, View):
+    """
+    Allows store admin and staff to edit an existing invoice (correct quantities,
+    prices, items, discounts, customer information) with atomic stock recalculation.
+    """
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
+
+    def get(self, request, pk, *args, **kwargs):
+        store = request.user.store
+        invoice = get_object_or_404(Invoice, pk=pk, store=store)
+
+        if invoice.status == Invoice.Status.CANCELLED:
+            messages.error(request, "Cancelled / refunded bills cannot be edited.")
+            return redirect('billing:invoice_detail', pk=invoice.pk)
+
+        # Build active batches list for POS item search
+        # Include quantity held by this invoice for any batches already on the bill
+        items_by_batch = {item.batch_id: item.quantity for item in invoice.items.all() if item.batch_id}
+
+        batches = Batch.objects.filter(
+            store=store,
+            is_active=True,
+            status=Batch.Status.ACTIVE,
+            expiry_date__gt=timezone.localdate(),
+        ).filter(
+            Q(quantity__gt=0) | Q(id__in=items_by_batch.keys())
+        ).select_related('medicine', 'medicine__unit').order_by('medicine__name', 'expiry_date')
+
+        batch_list = []
+        for b in batches:
+            held_qty = items_by_batch.get(b.id, 0)
+            batch_list.append({
+                'id': b.id,
+                'medicine_name': b.medicine.name,
+                'generic_name': b.medicine.generic_name or '',
+                'unit': b.medicine.unit.short_name if b.medicine.unit else 'unit',
+                'rack': b.medicine.rack_location or '',
+                'batch_number': b.batch_number,
+                'expiry_date': b.expiry_date.strftime('%Y-%m-%d'),
+                'selling_price': str(b.selling_price),
+                'mrp': str(b.mrp),
+                'tax_percentage': str(b.tax_percentage),
+                'available_qty': b.quantity + held_qty,
+            })
+
+        # Pre-populate cart items from existing invoice items
+        initial_items = []
+        for item in invoice.items.select_related('batch', 'batch__medicine', 'batch__medicine__unit'):
+            held_qty = item.quantity
+            avail = (item.batch.quantity + held_qty) if item.batch else 999999
+            initial_items.append({
+                'uid': f"inv_item_{item.id}",
+                'batch_id': item.batch_id,
+                'medicine_name': item.medicine_name,
+                'batch_number': item.batch_number or 'OTC',
+                'expiry_date': item.expiry_date.strftime('%Y-%m-%d') if item.expiry_date else '',
+                'unit': item.batch.medicine.unit.short_name if item.batch and item.batch.medicine and item.batch.medicine.unit else 'unit',
+                'unit_price': float(item.unit_price),
+                'tax_percentage': float(item.tax_percentage),
+                'available_qty': avail,
+                'quantity': item.quantity,
+                'is_manual': not bool(item.batch_id)
+            })
+
+        context = {
+            'is_edit_mode': True,
+            'invoice': invoice,
+            'initial_cart_json': json.dumps(initial_items),
+            'batches_json': json.dumps(batch_list),
+            'payment_methods': Invoice.PaymentMethod.choices,
+            'store_upi_id': store.upi_id or '',
+            'store_upi_payee': store.upi_display_name,
+        }
+        return render(request, 'billing/pos.html', context)
+
+    def post(self, request, pk, *args, **kwargs):
+        store = request.user.store
+        invoice = get_object_or_404(Invoice, pk=pk, store=store)
+
+        if invoice.status == Invoice.Status.CANCELLED:
+            messages.error(request, "Cancelled bills cannot be edited.")
+            return redirect('billing:invoice_detail', pk=invoice.pk)
+
+        try:
+            if request.content_type == 'application/json':
+                payload = json.loads(request.body)
+            else:
+                raw_items = request.POST.get('items_json')
+                raw_discount = str(request.POST.get('discount_amount') or '0.00').strip()
+                items_list = json.loads(raw_items) if raw_items else []
+
+                if raw_discount.endswith('%'):
+                    try:
+                        pct = Decimal(raw_discount.rstrip('%').strip() or '0')
+                        gross = Decimal('0.00')
+                        for it in items_list:
+                            u_pr = Decimal(str(it.get('unit_price') or '0'))
+                            u_qty = Decimal(str(it.get('quantity') or '0'))
+                            u_tax = Decimal(str(it.get('tax_percentage') or '0'))
+                            line_s = u_pr * u_qty
+                            line_t = (line_s * (u_tax / Decimal('100.00'))).quantize(Decimal('0.01'))
+                            gross += line_s + line_t
+                        discount_val = (gross * (pct / Decimal('100.00'))).quantize(Decimal('0.01'))
+                    except Exception:
+                        discount_val = Decimal('0.00')
+                else:
+                    try:
+                        discount_val = Decimal(raw_discount)
+                    except Exception:
+                        discount_val = Decimal('0.00')
+
+                payload = {
+                    'customer_name': request.POST.get('customer_name', invoice.customer_name),
+                    'customer_phone': request.POST.get('customer_phone', ''),
+                    'customer_address': request.POST.get('customer_address', ''),
+                    'doctor_name': request.POST.get('doctor_name', ''),
+                    'payment_method': request.POST.get('payment_method', invoice.payment_method),
+                    'discount_amount': discount_val,
+                    'notes': request.POST.get('notes', invoice.notes),
+                    'items': items_list
+                }
+
+            updated = update_invoice(invoice, request.user, payload)
+            messages.success(request, f"Invoice #{updated.invoice_number} updated successfully.")
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+                return JsonResponse({
+                    'status': 'success',
+                    'invoice_id': updated.id,
+                    'invoice_number': updated.invoice_number,
+                    'redirect_url': reverse('billing:invoice_detail', kwargs={'pk': updated.id})
+                })
+
+            return redirect('billing:invoice_detail', pk=updated.id)
+
+        except (ValidationError, Exception) as e:
+            err_msg = e.messages[0] if hasattr(e, 'messages') else str(e)
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+                return JsonResponse({'status': 'error', 'message': err_msg}, status=400)
+
+            messages.error(request, f"Error updating bill: {err_msg}")
+            return redirect('billing:invoice_edit', pk=invoice.pk)
 
 
 class ExpenseListView(TenantAccessMixin, RoleRequiredMixin, ListView):
