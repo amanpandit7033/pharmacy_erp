@@ -25,13 +25,13 @@ class MedicineListView(TenantAccessMixin, RoleRequiredMixin, ListView):
     template_name = 'inventory/medicine_list.html'
     context_object_name = 'medicines'
     allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
-    paginate_by = 50
+    paginate_by = 20
 
     def get_paginate_by(self, queryset):
         per_page = self.request.GET.get('per_page', '').strip()
-        if per_page in ['20', '50', '100', '200']:
+        if per_page in ['10', '20', '50', '100', '200']:
             return int(per_page)
-        return 50
+        return 20
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('category', 'unit', 'manufacturer').prefetch_related('batches')
