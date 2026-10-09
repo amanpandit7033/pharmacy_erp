@@ -25,7 +25,13 @@ class MedicineListView(TenantAccessMixin, RoleRequiredMixin, ListView):
     template_name = 'inventory/medicine_list.html'
     context_object_name = 'medicines'
     allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
-    paginate_by = 20
+    paginate_by = 50
+
+    def get_paginate_by(self, queryset):
+        per_page = self.request.GET.get('per_page', '').strip()
+        if per_page in ['20', '50', '100', '200']:
+            return int(per_page)
+        return 50
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('category', 'unit', 'manufacturer').prefetch_related('batches')
@@ -308,6 +314,13 @@ class CategoryListView(TenantAccessMixin, RoleRequiredMixin, ListView):
     template_name = 'inventory/category_list.html'
     context_object_name = 'categories'
     allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
+    paginate_by = 50
+
+    def get_paginate_by(self, queryset):
+        per_page = self.request.GET.get('per_page', '').strip()
+        if per_page in ['20', '50', '100', '200']:
+            return int(per_page)
+        return 50
 
     def get_queryset(self):
         qs = Category.objects.filter(store=self.request.user.store).annotate(
@@ -336,6 +349,11 @@ class CategoryListView(TenantAccessMixin, RoleRequiredMixin, ListView):
             qs = qs.order_by('name')
 
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_categories_count'] = Category.objects.filter(store=self.request.user.store).count()
+        return context
 
 
 class CategoryCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):
@@ -384,6 +402,13 @@ class UnitListView(TenantAccessMixin, RoleRequiredMixin, ListView):
     template_name = 'inventory/unit_list.html'
     context_object_name = 'units'
     allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
+    paginate_by = 50
+
+    def get_paginate_by(self, queryset):
+        per_page = self.request.GET.get('per_page', '').strip()
+        if per_page in ['20', '50', '100', '200']:
+            return int(per_page)
+        return 50
 
     def get_queryset(self):
         qs = Unit.objects.filter(store=self.request.user.store).annotate(
@@ -412,6 +437,11 @@ class UnitListView(TenantAccessMixin, RoleRequiredMixin, ListView):
             qs = qs.order_by('name')
 
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_units_count'] = Unit.objects.filter(store=self.request.user.store).count()
+        return context
 
 
 class UnitCreateView(TenantAccessMixin, RoleRequiredMixin, CreateView):

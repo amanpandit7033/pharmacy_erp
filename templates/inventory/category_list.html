@@ -40,7 +40,7 @@
             </div>
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Categories</p>
-                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ categories|length }}</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ total_categories_count|default:page_obj.paginator.count }}</p>
             </div>
         </div>
 
@@ -78,7 +78,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
             </svg>
             <span>Medicine Categories</span>
-            <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ categories|length }}</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ total_categories_count|default:page_obj.paginator.count }}</span>
         </a>
         <a href="{% url 'inventory:unit_list' %}" class="px-4 py-2 bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold transition flex items-center space-x-2">
             <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,6 +194,24 @@
                 </tbody>
             </table>
         </div>
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div>
+                Showing page <span class="font-bold text-slate-800">{{ page_obj.number }}</span> of <span class="font-bold text-slate-800">{{ page_obj.paginator.num_pages }}</span> ({{ page_obj.paginator.count }} categories)
+            </div>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.usage %}&usage={{ request.GET.usage }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs" title="First Page">&laquo;</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.usage %}&usage={{ request.GET.usage }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Prev</a>
+                {% endif %}
+                <span class="px-3 py-1.5 rounded-xl bg-[#283891] text-white font-bold text-xs shadow-2xs">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.usage %}&usage={{ request.GET.usage }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.usage %}&usage={{ request.GET.usage }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs" title="Last Page">&raquo;</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

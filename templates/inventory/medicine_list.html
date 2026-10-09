@@ -56,7 +56,7 @@
             </div>
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Products</p>
-                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ medicines|length }}</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ total_products_count|default:page_obj.paginator.count }}</p>
             </div>
         </div>
 
@@ -160,6 +160,16 @@
                     <option value="stock_high" {% if request.GET.sort == 'stock_high' %}selected{% endif %}>Sort: Stock (High)</option>
                     <option value="stock_low" {% if request.GET.sort == 'stock_low' %}selected{% endif %}>Sort: Stock (Low)</option>
                     <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>Sort: Oldest</option>
+                </select>
+            </div>
+
+            <!-- Per Page Filter -->
+            <div class="w-full sm:w-auto min-w-[110px]">
+                <select name="per_page" onchange="this.form.submit()" class="w-full py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-medium text-slate-700 focus:bg-white focus:border-[#283891] outline-none">
+                    <option value="20" {% if request.GET.per_page == '20' %}selected{% endif %}>20 / page</option>
+                    <option value="50" {% if not request.GET.per_page or request.GET.per_page == '50' %}selected{% endif %}>50 / page</option>
+                    <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100 / page</option>
+                    <option value="200" {% if request.GET.per_page == '200' %}selected{% endif %}>200 / page</option>
                 </select>
             </div>
 
@@ -288,6 +298,24 @@
                 </tbody>
             </table>
         </div>
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div>
+                Showing page <span class="font-bold text-slate-800">{{ page_obj.number }}</span> of <span class="font-bold text-slate-800">{{ page_obj.paginator.num_pages }}</span> ({{ page_obj.paginator.count }} products)
+            </div>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.unit %}&unit={{ request.GET.unit }}{% endif %}{% if request.GET.stock %}&stock={{ request.GET.stock }}{% endif %}{% if request.GET.rx %}&rx={{ request.GET.rx }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs" title="First Page">&laquo;</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.unit %}&unit={{ request.GET.unit }}{% endif %}{% if request.GET.stock %}&stock={{ request.GET.stock }}{% endif %}{% if request.GET.rx %}&rx={{ request.GET.rx }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Prev</a>
+                {% endif %}
+                <span class="px-3 py-1.5 rounded-xl bg-[#283891] text-white font-bold text-xs shadow-2xs">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.unit %}&unit={{ request.GET.unit }}{% endif %}{% if request.GET.stock %}&stock={{ request.GET.stock }}{% endif %}{% if request.GET.rx %}&rx={{ request.GET.rx }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.unit %}&unit={{ request.GET.unit }}{% endif %}{% if request.GET.stock %}&stock={{ request.GET.stock }}{% endif %}{% if request.GET.rx %}&rx={{ request.GET.rx }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs" title="Last Page">&raquo;</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

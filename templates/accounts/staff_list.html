@@ -37,7 +37,7 @@
             </div>
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Staff</p>
-                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ staff_members|length }}</p>
+                <p class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ total_staff_count|default:page_obj.paginator.count }}</p>
             </div>
         </div>
 
@@ -50,10 +50,7 @@
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Counter Operators</p>
                 <p class="text-2xl font-extrabold text-emerald-600 tracking-tight">
-                    {% with active_count=0 %}
-                        {% for s in staff_members %}{% if s.is_active %}{% with active_count=active_count|add:1 %}{% endwith %}{% endif %}{% endfor %}
-                        {{ staff_members|length }}
-                    {% endwith %}
+                    {{ active_staff_count }}
                 </p>
             </div>
         </div>
@@ -184,6 +181,24 @@
                 </tbody>
             </table>
         </div>
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div>
+                Showing page <span class="font-bold text-slate-800">{{ page_obj.number }}</span> of <span class="font-bold text-slate-800">{{ page_obj.paginator.num_pages }}</span> ({{ page_obj.paginator.count }} staff)
+            </div>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs" title="First Page">&laquo;</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Prev</a>
+                {% endif %}
+                <span class="px-3 py-1.5 rounded-xl bg-[#283891] text-white font-bold text-xs shadow-2xs">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold transition text-slate-700 shadow-2xs" title="Last Page">&raquo;</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

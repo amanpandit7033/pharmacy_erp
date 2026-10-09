@@ -74,6 +74,13 @@ class StaffListView(RoleRequiredMixin, ListView):
     template_name = 'accounts/staff_list.html'
     context_object_name = 'staff_members'
     allowed_roles = [User.Role.STORE_ADMIN]
+    paginate_by = 25
+
+    def get_paginate_by(self, queryset):
+        per_page = self.request.GET.get('per_page', '').strip()
+        if per_page in ['20', '25', '50', '100']:
+            return int(per_page)
+        return 25
 
     def get_queryset(self):
         qs = User.objects.filter(
@@ -105,6 +112,13 @@ class StaffListView(RoleRequiredMixin, ListView):
             qs = qs.order_by('-date_joined')
 
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        base_qs = User.objects.filter(store=self.request.user.store, role=User.Role.STAFF)
+        context['total_staff_count'] = base_qs.count()
+        context['active_staff_count'] = base_qs.filter(is_active=True).count()
+        return context
 
 
 class StaffCreateView(RoleRequiredMixin, CreateView):

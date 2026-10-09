@@ -130,6 +130,12 @@ class InvoiceListView(TenantAccessMixin, RoleRequiredMixin, ListView):
     allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
     paginate_by = 25
 
+    def get_paginate_by(self, queryset):
+        per_page = self.request.GET.get('per_page', '').strip()
+        if per_page in ['20', '25', '50', '100']:
+            return int(per_page)
+        return 25
+
     def get_queryset(self):
         qs = super().get_queryset().select_related('customer', 'created_by')
         q = self.request.GET.get('q', '').strip()
@@ -174,6 +180,7 @@ class InvoiceListView(TenantAccessMixin, RoleRequiredMixin, ListView):
         context['can_cancel_bill'] = (self.request.user.role == User.Role.STORE_ADMIN)
         context['payment_methods'] = Invoice.PaymentMethod.choices
         context['status_choices'] = Invoice.Status.choices
+        context['total_invoices_count'] = Invoice.objects.filter(store=self.request.user.store).count()
         return context
 
 
