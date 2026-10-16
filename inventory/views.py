@@ -8,7 +8,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q, Sum, Count, F, Value
+from django.db.models import Q, Sum, Count, F, Value, DecimalField
 from django.db.models.functions import Coalesce, Greatest
 from django.contrib.postgres.search import TrigramSimilarity, TrigramWordSimilarity
 from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
@@ -39,7 +39,8 @@ class MedicineListView(TenantAccessMixin, RoleRequiredMixin, ListView):
         qs = qs.annotate(
             total_qty=Coalesce(
                 Sum('batches__quantity', filter=Q(batches__is_active=True, batches__status=Batch.Status.ACTIVE)),
-                Value(0)
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
             )
         )
 
@@ -504,7 +505,11 @@ class SupplierListView(TenantAccessMixin, RoleRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = Supplier.objects.filter(store=self.request.user.store, is_active=True).annotate(
-            total_spent=Coalesce(Sum(F('batches__cost_price') * F('batches__quantity'), filter=Q(batches__is_active=True)), Value(Decimal('0.00'))),
+            total_spent=Coalesce(
+                Sum(F('batches__cost_price') * F('batches__quantity'), filter=Q(batches__is_active=True)),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            ),
             batches_count=Count('batches', filter=Q(batches__is_active=True), distinct=True)
         )
         q = self.request.GET.get('q', '').strip()

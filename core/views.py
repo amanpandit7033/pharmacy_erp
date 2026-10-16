@@ -1,8 +1,9 @@
+from decimal import Decimal
 from django.views import View
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Q, Sum, Count, Value
+from django.db.models import Q, Sum, Count, Value, DecimalField
 from django.db.models.functions import Coalesce
 from accounts.models import User
 from stores.models import Store
@@ -38,7 +39,8 @@ class SearchSuggestionsView(View):
                 qs = Medicine.objects.filter(store=store).annotate(
                     annotated_stock=Coalesce(
                         Sum('batches__quantity', filter=Q(batches__is_active=True)),
-                        Value(0)
+                        Value(Decimal('0.00')),
+                        output_field=DecimalField(max_digits=12, decimal_places=2)
                     )
                 ).filter(
                     Q(name__icontains=q) |
