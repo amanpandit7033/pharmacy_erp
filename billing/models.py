@@ -28,6 +28,8 @@ class Invoice(TenantModel):
 
     class Status(models.TextChoices):
         PAID = 'PAID', 'Paid'
+        PARTIAL = 'PARTIAL', 'Partially Paid'
+        DUE = 'DUE', 'Unpaid / Due'
         CANCELLED = 'CANCELLED', 'Cancelled / Refunded'
 
     invoice_number = models.CharField(max_length=64, db_index=True)
@@ -62,6 +64,8 @@ class Invoice(TenantModel):
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Amount paid by customer")
+    due_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Balance remaining / unpaid due amount")
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -78,7 +82,13 @@ class InvoiceItem(TenantModel):
     medicine_name = models.CharField(max_length=255)
     batch_number = models.CharField(max_length=100, blank=True, default='')
     expiry_date = models.DateField(null=True, blank=True)
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('1.00'))
+    is_loose = models.BooleanField(default=False, help_text="Sold as loose units from pack")
+    pack_size = models.PositiveIntegerField(default=1, help_text="Pack size at time of sale")
+    loose_quantity = models.PositiveIntegerField(default=0, help_text="Number of loose units sold (e.g. 2 tablets)")
+    discount_type = models.CharField(max_length=10, choices=[('PERCENT', '%'), ('FLAT', 'Flat')], default='FLAT')
+    discount_value = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
@@ -101,6 +111,30 @@ class InvoiceItem(TenantModel):
         if self.batch and self.batch.medicine:
             return self.batch.medicine.generic_name or ""
         return ""
+
+
+class InvoicePayment(TenantModel):
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_method = models.CharField(
+        max_length=20,
+        choices=Invoice.PaymentMethod.choices,
+        default=Invoice.PaymentMethod.CASH
+    )
+    notes = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='collected_payments'
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Payment of {self.store.currency}{self.amount} for #{self.invoice.invoice_number}"
 
 
 class Expense(TenantModel):

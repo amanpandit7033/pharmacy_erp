@@ -18,13 +18,11 @@
                 <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                 </svg>
-                <span>Thermal Slip</span>
             </a>
             <a href="{% url 'billing:invoice_pdf' invoice.pk %}" target="_blank" class="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition space-x-1.5" title="Download Official PDF Invoice">
                 <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
-                <span>Download PDF</span>
             </a>
             {% if invoice.customer_phone %}
             <form action="{% url 'billing:invoice_whatsapp' invoice.pk %}" method="post" class="inline" onsubmit="const btn = this.querySelector('button'); btn.disabled = true; btn.classList.add('opacity-75');">
@@ -33,7 +31,7 @@
                     <svg class="w-4 h-4 text-emerald-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                     </svg>
-                    <span>Send on WhatsApp</span>
+                    <span>WhatsApp</span>
                 </button>
             </form>
             {% else %}
@@ -41,15 +39,22 @@
                 <svg class="w-4 h-4 text-emerald-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                 </svg>
-                <span>Send on WhatsApp</span>
+                <span>WhatsApp</span>
             </button>
             {% endif %}
-            {% if invoice.status == 'PAID' %}
+            {% if invoice.due_amount > 0 and invoice.status != 'CANCELLED' %}
+            <button type="button" onclick="openCollectDueModal()" class="inline-flex items-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition space-x-1.5 active:scale-[0.98]" title="Collect customer balance payment">
+                <svg class="w-4 h-4 text-emerald-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                <span>Collect Due ({{ invoice.store.currency }}{{ invoice.due_amount|floatformat:2 }})</span>
+            </button>
+            {% endif %}
+            {% if invoice.status != 'CANCELLED' %}
             <a href="{% url 'billing:invoice_edit' invoice.pk %}" class="inline-flex items-center px-4 py-2.5 bg-blue-50 border border-blue-200 hover:bg-[#283891] text-[#283891] hover:text-white text-xs font-bold rounded-xl shadow-2xs transition space-x-1.5" title="Edit bill medicines, prices, quantities, or customer info">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                 </svg>
-                <span>Edit Bill</span>
             </a>
             {% endif %}
             {% if can_cancel %}
@@ -87,9 +92,15 @@
                 </div>
             </div>
         </div>
-        <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-center min-w-[220px]">
+        <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-center min-w-[240px]">
             <div class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Total Invoice Amount</div>
             <div class="text-3xl font-black font-mono text-[#283891] mt-0.5">{{ invoice.store.currency }}{{ invoice.total_amount|floatformat:2 }}</div>
+            {% if invoice.due_amount > 0 %}
+            <div class="mt-2 pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs font-mono font-bold">
+                <span class="text-slate-500 font-sans text-[11px]">Paid: {{ invoice.store.currency }}{{ invoice.paid_amount|floatformat:2 }}</span>
+                <span class="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200/60">Due: {{ invoice.store.currency }}{{ invoice.due_amount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -108,9 +119,12 @@
             <span class="font-semibold text-slate-800 text-xs mt-1 block">{{ invoice.get_payment_method_display }}</span>
         </div>
         <div>
-            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Invoice Status</span>
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px] block">Settlement Status</span>
             <span class="inline-flex items-center px-2.5 py-0.5 mt-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide
-                {% if invoice.status == 'PAID' %}bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs{% else %}bg-rose-50 text-rose-700 border border-rose-200/60 shadow-2xs{% endif %}">
+                {% if invoice.status == 'PAID' %}bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs
+                {% elif invoice.status == 'PARTIAL' %}bg-amber-50 text-amber-700 border border-amber-200/60 shadow-2xs
+                {% elif invoice.status == 'DUE' %}bg-orange-50 text-orange-700 border border-orange-200/60 shadow-2xs
+                {% else %}bg-rose-50 text-rose-700 border border-rose-200/60 shadow-2xs{% endif %}">
                 {{ invoice.get_status_display }}
             </span>
         </div>
@@ -143,7 +157,7 @@
             <span class="text-xs text-slate-400 font-mono">{{ items|length }} item{{ items|length|pluralize }}</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-100 text-left text-xs min-w-[620px]">
+            <table class="min-w-full divide-y divide-slate-100 text-left text-xs min-w-[680px]">
                 <thead class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                     <tr>
                         <th class="px-5 py-3.5">Item / Medicine</th>
@@ -151,6 +165,7 @@
                         <th class="px-5 py-3.5">Expiry</th>
                         <th class="px-5 py-3.5 text-right">Unit Price</th>
                         <th class="px-5 py-3.5 text-center">Qty</th>
+                        <th class="px-5 py-3.5 text-right">Discount</th>
                         <th class="px-5 py-3.5 text-right">Tax</th>
                         <th class="px-5 py-3.5 text-right">Line Total</th>
                     </tr>
@@ -158,11 +173,35 @@
                 <tbody class="divide-y divide-slate-100 bg-white">
                     {% for item in items %}
                     <tr class="hover:bg-slate-50/70 transition">
-                        <td class="px-5 py-3.5 font-bold text-slate-900 text-xs">{{ item.medicine_name }}</td>
-                        <td class="px-5 py-3.5 font-mono text-slate-600 text-xs">{{ item.batch_number }}</td>
-                        <td class="px-5 py-3.5 text-slate-500 text-xs">{{ item.expiry_date|date:"M Y" }}</td>
-                        <td class="px-5 py-3.5 text-right font-mono text-slate-700 text-xs">{{ request.user.store.currency }}{{ item.unit_price|floatformat:2 }}</td>
-                        <td class="px-5 py-3.5 text-center font-bold text-slate-900 text-xs">{{ item.quantity }}</td>
+                        <td class="px-5 py-3.5">
+                            <div class="font-bold text-slate-900 text-xs">{{ item.medicine_name }}</div>
+                            {% if item.is_loose %}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 mt-0.5">
+                                Loose ({{ item.loose_quantity }} of {{ item.pack_size }} units)
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3.5 font-mono text-slate-600 text-xs">{{ item.batch_number|default:"OTC" }}</td>
+                        <td class="px-5 py-3.5 text-slate-500 text-xs">{% if item.expiry_date %}{{ item.expiry_date|date:"M Y" }}{% else %}-{% endif %}</td>
+                        <td class="px-5 py-3.5 text-right font-mono text-slate-700 text-xs">
+                            {{ request.user.store.currency }}{{ item.unit_price|floatformat:2 }}{% if item.is_loose %}<span class="text-[10px] text-slate-400">/tab</span>{% endif %}
+                        </td>
+                        <td class="px-5 py-3.5 text-center font-bold text-slate-900 text-xs">
+                            {% if item.is_loose %}
+                            {{ item.loose_quantity }} <span class="text-[10px] text-slate-500 font-normal">tabs</span>
+                            <span class="text-[9px] text-slate-400 block font-mono">({{ item.quantity|floatformat:2 }} pk)</span>
+                            {% else %}
+                            {{ item.quantity|floatformat:0 }} <span class="text-[10px] text-slate-500 font-normal">pack{{ item.quantity|pluralize }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3.5 text-right font-mono text-xs">
+                            {% if item.discount_amount > 0 %}
+                            <span class="font-bold text-emerald-700">-{{ request.user.store.currency }}{{ item.discount_amount|floatformat:2 }}</span>
+                            {% if item.discount_type == 'PERCENT' %}<span class="text-[10px] text-slate-400 block font-sans">({{ item.discount_value|floatformat:0 }}%)</span>{% endif %}
+                            {% else %}
+                            <span class="text-slate-300">-</span>
+                            {% endif %}
+                        </td>
                         <td class="px-5 py-3.5 text-right font-mono text-slate-500 text-xs">{{ request.user.store.currency }}{{ item.tax_amount|floatformat:2 }} <span class="text-[10px] text-slate-400">({{ item.tax_percentage }}%)</span></td>
                         <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-900 text-xs">{{ request.user.store.currency }}{{ item.total_price|floatformat:2 }}</td>
                     </tr>
@@ -173,27 +212,153 @@
 
         <!-- Bill Totals Section -->
         <div class="bg-slate-50/80 p-6 border-t border-slate-200/80 flex justify-end">
-            <div class="w-full sm:w-72 space-y-2.5 text-xs">
+            <div class="w-full sm:w-80 space-y-2.5 text-xs">
                 <div class="flex justify-between text-slate-500 font-medium">
-                    <span>Subtotal:</span>
+                    <span>Gross Subtotal:</span>
                     <span class="font-mono font-bold text-slate-800">{{ request.user.store.currency }}{{ invoice.subtotal|floatformat:2 }}</span>
                 </div>
                 <div class="flex justify-between text-slate-500 font-medium">
                     <span>Total Tax / GST:</span>
                     <span class="font-mono font-bold text-slate-800">{{ request.user.store.currency }}{{ invoice.tax_amount|floatformat:2 }}</span>
                 </div>
-                <div class="flex justify-between text-rose-600 font-medium">
-                    <span>Discount Applied:</span>
+                {% if invoice.discount_amount > 0 %}
+                <div class="flex justify-between text-emerald-700 font-medium">
+                    <span>Total Discount Saved:</span>
                     <span class="font-mono font-bold">-{{ request.user.store.currency }}{{ invoice.discount_amount|floatformat:2 }}</span>
                 </div>
+                {% endif %}
                 <div class="border-t border-slate-200 pt-2.5 flex justify-between items-center text-slate-900 font-bold">
-                    <span class="text-xs">Final Amount:</span>
+                    <span class="text-xs">Final Net Amount:</span>
                     <span class="font-mono text-[#283891] text-xl font-black">{{ request.user.store.currency }}{{ invoice.total_amount|floatformat:2 }}</span>
                 </div>
+                <div class="flex justify-between text-slate-600 font-medium pt-1">
+                    <span>Customer Paid:</span>
+                    <span class="font-mono font-bold text-slate-900">{{ request.user.store.currency }}{{ invoice.paid_amount|floatformat:2 }}</span>
+                </div>
+                {% if invoice.due_amount > 0 %}
+                <div class="flex justify-between items-center text-rose-600 font-bold pt-1 border-t border-dashed border-rose-200">
+                    <span class="flex items-center space-x-1">
+                        <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                        <span>Remaining Balance Due:</span>
+                    </span>
+                    <span class="font-mono text-sm font-black">{{ request.user.store.currency }}{{ invoice.due_amount|floatformat:2 }}</span>
+                </div>
+                {% else %}
+                <div class="flex justify-between items-center text-emerald-700 font-bold pt-1">
+                    <span>Balance Due:</span>
+                    <span class="font-mono font-bold">{{ request.user.store.currency }}0.00 (Fully Settled)</span>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
+
+    <!-- Payment History / Settlement Ledger -->
+    {% if payments %}
+    <div class="bg-white rounded-2xl shadow-card border border-slate-200/80 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Payment Settlement History</h2>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">{{ payments|length }} payment{{ payments|length|pluralize }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-100 text-left text-xs min-w-[550px]">
+                <thead class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                        <th class="px-5 py-3">Date &amp; Time</th>
+                        <th class="px-5 py-3">Amount Paid</th>
+                        <th class="px-5 py-3">Payment Mode</th>
+                        <th class="px-5 py-3">Collected By</th>
+                        <th class="px-5 py-3">Notes / Reference</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for p in payments %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="px-5 py-3 font-mono text-slate-600">{{ p.created_at|date:"d M Y, h:i A" }}</td>
+                        <td class="px-5 py-3 font-mono font-black text-emerald-700">{{ request.user.store.currency }}{{ p.amount|floatformat:2 }}</td>
+                        <td class="px-5 py-3">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">{{ p.get_payment_method_display }}</span>
+                        </td>
+                        <td class="px-5 py-3 text-slate-700 font-medium">{{ p.created_by.username|default:"System" }}</td>
+                        <td class="px-5 py-3 text-slate-500 text-[11px]">{{ p.notes|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<!-- Collect Due Payment Modal -->
+{% if invoice.due_amount > 0 %}
+<div id="collectDueModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="collect-due-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" onclick="closeCollectDueModal()"></div>
+    <div class="flex min-h-full items-center justify-center p-4 text-center">
+        <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-slate-200">
+            <form action="{% url 'billing:invoice_collect_due' invoice.pk %}" method="post" id="collectDueForm" onsubmit="const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.classList.add('opacity-75'); btn.textContent = 'Processing Payment...';">
+                {% csrf_token %}
+                <div class="p-6">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900" id="collect-due-title">Collect Due Payment</h3>
+                            <p class="text-xs text-slate-500">Invoice #{{ invoice.invoice_number }} &bull; {{ invoice.customer_name }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Due Amount Banner -->
+                    <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 mb-4 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-rose-600 tracking-wider block">Current Unpaid Balance</span>
+                            <span class="text-xl font-black font-mono text-rose-700">{{ invoice.store.currency }}{{ invoice.due_amount|floatformat:2 }}</span>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-rose-200 text-rose-800">Due</span>
+                    </div>
+
+                    <div class="space-y-3.5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Collection Amount ({{ invoice.store.currency }}) *</label>
+                            <input type="number" name="amount" step="0.01" min="0.01" max="{{ invoice.due_amount }}" value="{{ invoice.due_amount }}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs font-mono font-black text-slate-900 outline-none transition">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Enter full or partial amount to collect now.</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Payment Method *</label>
+                            <select name="payment_method" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#283891] text-xs font-bold text-slate-900 outline-none transition">
+                                {% for code, label in payment_methods %}
+                                <option value="{{ code }}" {% if code == 'CASH' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Payment Notes / Transaction ID</label>
+                            <input type="text" name="notes" placeholder="e.g. Cash received by cashier, UPI ref #..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#283891] text-xs text-slate-800 outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 px-6 py-3.5 border-t border-slate-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeCollectDueModal()" class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition active:scale-[0.98]">
+                        Record Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- WhatsApp Phone Prompt Modal -->
 <div id="whatsappPhoneModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -261,9 +426,24 @@
         }
     }
 
+    function openCollectDueModal() {
+        const modal = document.getElementById('collectDueModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    }
+
+    function closeCollectDueModal() {
+        const modal = document.getElementById('collectDueModal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeWhatsAppModal();
+            closeCollectDueModal();
         }
     });
 </script>

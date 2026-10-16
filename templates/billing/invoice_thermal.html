@@ -336,15 +336,25 @@
                     <!-- Line 1: Item Name -->
                     <div class="item-title font-bold leading-tight text-black text-[9px]">
                         {{ item.medicine_name }}
+                        {% if item.is_loose %}
+                        <span class="text-[7.5px] font-bold text-amber-800">(Loose: {{ item.loose_quantity }}/{{ item.pack_size }})</span>
+                        {% endif %}
                     </div>
                     <!-- Line 2: Batch & Expiry -->
                     <div class="text-[8px] text-slate-600">
                         {% if item.batch_number %}Batch {{ item.batch_number }}{% endif %}{% if item.expiry_date %}{% if item.batch_number %} &nbsp;-&nbsp; {% endif %}Exp {{ item.expiry_date|date:"m/y" }}{% endif %}
+                        {% if item.discount_amount > 0 %}
+                        <span class="text-emerald-700">&nbsp;• Disc: -{{ invoice.store.currency }}{{ item.discount_amount|floatformat:2 }}</span>
+                        {% endif %}
                     </div>
                     <!-- Line 3: Qty x Rate & Total Amount -->
                     <div class="flex justify-between items-center text-[8.5px]">
                         <span class="text-slate-700">
+                            {% if item.is_loose %}
+                            {{ item.loose_quantity }} loose &times; {{ invoice.store.currency }}{{ item.unit_price|floatformat:2 }}/tab
+                            {% else %}
                             {{ item.quantity }} {{ item.unit_name }} &times; {{ invoice.store.currency }}{{ item.unit_price|floatformat:2 }}
+                            {% endif %}
                         </span>
                         <span class="font-bold text-black">
                             {{ invoice.store.currency }}{{ item.total_price|floatformat:2 }}
@@ -399,6 +409,20 @@
                     <span class="text-slate-700">Paid via</span>
                     <span class="font-bold uppercase text-black">{{ invoice.get_payment_method_display }}</span>
                 </div>
+                {% if invoice.due_amount > 0 or invoice.status == 'PARTIAL' or invoice.status == 'DUE' %}
+                <div class="flex justify-between text-[8.5px] font-bold text-emerald-800">
+                    <span>Paid Amount</span>
+                    <span>{{ invoice.store.currency }}{{ invoice.paid_amount|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-between text-[8.5px] font-bold text-rose-700">
+                    <span>Balance Due</span>
+                    <span>{{ invoice.store.currency }}{{ invoice.due_amount|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-between text-[8px] text-slate-600">
+                    <span>Status</span>
+                    <span class="font-bold uppercase text-amber-700">{{ invoice.get_status_display }}</span>
+                </div>
+                {% endif %}
                 {% if invoice.discount_amount > 0 %}
                 <div class="text-right text-[7.5px] text-slate-600 mt-0.5 italic">
                     You saved {{ invoice.store.currency }}{{ invoice.discount_amount|floatformat:2 }} on this bill
@@ -445,6 +469,9 @@
         "sgst": "{{ sgst_amount|floatformat:2 }}",
         "discount": "{{ invoice.discount_amount|floatformat:2 }}",
         "total": "{{ invoice.total_amount|floatformat:2 }}",
+        "paid_amount": "{{ invoice.paid_amount|floatformat:2 }}",
+        "due_amount": "{{ invoice.due_amount|floatformat:2 }}",
+        "status": "{{ invoice.status|escapejs }}",
         "currency": "{{ invoice.store.currency|escapejs }}",
         "payment_method": "{{ invoice.get_payment_method_display|upper|escapejs }}",
         "items": [
@@ -454,6 +481,10 @@
                 "batch": "{{ item.batch_number|escapejs }}",
                 "expiry": "{{ item.expiry_date|date:'m/y'|escapejs }}",
                 "quantity": {{ item.quantity }},
+                "is_loose": {{ item.is_loose|yesno:"true,false" }},
+                "loose_quantity": {{ item.loose_quantity|default:0 }},
+                "pack_size": {{ item.pack_size|default:1 }},
+                "discount_amount": "{{ item.discount_amount|floatformat:2 }}",
                 "unit": "{{ item.unit_name|escapejs }}",
                 "unit_price": "{{ item.unit_price|floatformat:2 }}",
                 "total_price": "{{ item.total_price|floatformat:2 }}"

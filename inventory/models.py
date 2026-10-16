@@ -79,6 +79,7 @@ class Medicine(TenantModel):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='medicines')
     manufacturer = models.ForeignKey(Manufacturer, on_delete=models.SET_NULL, null=True, blank=True, related_name='medicines')
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT, related_name='medicines')
+    pack_size = models.PositiveIntegerField(default=1, help_text="Units per pack/strip (e.g. 10 for a 10-tablet strip, 1 for bottle/syrup)")
     sku = models.CharField(max_length=100, blank=True, help_text="SKU or Barcode")
     rack_location = models.CharField(max_length=100, blank=True, help_text="Rack / Shelf storage location")
     min_stock_level = models.PositiveIntegerField(default=10, help_text="Low stock alert threshold")
@@ -98,7 +99,7 @@ class Medicine(TenantModel):
             return self.total_qty
         return self.batches.filter(is_active=True, status=Batch.Status.ACTIVE).aggregate(
             total=models.Sum('quantity')
-        )['total'] or 0
+        )['total'] or Decimal('0.00')
 
     @property
     def is_low_stock(self):
@@ -142,7 +143,7 @@ class Batch(TenantModel):
     mrp = models.DecimalField(max_digits=12, decimal_places=2, help_text="Maximum Retail Price")
     selling_price = models.DecimalField(max_digits=12, decimal_places=2, help_text="Selling price per unit")
     tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'), help_text="GST/Tax %")
-    quantity = models.PositiveIntegerField(default=0, help_text="Available units in stock")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Available units in stock (supports fractional packs for loose sales)")
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

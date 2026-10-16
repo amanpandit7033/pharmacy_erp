@@ -71,21 +71,22 @@
                     </button>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-100 text-left text-xs min-w-[580px]">
+                    <table class="min-w-full divide-y divide-slate-100 text-left text-xs min-w-[680px]">
                         <thead class="bg-slate-50/75 border-b border-slate-100 font-bold text-slate-400 uppercase tracking-wider text-[11px]">
                             <tr>
-                                <th class="px-5 py-3.5">Medicine</th>
-                                <th class="px-5 py-3.5">Batch & Expiry</th>
-                                <th class="px-5 py-3.5 text-right">Price</th>
-                                <th class="px-5 py-3.5 text-center">Qty</th>
-                                <th class="px-5 py-3.5 text-right">Tax</th>
-                                <th class="px-5 py-3.5 text-right">Total</th>
-                                <th class="px-4 py-3.5 text-center">Action</th>
+                                <th class="px-4 py-3.5">Medicine</th>
+                                <th class="px-3 py-3.5">Batch & Exp</th>
+                                <th class="px-3 py-3.5 text-right">Price</th>
+                                <th class="px-3 py-3.5 text-center">Qty / Mode</th>
+                                <th class="px-3 py-3.5 text-center">Item Disc</th>
+                                <th class="px-3 py-3.5 text-right">Tax</th>
+                                <th class="px-3 py-3.5 text-right">Total</th>
+                                <th class="px-3 py-3.5 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody id="cartTableBody" class="divide-y divide-slate-100 bg-white">
                             <tr id="emptyCartRow">
-                                <td colspan="7" class="px-4 py-14 text-center text-slate-400">
+                                <td colspan="8" class="px-4 py-14 text-center text-slate-400">
                                     <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
                                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
@@ -226,20 +227,49 @@
                         <!-- Bill Calculation Summary -->
                         <div class="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2.5 text-xs">
                             <div class="flex justify-between text-slate-500 font-medium">
-                                <span>Subtotal:</span>
+                                <span>Gross Items Subtotal:</span>
                                 <span class="font-mono font-bold text-slate-800">{{ request.user.store.currency }}<span id="subtotalDisplay">0.00</span></span>
+                            </div>
+                            <div class="flex justify-between text-emerald-700 font-medium" id="itemDiscountRow">
+                                <span>Item-wise Discounts:</span>
+                                <span class="font-mono font-bold">-{{ request.user.store.currency }}<span id="itemDiscountDisplay">0.00</span></span>
+                            </div>
+                            <div class="flex justify-between text-rose-600 font-medium" id="billDiscountRow">
+                                <span>Bill Special Discount:</span>
+                                <span class="font-mono font-bold">-{{ request.user.store.currency }}<span id="discountDisplay">0.00</span></span>
                             </div>
                             <div class="flex justify-between text-slate-500 font-medium">
                                 <span>Tax / GST:</span>
                                 <span class="font-mono font-bold text-slate-800">{{ request.user.store.currency }}<span id="taxDisplay">0.00</span></span>
                             </div>
-                            <div class="flex justify-between text-rose-600 font-medium">
-                                <span>Discount:</span>
-                                <span class="font-mono font-bold">-{{ request.user.store.currency }}<span id="discountDisplay">0.00</span></span>
-                            </div>
                             <div class="border-t border-slate-200/80 pt-2.5 flex justify-between items-center text-slate-900 font-bold">
                                 <span class="text-xs">Grand Total:</span>
                                 <span class="text-[#283891] font-mono font-extrabold text-lg">{{ request.user.store.currency }}<span id="grandTotalDisplay">0.00</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Payment & Due Settlement Box -->
+                        <div class="bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-2xl p-4 border border-slate-200/90 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold text-slate-800">
+                                    Customer Paid ({{ request.user.store.currency }})
+                                </label>
+                                <button type="button" onclick="setFullPayment()" class="text-[10px] font-bold text-[#283891] hover:underline bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs cursor-pointer">
+                                    Pay in Full
+                                </button>
+                            </div>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-xs font-mono font-bold text-slate-400">{{ request.user.store.currency }}</span>
+                                <input type="number" step="0.01" min="0" name="paid_amount" id="paidAmountInput" value="{% if is_edit_mode %}{{ invoice.paid_amount }}{% endif %}" placeholder="0.00" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-white border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-[#283891]/10 text-xs font-mono font-black text-slate-900 outline-none transition">
+                            </div>
+
+                            <!-- Live Settlement Status Badge -->
+                            <div id="paymentStatusBox" class="p-2.5 rounded-xl border flex items-center justify-between text-xs font-bold transition bg-emerald-50 border-emerald-200/80 text-emerald-800">
+                                <div class="flex items-center space-x-1.5">
+                                    <span id="paymentStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span id="paymentStatusText">Full Payment</span>
+                                </div>
+                                <span id="paymentStatusAmount" class="font-mono font-extrabold">{{ request.user.store.currency }}0.00</span>
                             </div>
                         </div>
 
@@ -315,6 +345,14 @@
     const discountDisplay = document.getElementById('discountDisplay');
     const grandTotalDisplay = document.getElementById('grandTotalDisplay');
     const itemsJsonInput = document.getElementById('itemsJsonInput');
+
+    const itemDiscountDisplay = document.getElementById('itemDiscountDisplay');
+    const paidAmountInput = document.getElementById('paidAmountInput');
+    const paymentStatusBox = document.getElementById('paymentStatusBox');
+    const paymentStatusDot = document.getElementById('paymentStatusDot');
+    const paymentStatusText = document.getElementById('paymentStatusText');
+    const paymentStatusAmount = document.getElementById('paymentStatusAmount');
+    let userTouchedPaidAmount = {% if is_edit_mode %}true{% else %}false{% endif %};
 
     // Intelligent Typo-Tolerant Search for POS Counter
     function levenshteinDistance(s1, s2) {
@@ -438,12 +476,15 @@
         if (scoredResults.length === 0) {
             searchResults.innerHTML = '<div class="p-4 text-xs text-slate-400 text-center font-medium">No matching medicines with available stock.</div>';
         } else {
-            searchResults.innerHTML = scoredResults.slice(0, 10).map(({ batch: b, isTypoMatch }) => `
-                <div onclick="addToCart(${b.id})" class="p-3.5 hover:bg-blue-50/60 cursor-pointer flex justify-between items-center transition">
+            searchResults.innerHTML = scoredResults.slice(0, 10).map(({ batch: b, isTypoMatch }) => {
+                const pSize = parseInt(b.pack_size || 1, 10);
+                return `
+                <div onclick="addToCart(${b.id})" class="p-3.5 hover:bg-blue-50/60 cursor-pointer flex justify-between items-center transition border-b border-slate-100/60 last:border-0">
                     <div>
                         <div class="font-bold text-slate-900 text-xs flex items-center space-x-1.5 flex-wrap">
                             <span>${escapeHtml(b.medicine_name)}</span>
                             <span class="text-slate-400 font-normal">(${escapeHtml(b.unit)})</span>
+                            ${pSize > 1 ? `<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">Pack of ${pSize}</span>` : ''}
                             ${isTypoMatch ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Typo match</span>' : ''}
                         </div>
                         <div class="text-[11px] text-slate-500 mt-0.5">
@@ -452,11 +493,13 @@
                         </div>
                     </div>
                     <div class="text-right shrink-0 ml-3">
-                        <div class="font-bold text-[#283891] text-xs">${currency}${b.selling_price}</div>
-                        <div class="text-[10px] text-slate-400 font-medium">Stock: ${b.available_qty}</div>
+                        <div class="font-bold text-[#283891] text-xs">${currency}${b.selling_price} <span class="text-[10px] text-slate-400 font-normal">/pack</span></div>
+                        ${pSize > 1 ? `<div class="text-[10px] text-indigo-700 font-semibold">${currency}${b.loose_price} /tab</div>` : ''}
+                        <div class="text-[10px] text-slate-400 font-medium">Stock: ${b.available_qty} ${pSize > 1 ? 'packs' : 'units'}</div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
         searchResults.classList.remove('hidden');
     });
@@ -483,11 +526,24 @@
 
         const uid = 'b_' + batch.id;
         const existing = cart.find(item => item.uid === uid);
+        const pSize = parseInt(batch.pack_size || 1, 10);
+        const loosePrice = parseFloat(batch.loose_price) || (parseFloat(batch.selling_price) / pSize);
+
         if (existing) {
-            if (existing.quantity < batch.available_qty) {
-                existing.quantity += 1;
+            if (existing.is_loose) {
+                const maxLoose = Math.floor(batch.available_qty * pSize);
+                if (existing.quantity < maxLoose) {
+                    existing.quantity += 1;
+                    existing.loose_quantity = existing.quantity;
+                } else {
+                    alert(`Cannot exceed available loose stock of ${maxLoose} units.`);
+                }
             } else {
-                alert(`Cannot exceed available stock of ${batch.available_qty} units.`);
+                if (existing.quantity < batch.available_qty) {
+                    existing.quantity += 1;
+                } else {
+                    alert(`Cannot exceed available stock of ${batch.available_qty} packs.`);
+                }
             }
         } else {
             cart.push({
@@ -498,10 +554,18 @@
                 batch_number: batch.batch_number,
                 expiry_date: batch.expiry_date,
                 unit: batch.unit,
+                pack_size: pSize,
+                unit_price_pack: parseFloat(batch.selling_price),
+                loose_price: loosePrice,
+                is_loose: false,
+                loose_quantity: 0,
                 unit_price: parseFloat(batch.selling_price),
                 tax_percentage: parseFloat(batch.tax_percentage || 0),
                 available_qty: batch.available_qty,
-                quantity: 1
+                quantity: 1,
+                discount_type: 'FLAT',
+                discount_value: 0.0,
+                discount_amount: 0.0
             });
         }
 
@@ -520,10 +584,18 @@
             batch_number: 'OTC',
             expiry_date: '',
             unit: 'unit',
+            pack_size: 1,
+            unit_price_pack: 0.0,
+            loose_price: 0.0,
+            is_loose: false,
+            loose_quantity: 0,
             unit_price: 0.0,
             tax_percentage: 0.0,
             available_qty: 999999,
-            quantity: 1
+            quantity: 1,
+            discount_type: 'FLAT',
+            discount_value: 0.0,
+            discount_amount: 0.0
         });
         renderCart();
         setTimeout(() => {
@@ -535,6 +607,39 @@
         }, 50);
     }
 
+    function setLooseMode(uid, isLoose) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item || item.is_manual) return;
+        item.is_loose = isLoose;
+        if (isLoose) {
+            item.unit_price = item.loose_price;
+            item.quantity = Math.max(1, Math.min(item.pack_size, item.quantity));
+            item.loose_quantity = item.quantity;
+        } else {
+            item.unit_price = item.unit_price_pack;
+            item.quantity = Math.max(1, Math.min(item.available_qty, Math.floor(item.quantity / item.pack_size) || 1));
+            item.loose_quantity = 0;
+        }
+        renderCart();
+    }
+
+    function handleItemDiscountInput(uid, rawVal) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+        const str = (rawVal || '').trim();
+        item.discount_raw_input = rawVal;
+        if (str.includes('%')) {
+            item.discount_type = 'PERCENT';
+            const num = parseFloat(str.replace('%', '').trim()) || 0.0;
+            item.discount_value = Math.min(100, Math.max(0, num));
+        } else {
+            item.discount_type = 'FLAT';
+            item.discount_value = Math.max(0, parseFloat(str) || 0.0);
+        }
+        updateRowTotals(uid);
+        calculateTotals();
+    }
+
     function updateQtyByUid(uid, delta) {
         const item = cart.find(i => i.uid === uid);
         if (!item) return;
@@ -544,11 +649,22 @@
             removeFromCartByUid(uid);
             return;
         }
-        if (!item.is_manual && newQty > item.available_qty) {
-            alert(`Maximum available stock is ${item.available_qty}`);
-            return;
+        if (!item.is_manual) {
+            if (item.is_loose) {
+                const maxLoose = Math.floor(item.available_qty * item.pack_size);
+                if (newQty > maxLoose) {
+                    alert(`Maximum available stock is ${maxLoose} loose units.`);
+                    return;
+                }
+            } else {
+                if (newQty > item.available_qty) {
+                    alert(`Maximum available stock is ${item.available_qty} packs.`);
+                    return;
+                }
+            }
         }
         item.quantity = newQty;
+        if (item.is_loose) item.loose_quantity = newQty;
         renderCart();
     }
 
@@ -563,6 +679,7 @@
         const item = cart.find(i => i.uid === uid);
         if (!item) return;
         item.unit_price = parseFloat(value) || 0.0;
+        item.unit_price_pack = item.unit_price;
         updateRowTotals(uid);
         calculateTotals();
     }
@@ -572,6 +689,7 @@
         if (!item) return;
         const q = parseInt(value, 10);
         item.quantity = isNaN(q) || q < 1 ? 1 : q;
+        if (item.is_loose) item.loose_quantity = item.quantity;
         updateRowTotals(uid);
         calculateTotals();
     }
@@ -582,12 +700,34 @@
         const row = document.querySelector(`[data-uid="${uid}"]`);
         if (!row) return;
 
-        const lineSub = item.unit_price * item.quantity;
-        const lineTax = lineSub * (item.tax_percentage / 100);
-        const lineTotal = lineSub + lineTax;
+        const lineGross = item.unit_price * item.quantity;
+        let lineDisc = 0;
+        if (item.discount_type === 'PERCENT') {
+            lineDisc = lineGross * (Math.min(100, Math.max(0, item.discount_value)) / 100);
+        } else {
+            lineDisc = Math.min(lineGross, Math.max(0, item.discount_value));
+        }
+        item.discount_amount = lineDisc;
 
+        const lineTaxable = Math.max(0, lineGross - lineDisc);
+        const lineTax = lineTaxable * (item.tax_percentage / 100);
+        const lineTotal = lineTaxable + lineTax;
+
+        const discEl = row.querySelector('.line-item-disc');
         const taxEl = row.querySelector('.line-tax');
         const totalEl = row.querySelector('.line-total');
+        if (discEl) {
+            if (lineDisc > 0) {
+                const badgeText = item.discount_type === 'PERCENT'
+                    ? `-${currency}${lineDisc.toFixed(2)} (${item.discount_value}%)`
+                    : `-${currency}${lineDisc.toFixed(2)}`;
+                discEl.textContent = badgeText;
+                discEl.style.display = 'block';
+            } else {
+                discEl.textContent = '';
+                discEl.style.display = 'none';
+            }
+        }
         if (taxEl) taxEl.textContent = `${currency}${lineTax.toFixed(2)}`;
         if (totalEl) totalEl.textContent = `${currency}${lineTotal.toFixed(2)}`;
     }
@@ -601,7 +741,7 @@
         if (cart.length === 0) {
             cartTableBody.innerHTML = `
                 <tr id="emptyCartRow">
-                    <td colspan="7" class="px-4 py-14 text-center text-slate-400">
+                    <td colspan="8" class="px-4 py-14 text-center text-slate-400">
                         <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
@@ -615,29 +755,39 @@
             itemCount.textContent = '0 items';
         } else {
             cartTableBody.innerHTML = cart.map(item => {
-                const lineSub = item.unit_price * item.quantity;
-                const lineTax = lineSub * (item.tax_percentage / 100);
-                const lineTotal = lineSub + lineTax;
+                const lineGross = item.unit_price * item.quantity;
+                let lineDisc = 0;
+                if (item.discount_type === 'PERCENT') {
+                    lineDisc = lineGross * (Math.min(100, Math.max(0, item.discount_value)) / 100);
+                } else {
+                    lineDisc = Math.min(lineGross, Math.max(0, item.discount_value));
+                }
+                item.discount_amount = lineDisc;
+
+                const lineTaxable = Math.max(0, lineGross - lineDisc);
+                const lineTax = lineTaxable * (item.tax_percentage / 100);
+                const lineTotal = lineTaxable + lineTax;
+                const pSize = parseInt(item.pack_size || 1, 10);
 
                 if (item.is_manual) {
                     return `
                         <tr data-uid="${item.uid}" class="hover:bg-blue-50/20 bg-blue-50/10 transition">
-                            <td class="px-5 py-3">
+                            <td class="px-4 py-3">
                                 <div class="space-y-1">
                                     <input type="text"
                                            value="${escapeHtml(item.medicine_name)}"
-                                           placeholder="e.g. Fever Medicine, Paracetamol..."
+                                           placeholder="e.g. Fever Medicine, OTC..."
                                            oninput="updateManualName('${item.uid}', this.value)"
-                                           class="manual-name-input w-full max-w-[220px] px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-400">
+                                           class="manual-name-input w-full max-w-[200px] px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-400">
                                     <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">Manual Entry</span>
                                 </div>
                             </td>
-                            <td class="px-5 py-3 font-mono text-[11px] text-slate-500">
+                            <td class="px-3 py-3 font-mono text-[11px] text-slate-500">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 border border-slate-200/80">
                                     Direct / OTC
                                 </span>
                             </td>
-                            <td class="px-5 py-3 text-right">
+                            <td class="px-3 py-3 text-right">
                                 <div class="inline-flex items-center justify-end">
                                     <span class="text-xs font-mono font-bold text-slate-400 mr-1">${currency}</span>
                                     <input type="number"
@@ -646,23 +796,33 @@
                                            value="${item.unit_price > 0 ? item.unit_price : ''}"
                                            placeholder="0.00"
                                            oninput="updateManualPrice('${item.uid}', this.value)"
-                                           class="manual-price w-24 px-2.5 py-1.5 text-right font-mono font-bold text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-300">
+                                           class="manual-price w-20 px-2 py-1.5 text-right font-mono font-bold text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-300">
                                 </div>
                             </td>
-                            <td class="px-5 py-3 text-center">
-                                <div class="inline-flex items-center space-x-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                            <td class="px-3 py-3 text-center">
+                                <div class="inline-flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
                                     <button type="button" onclick="updateQtyByUid('${item.uid}', -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">-</button>
                                     <input type="number" min="1" value="${item.quantity}" oninput="updateManualQty('${item.uid}', this.value)" class="w-8 text-center font-bold text-xs text-slate-800 bg-transparent border-0 outline-none p-0 font-mono">
                                     <button type="button" onclick="updateQtyByUid('${item.uid}', 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">+</button>
                                 </div>
                             </td>
-                            <td class="px-5 py-3 text-right font-mono text-slate-500 text-xs">
+                            <td class="px-3 py-3 text-center">
+                                <input type="text"
+                                       value="${item.discount_raw_input !== undefined ? item.discount_raw_input : (item.discount_value > 0 ? (item.discount_type === 'PERCENT' ? item.discount_value + '%' : item.discount_value) : '')}"
+                                       placeholder="0 or 10%"
+                                       oninput="handleItemDiscountInput('${item.uid}', this.value)"
+                                       class="w-20 px-2 py-1.5 text-center font-mono font-bold text-xs bg-white border border-slate-200/90 rounded-xl text-slate-900 focus:border-[#283891] focus:ring-2 focus:ring-[#283891]/10 outline-none transition placeholder-slate-400">
+                                <span class="line-item-disc text-[10px] font-bold text-emerald-700 block mt-1" style="${lineDisc > 0 ? '' : 'display:none;'}">
+                                    -${currency}${lineDisc.toFixed(2)}${item.discount_type === 'PERCENT' && item.discount_value > 0 ? ` (${item.discount_value}%)` : ''}
+                                </span>
+                            </td>
+                            <td class="px-3 py-3 text-right font-mono text-slate-500 text-xs">
                                 <span class="line-tax">${currency}${lineTax.toFixed(2)}</span>
                             </td>
-                            <td class="px-5 py-3 text-right font-mono font-bold text-slate-900 text-xs">
+                            <td class="px-3 py-3 text-right font-mono font-bold text-slate-900 text-xs">
                                 <span class="line-total text-[#283891]">${currency}${lineTotal.toFixed(2)}</span>
                             </td>
-                            <td class="px-4 py-3 text-center">
+                            <td class="px-3 py-3 text-center">
                                 <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -675,20 +835,53 @@
 
                 return `
                     <tr data-uid="${item.uid}" class="hover:bg-slate-50/60 transition">
-                        <td class="px-5 py-3.5 font-bold text-slate-900 text-xs">${escapeHtml(item.medicine_name)}</td>
-                        <td class="px-5 py-3.5 font-mono text-[11px] text-slate-600">${escapeHtml(item.batch_number)} <br><span class="text-[10px] text-slate-400">Exp: ${item.expiry_date}</span></td>
-                        <td class="px-5 py-3.5 text-right font-mono text-slate-700 text-xs">${currency}${item.unit_price.toFixed(2)}</td>
-                        <td class="px-5 py-3.5 text-center">
-                            <div class="inline-flex items-center space-x-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                        <td class="px-4 py-3">
+                            <div class="font-bold text-slate-900 text-xs leading-snug">${escapeHtml(item.medicine_name)}</div>
+                            ${pSize > 1 ? `
+                                <div class="mt-1 inline-flex items-center p-0.5 rounded-lg bg-slate-100 border border-slate-200/80 text-[10px] space-x-1">
+                                    <button type="button" onclick="setLooseMode('${item.uid}', false)" class="px-2 py-0.5 rounded-md font-bold transition ${!item.is_loose ? 'bg-[#283891] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'}">
+                                        Full Pack (${pSize}s)
+                                    </button>
+                                    <button type="button" onclick="setLooseMode('${item.uid}', true)" class="px-2 py-0.5 rounded-md font-bold transition ${item.is_loose ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'}">
+                                        Loose (${currency}${item.loose_price}/tab)
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td class="px-3 py-3 font-mono text-[11px] text-slate-600">
+                            <div>${escapeHtml(item.batch_number)}</div>
+                            <span class="text-[10px] text-slate-400">Exp: ${item.expiry_date}</span>
+                        </td>
+                        <td class="px-3 py-3 text-right font-mono text-slate-700 text-xs">
+                            <div>${currency}${item.unit_price.toFixed(2)}</div>
+                            <span class="text-[9px] text-slate-400">${item.is_loose ? '/tab' : '/pack'}</span>
+                        </td>
+                        <td class="px-3 py-3 text-center">
+                            <div class="inline-flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
                                 <button type="button" onclick="updateQtyByUid('${item.uid}', -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">-</button>
                                 <span class="w-7 text-center font-bold text-xs text-slate-800 font-mono">${item.quantity}</span>
                                 <button type="button" onclick="updateQtyByUid('${item.uid}', 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">+</button>
                             </div>
+                            ${item.is_loose ? `<span class="text-[9px] font-bold text-indigo-700 block mt-0.5">${item.quantity} tab${item.quantity > 1 ? 's' : ''} (${(item.quantity / pSize).toFixed(2)} pk)</span>` : `<span class="text-[9px] text-slate-400 block mt-0.5">${item.quantity} pk</span>`}
                         </td>
-                        <td class="px-5 py-3.5 text-right font-mono text-slate-500 text-xs">${currency}${lineTax.toFixed(2)}</td>
-                        <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-900 text-xs">${currency}${lineTotal.toFixed(2)}</td>
-                        <td class="px-4 py-3.5 text-center">
-                            <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
+                        <td class="px-3 py-3 text-center">
+                            <input type="text"
+                                   value="${item.discount_raw_input !== undefined ? item.discount_raw_input : (item.discount_value > 0 ? (item.discount_type === 'PERCENT' ? item.discount_value + '%' : item.discount_value) : '')}"
+                                   placeholder="0 or 10%"
+                                   oninput="handleItemDiscountInput('${item.uid}', this.value)"
+                                   class="w-20 px-2 py-1.5 text-center font-mono font-bold text-xs bg-white border border-slate-200/90 rounded-xl text-slate-900 focus:border-[#283891] focus:ring-2 focus:ring-[#283891]/10 outline-none transition placeholder-slate-400">
+                            <span class="line-item-disc text-[10px] font-bold text-emerald-700 block mt-1" style="${lineDisc > 0 ? '' : 'display:none;'}">
+                                -${currency}${lineDisc.toFixed(2)}${item.discount_type === 'PERCENT' && item.discount_value > 0 ? ` (${item.discount_value}%)` : ''}
+                            </span>
+                        </td>
+                        <td class="px-3 py-3 text-right font-mono text-slate-500 text-xs">
+                            <span class="line-tax">${currency}${lineTax.toFixed(2)}</span>
+                        </td>
+                        <td class="px-3 py-3 text-right font-mono font-bold text-slate-900 text-xs">
+                            <span class="line-total text-[#283891]">${currency}${lineTotal.toFixed(2)}</span>
+                        </td>
+                        <td class="px-3 py-3 text-center">
+                            <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
@@ -703,47 +896,113 @@
     }
 
     function calculateTotals() {
-        let sub = 0;
-        let tax = 0;
+        let grossSubtotal = 0;
+        let totalItemDisc = 0;
+        let totalTax = 0;
 
         cart.forEach(item => {
-            const lineSub = item.unit_price * item.quantity;
-            const lineTax = lineSub * (item.tax_percentage / 100);
-            sub += lineSub;
-            tax += lineTax;
+            const lineGross = item.unit_price * item.quantity;
+            let lineDisc = 0;
+            if (item.discount_type === 'PERCENT') {
+                lineDisc = lineGross * (Math.min(100, Math.max(0, item.discount_value)) / 100);
+            } else {
+                lineDisc = Math.min(lineGross, Math.max(0, item.discount_value));
+            }
+            item.discount_amount = lineDisc;
+
+            const lineTaxable = Math.max(0, lineGross - lineDisc);
+            const lineTax = lineTaxable * (item.tax_percentage / 100);
+
+            grossSubtotal += lineGross;
+            totalItemDisc += lineDisc;
+            totalTax += lineTax;
         });
 
-        const grossTotal = sub + tax;
-        const rawVal = (discountInput ? discountInput.value : '').trim();
-        let discAmount = 0;
+        // Overall bill discount (optional additional discount on whole bill)
+        const rawBillDisc = (discountInput ? discountInput.value : '').trim();
+        let billDiscAmount = 0;
         let isPct = false;
         let pct = 0;
+        const taxableBase = Math.max(0, grossSubtotal - totalItemDisc + totalTax);
 
-        if (rawVal.includes('%')) {
+        if (rawBillDisc.includes('%')) {
             isPct = true;
-            pct = parseFloat(rawVal.replace('%', '').trim()) || 0;
-            discAmount = grossTotal * (pct / 100);
+            pct = parseFloat(rawBillDisc.replace('%', '').trim()) || 0;
+            billDiscAmount = taxableBase * (pct / 100);
         } else {
-            discAmount = parseFloat(rawVal) || 0;
+            billDiscAmount = parseFloat(rawBillDisc) || 0;
         }
 
-        discAmount = Math.min(grossTotal, Math.max(0, discAmount));
-        const grand = Math.max(0, grossTotal - discAmount);
+        billDiscAmount = Math.min(taxableBase, Math.max(0, billDiscAmount));
+        const grandTotal = Math.max(0, taxableBase - billDiscAmount);
 
-        if (subtotalDisplay) subtotalDisplay.textContent = sub.toFixed(2);
-        if (taxDisplay) taxDisplay.textContent = tax.toFixed(2);
+        if (subtotalDisplay) subtotalDisplay.textContent = grossSubtotal.toFixed(2);
+        if (itemDiscountDisplay) itemDiscountDisplay.textContent = totalItemDisc.toFixed(2);
+        if (taxDisplay) taxDisplay.textContent = totalTax.toFixed(2);
         if (discountDisplay) {
             if (isPct && pct > 0) {
-                discountDisplay.textContent = `${discAmount.toFixed(2)} (${pct}%)`;
+                discountDisplay.textContent = `${billDiscAmount.toFixed(2)} (${pct}%)`;
             } else {
-                discountDisplay.textContent = discAmount.toFixed(2);
+                discountDisplay.textContent = billDiscAmount.toFixed(2);
             }
         }
-        if (grandTotalDisplay) grandTotalDisplay.textContent = grand.toFixed(2);
+        if (grandTotalDisplay) grandTotalDisplay.textContent = grandTotal.toFixed(2);
+
+        // Synchronize paid amount if not manually touched
+        if (paidAmountInput && !userTouchedPaidAmount) {
+            paidAmountInput.value = grandTotal > 0 ? grandTotal.toFixed(2) : '';
+        }
+
+        // Live Settlement status
+        if (paymentStatusBox && paidAmountInput) {
+            const paid = parseFloat(paidAmountInput.value) || 0.0;
+            if (paid >= grandTotal && grandTotal > 0) {
+                paymentStatusBox.className = "p-2.5 rounded-xl border flex items-center justify-between text-xs font-bold transition bg-emerald-50 border-emerald-200/80 text-emerald-800";
+                paymentStatusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                paymentStatusText.textContent = "Paid in Full";
+                if (paid > grandTotal) {
+                    paymentStatusAmount.textContent = `Change: ${currency}${(paid - grandTotal).toFixed(2)}`;
+                } else {
+                    paymentStatusAmount.textContent = `${currency}${paid.toFixed(2)}`;
+                }
+            } else if (paid > 0 && paid < grandTotal) {
+                const due = grandTotal - paid;
+                paymentStatusBox.className = "p-2.5 rounded-xl border flex items-center justify-between text-xs font-bold transition bg-amber-50 border-amber-200/80 text-amber-800";
+                paymentStatusDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+                paymentStatusText.textContent = "Partial Payment";
+                paymentStatusAmount.textContent = `Due: ${currency}${due.toFixed(2)}`;
+            } else {
+                paymentStatusBox.className = "p-2.5 rounded-xl border flex items-center justify-between text-xs font-bold transition bg-rose-50 border-rose-200/80 text-rose-800";
+                paymentStatusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+                paymentStatusText.textContent = "Payment Due";
+                paymentStatusAmount.textContent = `Due: ${currency}${grandTotal.toFixed(2)}`;
+            }
+        }
+
+        // Update UPI QR if active
+        if (paymentMethodSelect && paymentMethodSelect.value === 'UPI') {
+            const paid = parseFloat(paidAmountInput ? paidAmountInput.value : 0) || 0;
+            renderUpiQr(paid > 0 ? paid : grandTotal);
+        }
+    }
+
+    function setFullPayment() {
+        const grand = parseFloat(grandTotalDisplay ? grandTotalDisplay.textContent : '0') || 0;
+        if (paidAmountInput) {
+            paidAmountInput.value = grand.toFixed(2);
+            userTouchedPaidAmount = false;
+        }
+        calculateTotals();
     }
 
     if (discountInput) {
         discountInput.addEventListener('input', calculateTotals);
+    }
+    if (paidAmountInput) {
+        paidAmountInput.addEventListener('input', function() {
+            userTouchedPaidAmount = true;
+            calculateTotals();
+        });
     }
 
     function submitInvoice() {
@@ -773,17 +1032,25 @@
 
         // Convert percentage discount to numeric amount before form submission
         if (discountInput && discountInput.value.includes('%')) {
-            let sub = 0;
-            let tax = 0;
+            let gross = 0;
+            let itemDiscs = 0;
+            let taxes = 0;
             cart.forEach(item => {
-                const lineSub = item.unit_price * item.quantity;
-                const lineTax = lineSub * (item.tax_percentage / 100);
-                sub += lineSub;
-                tax += lineTax;
+                const lineGross = item.unit_price * item.quantity;
+                let lineDisc = 0;
+                if (item.discount_type === 'PERCENT') {
+                    lineDisc = lineGross * (Math.min(100, Math.max(0, item.discount_value)) / 100);
+                } else {
+                    lineDisc = Math.min(lineGross, Math.max(0, item.discount_value));
+                }
+                const lineTaxable = Math.max(0, lineGross - lineDisc);
+                gross += lineGross;
+                itemDiscs += lineDisc;
+                taxes += lineTaxable * (item.tax_percentage / 100);
             });
-            const gross = sub + tax;
+            const taxableBase = Math.max(0, gross - itemDiscs + taxes);
             const pct = parseFloat(discountInput.value.replace('%', '').trim()) || 0;
-            const disc = Math.min(gross, Math.max(0, gross * (pct / 100)));
+            const disc = Math.min(taxableBase, Math.max(0, taxableBase * (pct / 100)));
             discountInput.value = disc.toFixed(2);
         }
 
@@ -793,7 +1060,13 @@
             batch_number: i.batch_number || 'OTC',
             quantity: i.quantity,
             unit_price: i.unit_price,
-            tax_percentage: i.tax_percentage || 0
+            tax_percentage: i.tax_percentage || 0,
+            is_loose: Boolean(i.is_loose),
+            pack_size: i.pack_size || 1,
+            loose_quantity: i.is_loose ? (i.quantity || 1) : 0,
+            discount_type: i.discount_type || 'FLAT',
+            discount_value: i.discount_value || 0,
+            discount_amount: i.discount_amount || 0
         }));
 
         itemsJsonInput.value = JSON.stringify(payload);

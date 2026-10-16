@@ -25,7 +25,7 @@ class MedicineForm(forms.ModelForm):
     class Meta:
         model = Medicine
         fields = [
-            'name', 'generic_name', 'category', 'manufacturer', 'unit',
+            'name', 'generic_name', 'category', 'manufacturer', 'unit', 'pack_size',
             'sku', 'rack_location', 'min_stock_level', 'is_prescription_required', 'description'
         ]
         widgets = {
@@ -34,6 +34,7 @@ class MedicineForm(forms.ModelForm):
             'category': forms.Select(attrs={'class': INPUT_CLASSES}),
             'manufacturer': forms.Select(attrs={'class': INPUT_CLASSES}),
             'unit': forms.Select(attrs={'class': INPUT_CLASSES}),
+            'pack_size': forms.NumberInput(attrs={'class': INPUT_CLASSES, 'min': '1', 'placeholder': 'e.g. 10 (tablets per strip) or 1'}),
             'sku': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'rack_location': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Shelf A-3'}),
             'min_stock_level': forms.NumberInput(attrs={'class': INPUT_CLASSES}),
@@ -77,7 +78,7 @@ class BatchForm(forms.ModelForm):
             'mrp': forms.NumberInput(attrs={'step': '0.01', 'class': INPUT_CLASSES}),
             'selling_price': forms.NumberInput(attrs={'step': '0.01', 'class': INPUT_CLASSES}),
             'tax_percentage': forms.NumberInput(attrs={'step': '0.01', 'class': INPUT_CLASSES}),
-            'quantity': forms.NumberInput(attrs={'class': INPUT_CLASSES}),
+            'quantity': forms.NumberInput(attrs={'step': '0.01', 'class': INPUT_CLASSES, 'placeholder': 'e.g. 50 or 50.5'}),
             'status': forms.Select(attrs={'class': INPUT_CLASSES}),
             'quarantine_reason': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Optional reason if quarantined, disposed, or returned'}),
         }

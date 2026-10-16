@@ -69,10 +69,11 @@ def generate_invoice_pdf_from_html(invoice) -> bytes | None:
         except Exception as e:
             logger.warning("Could not base64 encode logo: %s", e)
 
+    total_quantity_display = sum(item.loose_quantity if item.is_loose else item.quantity for item in items)
     context = {
         'invoice': invoice,
         'items': items,
-        'total_quantity': sum(item.quantity for item in items),
+        'total_quantity': total_quantity_display,
         'blank_rows': blank_rows,
         'amount_in_words': amount_to_words(invoice.total_amount),
         'logo_data_uri': logo_data_uri,
@@ -309,21 +310,30 @@ def generate_invoice_pdf_reportlab(invoice) -> bytes:
     total_qty = 0
 
     for idx, item in enumerate(items, start=1):
-        total_qty += item.quantity
+        item_qty_count = item.loose_quantity if item.is_loose else item.quantity
+        total_qty += item_qty_count
         exp_str = item.expiry_date.strftime("%m/%y") if item.expiry_date else "-"
 
         desc_para = [Paragraph(f"<b>{item.medicine_name}</b>", s_td)]
-        if getattr(item, 'generic_name', None):
+        if item.is_loose:
+            desc_para.append(Paragraph(f"<font color='#B45309'><b>Loose: {item.loose_quantity} of {item.pack_size} units</b></font>", s_td_sub))
+        if item.discount_amount > 0:
+            desc_para.append(Paragraph(f"<font color='#047857'>Item Disc: -{currency}{item.discount_amount:.2f}</font>", s_td_sub))
+        if getattr(item, 'generic_name', None) and not item.is_loose:
             desc_para.append(Paragraph(item.generic_name, s_td_sub))
+
+        unit_str = "Loose" if item.is_loose else item.unit_name
+        qty_str = f"<b>{item.loose_quantity} loose</b>" if item.is_loose else f"<b>{item.quantity}</b>"
+        price_str = f"{currency}{item.unit_price:.2f}/tab" if item.is_loose else f"{currency}{item.unit_price:.2f}"
 
         table_data.append([
             Paragraph(str(idx), s_td_center),
             desc_para,
-            Paragraph(item.unit_name, s_td_center),
+            Paragraph(unit_str, s_td_center),
             Paragraph(item.batch_number or "-", s_td_center),
             Paragraph(exp_str, s_td_center),
-            Paragraph(f"<b>{item.quantity}</b>", s_td_center),
-            Paragraph(f"{currency}{item.unit_price:.2f}", s_td_right),
+            Paragraph(qty_str, s_td_center),
+            Paragraph(price_str, s_td_right),
             Paragraph(f"<b>{currency}{item.total_price:.2f}</b>", s_td_right_bold),
         ])
 
@@ -385,6 +395,15 @@ def generate_invoice_pdf_reportlab(invoice) -> bytes:
         summary_rows.append([
             Paragraph("GST / Tax Amount (Included):", s_meta_lbl),
             Paragraph(f"<b>{currency}{invoice.tax_amount:.2f}</b>", s_meta_val)
+        ])
+    if invoice.due_amount > 0 or invoice.status in ['PARTIAL', 'DUE']:
+        summary_rows.append([
+            Paragraph("Paid Amount:", ParagraphStyle('PaidLbl', parent=s_meta_lbl, textColor=colors.HexColor('#047857'))),
+            Paragraph(f"<b>{currency}{invoice.paid_amount:.2f}</b>", ParagraphStyle('PaidVal', parent=s_meta_val, textColor=colors.HexColor('#047857')))
+        ])
+        summary_rows.append([
+            Paragraph("Balance Due:", ParagraphStyle('DueLbl', parent=s_meta_lbl, textColor=colors.HexColor('#BE123C'))),
+            Paragraph(f"<b>{currency}{invoice.due_amount:.2f}</b>", ParagraphStyle('DueVal', parent=s_meta_val, textColor=colors.HexColor('#BE123C')))
         ])
 
     net_box = Table([[Paragraph("NET AMOUNT PAYABLE:", s_net_lbl), Paragraph(f"<b>{currency}{invoice.total_amount:.2f}</b>", s_net_val)]], colWidths=[40 * mm, 33 * mm])

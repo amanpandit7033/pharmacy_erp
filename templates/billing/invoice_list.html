@@ -79,6 +79,8 @@
                 <select name="status" onchange="this.form.submit()" class="w-full py-2.5 px-3 rounded-xl border border-slate-200/90 focus:bg-white focus:border-[#283891] text-xs text-slate-800 font-medium outline-none transition bg-slate-50">
                     <option value="">Status: All</option>
                     <option value="PAID" {% if request.GET.status == 'PAID' %}selected{% endif %}>Paid</option>
+                    <option value="PARTIAL" {% if request.GET.status == 'PARTIAL' %}selected{% endif %}>Partially Paid</option>
+                    <option value="DUE" {% if request.GET.status == 'DUE' %}selected{% endif %}>Payment Due</option>
                     <option value="CANCELLED" {% if request.GET.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
                 </select>
             </div>
@@ -163,6 +165,20 @@
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs">
                                 Paid
                             </span>
+                            {% elif inv.status == 'PARTIAL' %}
+                            <div class="inline-flex flex-col items-start gap-0.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200/60 shadow-2xs">
+                                    Partially Paid
+                                </span>
+                                <span class="text-[10px] font-bold text-amber-600 font-mono">Due: {{ request.user.store.currency }}{{ inv.due_amount|floatformat:2 }}</span>
+                            </div>
+                            {% elif inv.status == 'DUE' %}
+                            <div class="inline-flex flex-col items-start gap-0.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-orange-50 text-orange-700 border border-orange-200/60 shadow-2xs">
+                                    Payment Due
+                                </span>
+                                <span class="text-[10px] font-bold text-orange-600 font-mono">Due: {{ request.user.store.currency }}{{ inv.due_amount|floatformat:2 }}</span>
+                            </div>
                             {% else %}
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-50 text-rose-700 border border-rose-200/60 shadow-2xs">
                                 Cancelled
@@ -186,7 +202,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                     </svg>
                                 </a>
-                                {% if inv.status == 'PAID' %}
+                                {% if inv.status != 'CANCELLED' %}
                                 <a href="{% url 'billing:invoice_edit' inv.pk %}" title="Edit Bill" class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition inline-flex items-center justify-center">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>

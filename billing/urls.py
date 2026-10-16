@@ -12,6 +12,7 @@ urlpatterns = [
     path('invoices/<int:pk>/thermal/', views.InvoiceThermalPrintView.as_view(), name='invoice_thermal'),
     path('invoices/<int:pk>/cancel/', views.InvoiceCancelView.as_view(), name='invoice_cancel'),
     path('invoices/<int:pk>/edit/', views.InvoiceEditView.as_view(), name='invoice_edit'),
+    path('invoices/<int:pk>/collect-due/', views.InvoiceCollectDueView.as_view(), name='invoice_collect_due'),
     path('invoices/<int:pk>/whatsapp/', views.InvoiceWhatsAppSendView.as_view(), name='invoice_whatsapp'),
 
     # Daily Expenses Tracking (Store Admin)

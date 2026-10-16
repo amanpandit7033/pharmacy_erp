@@ -39,6 +39,7 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
 
         batch_list = []
         for b in batches:
+            p_size = b.medicine.pack_size or 1
             batch_list.append({
                 'id': b.id,
                 'medicine_name': b.medicine.name,
@@ -48,9 +49,11 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
                 'batch_number': b.batch_number,
                 'expiry_date': b.expiry_date.strftime('%Y-%m-%d'),
                 'selling_price': str(b.selling_price),
+                'loose_price': str(round(Decimal(str(b.selling_price)) / Decimal(p_size), 2)),
+                'pack_size': p_size,
                 'mrp': str(b.mrp),
                 'tax_percentage': str(b.tax_percentage),
-                'available_qty': b.quantity,
+                'available_qty': float(b.quantity),
             })
 
         context['batches_json'] = json.dumps(batch_list)
@@ -97,6 +100,7 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
                     'doctor_name': request.POST.get('doctor_name', ''),
                     'payment_method': request.POST.get('payment_method', Invoice.PaymentMethod.CASH),
                     'discount_amount': discount_val,
+                    'paid_amount': request.POST.get('paid_amount'),
                     'notes': request.POST.get('notes', ''),
                     'items': items_list
                 }
@@ -196,9 +200,11 @@ class InvoiceDetailView(TenantAccessMixin, RoleRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['items'] = self.object.items.all().select_related('batch', 'batch__medicine')
+        context['payments'] = self.object.payments.select_related('created_by').all()
+        context['payment_methods'] = Invoice.PaymentMethod.choices
         context['can_cancel'] = (
             self.request.user.role == User.Role.STORE_ADMIN and
-            self.object.status == Invoice.Status.PAID
+            self.object.status in [Invoice.Status.PAID, Invoice.Status.PARTIAL, Invoice.Status.DUE]
         )
         return context
 
@@ -291,7 +297,8 @@ class InvoiceEditView(TenantAccessMixin, RoleRequiredMixin, View):
 
         batch_list = []
         for b in batches:
-            held_qty = items_by_batch.get(b.id, 0)
+            held_qty = items_by_batch.get(b.id, Decimal('0.00'))
+            p_size = b.medicine.pack_size or 1
             batch_list.append({
                 'id': b.id,
                 'medicine_name': b.medicine.name,
@@ -301,16 +308,19 @@ class InvoiceEditView(TenantAccessMixin, RoleRequiredMixin, View):
                 'batch_number': b.batch_number,
                 'expiry_date': b.expiry_date.strftime('%Y-%m-%d'),
                 'selling_price': str(b.selling_price),
+                'loose_price': str(round(Decimal(str(b.selling_price)) / Decimal(p_size), 2)),
+                'pack_size': p_size,
                 'mrp': str(b.mrp),
                 'tax_percentage': str(b.tax_percentage),
-                'available_qty': b.quantity + held_qty,
+                'available_qty': float(b.quantity + held_qty),
             })
 
         # Pre-populate cart items from existing invoice items
         initial_items = []
         for item in invoice.items.select_related('batch', 'batch__medicine', 'batch__medicine__unit'):
             held_qty = item.quantity
-            avail = (item.batch.quantity + held_qty) if item.batch else 999999
+            avail = float(item.batch.quantity + held_qty) if item.batch else 999999.0
+            p_size = item.pack_size or (item.batch.medicine.pack_size if item.batch and item.batch.medicine else 1)
             initial_items.append({
                 'uid': f"inv_item_{item.id}",
                 'batch_id': item.batch_id,
@@ -321,7 +331,13 @@ class InvoiceEditView(TenantAccessMixin, RoleRequiredMixin, View):
                 'unit_price': float(item.unit_price),
                 'tax_percentage': float(item.tax_percentage),
                 'available_qty': avail,
-                'quantity': item.quantity,
+                'quantity': int(item.loose_quantity) if item.is_loose else (int(item.quantity) if item.quantity == int(item.quantity) else float(item.quantity)),
+                'is_loose': item.is_loose,
+                'pack_size': p_size,
+                'loose_quantity': item.loose_quantity,
+                'discount_type': item.discount_type,
+                'discount_value': float(item.discount_value),
+                'discount_amount': float(item.discount_amount),
                 'is_manual': not bool(item.batch_id)
             })
 
@@ -379,6 +395,7 @@ class InvoiceEditView(TenantAccessMixin, RoleRequiredMixin, View):
                     'doctor_name': request.POST.get('doctor_name', ''),
                     'payment_method': request.POST.get('payment_method', invoice.payment_method),
                     'discount_amount': discount_val,
+                    'paid_amount': request.POST.get('paid_amount'),
                     'notes': request.POST.get('notes', invoice.notes),
                     'items': items_list
                 }
@@ -403,6 +420,32 @@ class InvoiceEditView(TenantAccessMixin, RoleRequiredMixin, View):
 
             messages.error(request, f"Error updating bill: {err_msg}")
             return redirect('billing:invoice_edit', pk=invoice.pk)
+
+
+class InvoiceCollectDueView(TenantAccessMixin, RoleRequiredMixin, View):
+    """Collects remaining due balance on an invoice with DUE or PARTIAL status."""
+    allowed_roles = [User.Role.STORE_ADMIN, User.Role.STAFF]
+
+    def post(self, request, pk, *args, **kwargs):
+        invoice = get_object_or_404(Invoice, pk=pk, store=request.user.store)
+        amount = request.POST.get('amount')
+        payment_method = request.POST.get('payment_method', invoice.payment_method)
+        notes = request.POST.get('notes', '')
+
+        try:
+            from billing.services import collect_invoice_due
+            payment = collect_invoice_due(invoice, amount, payment_method, request.user, notes)
+            messages.success(
+                request,
+                f"Successfully collected {request.user.store.currency}{payment.amount:.2f} via {payment.get_payment_method_display()} for #{invoice.invoice_number}."
+            )
+        except ValidationError as e:
+            msg = e.messages[0] if hasattr(e, 'messages') else str(e)
+            messages.error(request, msg)
+        except Exception as e:
+            messages.error(request, f"Error collecting payment: {str(e)}")
+
+        return redirect('billing:invoice_detail', pk=invoice.pk)
 
 
 class ExpenseListView(TenantAccessMixin, RoleRequiredMixin, ListView):
