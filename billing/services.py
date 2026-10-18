@@ -92,11 +92,26 @@ def create_invoice(store, user, data):
     for item in items_data:
         batch_id = item.get('batch_id')
         is_loose = bool(item.get('is_loose', False))
+        unit_mode = str(item.get('unit_mode') or ('LOOSE' if is_loose else 'STRIP')).upper()
+        strips_per_box = int(item.get('strips_per_box') or 1)
+        if strips_per_box <= 0:
+            strips_per_box = 1
         pack_size = int(item.get('pack_size') or 1)
         if pack_size <= 0:
             pack_size = 1
 
-        if is_loose:
+        if unit_mode == 'BOX':
+            is_loose = False
+            loose_qty = 0
+            box_qty = Decimal(str(item.get('quantity') or 0))
+            if box_qty <= Decimal('0.00'):
+                raise ValidationError("Box quantity must be greater than zero.")
+            item_qty = box_qty
+            qty_deduct = box_qty * Decimal(str(strips_per_box))
+            line_gross_units = box_qty
+        elif unit_mode == 'LOOSE' or is_loose:
+            unit_mode = 'LOOSE'
+            is_loose = True
             loose_qty = int(item.get('loose_quantity') or item.get('loose_qty') or item.get('quantity') or 0)
             if loose_qty <= 0:
                 raise ValidationError("Loose quantity must be greater than zero.")
@@ -105,13 +120,17 @@ def create_invoice(store, user, data):
                 pack_fraction = Decimal('0.01')
             item_qty = pack_fraction
             qty_deduct = pack_fraction
+            line_gross_units = Decimal(str(loose_qty))
         else:
+            unit_mode = 'STRIP'
+            is_loose = False
             loose_qty = 0
             qty = Decimal(str(item.get('quantity') or 0))
             if qty <= Decimal('0.00'):
                 raise ValidationError("Quantity must be greater than zero.")
             item_qty = qty
             qty_deduct = qty
+            line_gross_units = qty
 
         if batch_id:
             batch = Batch.objects.select_for_update().get(id=batch_id, store=store)
@@ -134,7 +153,12 @@ def create_invoice(store, user, data):
             batch.quantity -= qty_deduct
             batch.save(update_fields=['quantity'])
 
-            if is_loose:
+            if unit_mode == 'BOX':
+                if item.get('unit_price'):
+                    unit_price = Decimal(str(item.get('unit_price')))
+                else:
+                    unit_price = (Decimal(str(batch.selling_price)) * Decimal(str(strips_per_box))).quantize(Decimal('0.01'))
+            elif unit_mode == 'LOOSE':
                 if item.get('unit_price'):
                     unit_price = Decimal(str(item.get('unit_price')))
                 else:
@@ -155,10 +179,7 @@ def create_invoice(store, user, data):
             tax_pct = Decimal(str(item.get('tax_percentage') or '0.00'))
 
         # Line Gross Calculation
-        if is_loose:
-            line_gross = (Decimal(str(loose_qty)) * unit_price).quantize(Decimal('0.01'))
-        else:
-            line_gross = (item_qty * unit_price).quantize(Decimal('0.01'))
+        line_gross = (line_gross_units * unit_price).quantize(Decimal('0.01'))
 
         # Product-wise Discount Calculation
         disc_type = item.get('discount_type', 'FLAT')
@@ -193,6 +214,8 @@ def create_invoice(store, user, data):
             batch_number=batch_num,
             expiry_date=exp_date,
             quantity=item_qty,
+            unit_mode=unit_mode,
+            strips_per_box=strips_per_box,
             is_loose=is_loose,
             pack_size=pack_size,
             loose_quantity=loose_qty,
@@ -310,11 +333,26 @@ def update_invoice(invoice, user, data):
     for item in items_data:
         batch_id = item.get('batch_id')
         is_loose = bool(item.get('is_loose', False))
+        unit_mode = str(item.get('unit_mode') or ('LOOSE' if is_loose else 'STRIP')).upper()
+        strips_per_box = int(item.get('strips_per_box') or 1)
+        if strips_per_box <= 0:
+            strips_per_box = 1
         pack_size = int(item.get('pack_size') or 1)
         if pack_size <= 0:
             pack_size = 1
 
-        if is_loose:
+        if unit_mode == 'BOX':
+            is_loose = False
+            loose_qty = 0
+            box_qty = Decimal(str(item.get('quantity') or 0))
+            if box_qty <= Decimal('0.00'):
+                raise ValidationError("Box quantity must be greater than zero.")
+            item_qty = box_qty
+            qty_deduct = box_qty * Decimal(str(strips_per_box))
+            line_gross_units = box_qty
+        elif unit_mode == 'LOOSE' or is_loose:
+            unit_mode = 'LOOSE'
+            is_loose = True
             loose_qty = int(item.get('loose_quantity') or item.get('loose_qty') or item.get('quantity') or 0)
             if loose_qty <= 0:
                 raise ValidationError("Loose quantity must be greater than zero.")
@@ -323,13 +361,17 @@ def update_invoice(invoice, user, data):
                 pack_fraction = Decimal('0.01')
             item_qty = pack_fraction
             qty_deduct = pack_fraction
+            line_gross_units = Decimal(str(loose_qty))
         else:
+            unit_mode = 'STRIP'
+            is_loose = False
             loose_qty = 0
             qty = Decimal(str(item.get('quantity') or 0))
             if qty <= Decimal('0.00'):
                 raise ValidationError("Quantity must be greater than zero.")
             item_qty = qty
             qty_deduct = qty
+            line_gross_units = qty
 
         if batch_id:
             batch = Batch.objects.select_for_update().get(id=batch_id, store=store)
@@ -352,7 +394,12 @@ def update_invoice(invoice, user, data):
             batch.quantity -= qty_deduct
             batch.save(update_fields=['quantity'])
 
-            if is_loose:
+            if unit_mode == 'BOX':
+                if item.get('unit_price'):
+                    unit_price = Decimal(str(item.get('unit_price')))
+                else:
+                    unit_price = (Decimal(str(batch.selling_price)) * Decimal(str(strips_per_box))).quantize(Decimal('0.01'))
+            elif unit_mode == 'LOOSE':
                 if item.get('unit_price'):
                     unit_price = Decimal(str(item.get('unit_price')))
                 else:
@@ -372,10 +419,7 @@ def update_invoice(invoice, user, data):
             unit_price = Decimal(str(item.get('unit_price') or '0.00'))
             tax_pct = Decimal(str(item.get('tax_percentage') or '0.00'))
 
-        if is_loose:
-            line_gross = (Decimal(str(loose_qty)) * unit_price).quantize(Decimal('0.01'))
-        else:
-            line_gross = (item_qty * unit_price).quantize(Decimal('0.01'))
+        line_gross = (line_gross_units * unit_price).quantize(Decimal('0.01'))
 
         # Product-wise Discount Calculation
         disc_type = item.get('discount_type', 'FLAT')
@@ -410,6 +454,8 @@ def update_invoice(invoice, user, data):
             batch_number=batch_num,
             expiry_date=exp_date,
             quantity=item_qty,
+            unit_mode=unit_mode,
+            strips_per_box=strips_per_box,
             is_loose=is_loose,
             pack_size=pack_size,
             loose_quantity=loose_qty,

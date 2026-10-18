@@ -79,7 +79,14 @@ class Medicine(TenantModel):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='medicines')
     manufacturer = models.ForeignKey(Manufacturer, on_delete=models.SET_NULL, null=True, blank=True, related_name='medicines')
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT, related_name='medicines')
-    pack_size = models.PositiveIntegerField(default=1, help_text="Units per pack/strip (e.g. 10 for a 10-tablet strip, 1 for bottle/syrup)")
+    strips_per_box = models.PositiveIntegerField(
+        default=1,
+        help_text="Number of strips per outer box/pack (e.g. 5 for a box of 5 strips, 1 if sold directly as strips)"
+    )
+    pack_size = models.PositiveIntegerField(
+        default=1,
+        help_text="Units per strip (e.g. 4 for a 4-tablet strip, 10 for a 10-tablet strip, 1 for bottle/syrup)"
+    )
     sku = models.CharField(max_length=100, blank=True, help_text="SKU or Barcode")
     rack_location = models.CharField(max_length=100, blank=True, help_text="Rack / Shelf storage location")
     min_stock_level = models.PositiveIntegerField(default=10, help_text="Low stock alert threshold")
@@ -100,6 +107,22 @@ class Medicine(TenantModel):
         return self.batches.filter(is_active=True, status=Batch.Status.ACTIVE).aggregate(
             total=models.Sum('quantity')
         )['total'] or Decimal('0.00')
+
+    @property
+    def total_boxes(self):
+        """Total outer boxes based on strips_per_box."""
+        spb = self.strips_per_box or 1
+        stock_val = self.total_stock or Decimal('0.00')
+        return (Decimal(str(stock_val)) / Decimal(str(spb))).quantize(Decimal('0.01'))
+
+    @property
+    def total_loose_units(self):
+        """Total individual units (tablets/capsules) across all active batches."""
+        pack_sz = getattr(self, 'pack_size', 1) or 1
+        stock_val = self.total_stock
+        if stock_val is None:
+            stock_val = Decimal('0.00')
+        return int((Decimal(str(stock_val)) * Decimal(str(pack_sz))).quantize(Decimal('1')))
 
     @property
     def is_low_stock(self):
@@ -188,6 +211,32 @@ class Batch(TenantModel):
     @property
     def is_quarantined(self):
         return self.status == self.Status.QUARANTINED
+
+    @property
+    def loose_units(self):
+        """Total individual units (tablets/capsules) in this batch."""
+        pack_sz = getattr(self.medicine, 'pack_size', 1) or 1
+        qty = self.quantity or Decimal('0.00')
+        return int((Decimal(str(qty)) * Decimal(str(pack_sz))).quantize(Decimal('1')))
+
+    @property
+    def box_count(self):
+        """Number of full boxes represented by this batch's strip quantity."""
+        spb = getattr(self.medicine, 'strips_per_box', 1) or 1
+        qty = self.quantity or Decimal('0.00')
+        return (Decimal(str(qty)) / Decimal(str(spb))).quantize(Decimal('0.01'))
+
+    @property
+    def box_selling_price(self):
+        """Selling price for one full box."""
+        spb = getattr(self.medicine, 'strips_per_box', 1) or 1
+        return (self.selling_price * Decimal(str(spb))).quantize(Decimal('0.01'))
+
+    @property
+    def loose_selling_price(self):
+        """Selling price for one loose unit."""
+        pack_sz = getattr(self.medicine, 'pack_size', 1) or 1
+        return (self.selling_price / Decimal(str(pack_sz))).quantize(Decimal('0.01'))
 
     @property
     def is_disposed(self):

@@ -10,7 +10,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    {% if inline_css %}
+    <style>
+        {{ inline_css|safe }}
+    </style>
+    {% else %}
     <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
+    {% endif %}
     <style>
         @page {
             size: A4 portrait;
@@ -117,9 +123,9 @@
                     <!-- Left: Pharmacy Logo + Name & Address Block -->
                     <div class="flex items-start space-x-3.5 flex-1 pr-6">
                         {% if logo_data_uri %}
-                        <img src="{{ logo_data_uri }}" alt="{{ invoice.store.name }}" class="h-12 max-w-[140px] object-contain flex-shrink-0 mt-0.5 rounded-lg border border-slate-200 p-0.5 bg-white">
+                        <img src="{{ logo_data_uri }}" alt="{{ invoice.store.name }}" style="height: 48px; max-height: 48px; max-width: 140px; object-fit: contain;" class="h-12 max-w-[140px] object-contain flex-shrink-0 mt-0.5 rounded-lg border border-slate-200 p-0.5 bg-white">
                         {% elif invoice.store.logo %}
-                        <img src="{{ invoice.store.logo.url }}" alt="{{ invoice.store.name }}" class="h-12 max-w-[140px] object-contain flex-shrink-0 mt-0.5 rounded-lg border border-slate-200 p-0.5 bg-white">
+                        <img src="{{ invoice.store.logo.url }}" alt="{{ invoice.store.name }}" style="height: 48px; max-height: 48px; max-width: 140px; object-fit: contain;" class="h-12 max-w-[140px] object-contain flex-shrink-0 mt-0.5 rounded-lg border border-slate-200 p-0.5 bg-white">
                         {% else %}
                         <div class="w-11 h-11 rounded-xl bg-slate-900 text-white font-black text-xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
                             {{ invoice.store.name|slice:":1"|upper }}
@@ -168,48 +174,48 @@
                 <!-- Invoice Info Column -->
                 <div class="p-3 border-r border-slate-200 space-y-1.5">
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Invoice No:</span>
-                        <span class="font-mono font-black text-xs text-slate-900">{{ invoice.invoice_number }}</span>
+                        <span class="text-slate-500 font-medium text-[11px]">Invoice No:</span>
+                        <span class="font-mono font-bold text-[11px] text-slate-900">{{ invoice.invoice_number }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Date & Time:</span>
-                        <span class="font-semibold text-slate-800">{{ invoice.created_at|date:"d/m/Y, h:i A" }}</span>
+                        <span class="text-slate-500 font-medium text-[11px]">Date & Time:</span>
+                        <span class="font-semibold text-[11px] text-slate-800">{{ invoice.created_at|date:"d/m/Y, h:i A" }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Payment Mode:</span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded font-bold uppercase text-[10px] bg-white border border-slate-200 text-slate-800 font-mono shadow-xs">
+                        <span class="text-slate-500 font-medium text-[11px]">Payment Mode:</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded font-semibold uppercase text-[11px] bg-white border border-slate-200 text-slate-800 font-mono shadow-xs">
                             {{ invoice.get_payment_method_display }}
                         </span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Cashier / Billed By:</span>
-                        <span class="text-slate-800 font-bold">{{ invoice.created_by.display_name|default:invoice.created_by.username|default:"Counter" }}</span>
+                        <span class="text-slate-500 font-medium text-[11px]">Cashier / Billed By:</span>
+                        <span class="text-slate-800 font-semibold text-[11px]">{{ invoice.created_by.display_name|default:invoice.created_by.username|default:"Counter" }}</span>
                     </div>
                 </div>
 
                 <!-- Patient / Customer Info Column -->
                 <div class="p-3 space-y-1.5">
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Customer / Patient:</span>
-                        <strong class="text-slate-900 font-extrabold text-xs uppercase">{{ invoice.customer_name }}</strong>
+                        <span class="text-slate-500 font-medium text-[11px]">Customer / Patient:</span>
+                        <span class="text-slate-900 font-bold text-[11px] uppercase">{{ invoice.customer_name }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Phone / Mobile:</span>
-                        <span class="font-mono text-slate-800 font-semibold">{{ invoice.customer_phone|default:"Walk-in Customer" }}</span>
+                        <span class="text-slate-500 font-medium text-[11px]">Phone / Mobile:</span>
+                        <span class="font-mono text-slate-800 font-semibold text-[11px]">{{ invoice.customer_phone|default:"Walk-in Customer" }}</span>
                     </div>
                     {% if invoice.customer_address %}
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Address:</span>
-                        <span class="text-slate-800 font-medium text-[11px] truncate max-w-[200px]">{{ invoice.customer_address }}</span>
+                        <span class="text-slate-500 font-medium text-[11px]">Address:</span>
+                        <span class="text-slate-800 font-semibold text-[11px] truncate max-w-[200px]">{{ invoice.customer_address }}</span>
                     </div>
                     {% endif %}
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Prescribing Doctor:</span>
-                        <span class="text-slate-800 font-bold">{{ invoice.doctor_name|default:"Self / OTC Dispense" }}</span>
+                        <span class="text-slate-500 font-medium text-[11px]">Prescribing Doctor:</span>
+                        <span class="text-slate-800 font-semibold text-[11px]">{{ invoice.doctor_name|default:"Self / OTC Dispense" }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500 font-semibold">Place of Supply:</span>
-                        <span class="text-slate-800 font-semibold">{{ invoice.store.city }}, {{ invoice.store.state }}</span>
+                        <span class="text-slate-500 font-medium text-[11px]">Place of Supply:</span>
+                        <span class="text-slate-800 font-semibold text-[11px]">{{ invoice.store.city }}, {{ invoice.store.state }}</span>
                     </div>
                 </div>
             </div>
@@ -219,20 +225,18 @@
                 <table class="w-full table-fixed invoice-table border-collapse text-left">
                     <colgroup>
                         <col style="width: 5%;"> <!-- 1: # -->
-                        <col style="width: 37%;"> <!-- 2: Description -->
-                        <col style="width: 8%;"> <!-- 3: Pack -->
-                        <col style="width: 14%;"> <!-- 4: Batch -->
-                        <col style="width: 10%;"> <!-- 5: Exp -->
-                        <col style="width: 6%;"> <!-- 6: Qty -->
-                        <col style="width: 10%;"> <!-- 7: Price -->
-                        <col style="width: 10%;"> <!-- 8: Total -->
+                        <col style="width: 48%;"> <!-- 2: Description -->
+                        <col style="width: 9%;"> <!-- 3: Pack -->
+                        <col style="width: 10%;"> <!-- 4: Exp -->
+                        <col style="width: 8%;"> <!-- 5: Qty -->
+                        <col style="width: 10%;"> <!-- 6: Price -->
+                        <col style="width: 10%;"> <!-- 7: Total -->
                     </colgroup>
                     <thead>
                         <tr class="bg-slate-100 text-[10px] font-black uppercase text-slate-700 border-b border-slate-200">
                             <th class="py-2 px-1 text-center border-r border-slate-200">#</th>
                             <th class="py-2 px-2.5 border-r border-slate-200">Medicine / Description</th>
                             <th class="py-2 px-1 text-center border-r border-slate-200">Pack</th>
-                            <th class="py-2 px-1 text-center font-mono border-r border-slate-200">Batch</th>
                             <th class="py-2 px-1 text-center font-mono border-r border-slate-200">Exp.</th>
                             <th class="py-2 px-1 text-center border-r border-slate-200">Qty</th>
                             <th class="py-2 px-2 text-right font-mono border-r border-slate-200">Price</th>
@@ -259,7 +263,6 @@
                             <td class="py-1 px-1 text-center text-slate-600 text-[10px] border-r border-slate-200/80">
                                 {% if item.is_loose %}Loose{% else %}{{ item.unit_name }}{% endif %}
                             </td>
-                            <td class="py-1 px-1 text-center font-mono text-[10px] text-slate-700 border-r border-slate-200/80">{{ item.batch_number|default:"-" }}</td>
                             <td class="py-1 px-1 text-center font-mono text-[10px] text-slate-700 border-r border-slate-200/80">{% if item.expiry_date %}{{ item.expiry_date|date:"m/y" }}{% else %}-{% endif %}</td>
                             <td class="py-1 px-1 text-center font-black text-slate-900 border-r border-slate-200/80">
                                 {% if item.is_loose %}{{ item.loose_quantity }}<span class="text-[8px] font-normal text-slate-500 block">loose</span>{% else %}{{ item.quantity }}{% endif %}
@@ -278,7 +281,6 @@
                             <td class="py-1 px-2.5 border-r border-slate-200/60">&nbsp;</td>
                             <td class="py-1 px-1 text-center border-r border-slate-200/60">&nbsp;</td>
                             <td class="py-1 px-1 text-center font-mono border-r border-slate-200/60">&nbsp;</td>
-                            <td class="py-1 px-1 text-center font-mono border-r border-slate-200/60">&nbsp;</td>
                             <td class="py-1 px-1 text-center border-r border-slate-200/60">&nbsp;</td>
                             <td class="py-1 px-2 text-right font-mono border-r border-slate-200/60">&nbsp;</td>
                             <td class="py-1 px-2 text-right font-mono">&nbsp;</td>
@@ -287,7 +289,7 @@
                     </tbody>
                     <tfoot>
                         <tr class="bg-slate-50 border-t border-slate-200 font-bold text-[11px] text-slate-800">
-                            <td colspan="5" class="py-2 px-3 border-r border-slate-200">
+                            <td colspan="4" class="py-2 px-3 border-r border-slate-200">
                                 <span class="font-black text-slate-900 uppercase text-[10px]">Total Items:</span> {{ items|length }} &nbsp;|&nbsp;
                                 <span class="font-black text-slate-900 uppercase text-[10px]">Total Quantity:</span> {{ total_quantity }} units
                             </td>

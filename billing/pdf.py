@@ -69,6 +69,15 @@ def generate_invoice_pdf_from_html(invoice) -> bytes | None:
         except Exception as e:
             logger.warning("Could not base64 encode logo: %s", e)
 
+    css_content = ''
+    css_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'css', 'tailwind.min.css')
+    if os.path.exists(css_path):
+        try:
+            with open(css_path, 'r', encoding='utf-8') as f:
+                css_content = f.read()
+        except Exception as e:
+            logger.warning("Could not read tailwind.min.css: %s", e)
+
     total_quantity_display = sum(item.loose_quantity if item.is_loose else item.quantity for item in items)
     context = {
         'invoice': invoice,
@@ -77,6 +86,7 @@ def generate_invoice_pdf_from_html(invoice) -> bytes | None:
         'blank_rows': blank_rows,
         'amount_in_words': amount_to_words(invoice.total_amount),
         'logo_data_uri': logo_data_uri,
+        'inline_css': css_content,
         'pdf_mode': True,
     }
 
@@ -97,6 +107,8 @@ def generate_invoice_pdf_from_html(invoice) -> bytes | None:
             '--no-sandbox',
             '--disable-dev-shm-usage',
             '--no-pdf-header-footer',
+            '--allow-file-access-from-files',
+            '--run-all-compositor-stages-before-draw',
             f'--print-to-pdf={pdf_path}',
             html_path
         ]
@@ -293,12 +305,11 @@ def generate_invoice_pdf_reportlab(invoice) -> bytes:
     story.append(meta_card)
     story.append(Spacer(1, 2.5 * mm))
 
-    col_widths = [9 * mm, 72 * mm, 16 * mm, 26 * mm, 18 * mm, 12 * mm, 18 * mm, 19 * mm]
+    col_widths = [9 * mm, 92 * mm, 18 * mm, 20 * mm, 14 * mm, 18 * mm, 19 * mm]
     headers = [
         Paragraph("#", s_th_center),
         Paragraph("MEDICINE / DESCRIPTION", s_th),
         Paragraph("PACK", s_th_center),
-        Paragraph("BATCH", s_th_center),
         Paragraph("EXP.", s_th_center),
         Paragraph("QTY", s_th_center),
         Paragraph("PRICE", s_th_right),
@@ -315,22 +326,34 @@ def generate_invoice_pdf_reportlab(invoice) -> bytes:
         exp_str = item.expiry_date.strftime("%m/%y") if item.expiry_date else "-"
 
         desc_para = [Paragraph(f"<b>{item.medicine_name}</b>", s_td)]
-        if item.is_loose:
+        if getattr(item, 'unit_mode', None) == 'BOX':
+            desc_para.append(Paragraph(f"<font color='#581C87'><b>Full Box ({item.strips_per_box} strips)</b></font>", s_td_sub))
+        elif item.is_loose:
             desc_para.append(Paragraph(f"<font color='#B45309'><b>Loose: {item.loose_quantity} of {item.pack_size} units</b></font>", s_td_sub))
         if item.discount_amount > 0:
             desc_para.append(Paragraph(f"<font color='#047857'>Item Disc: -{currency}{item.discount_amount:.2f}</font>", s_td_sub))
-        if getattr(item, 'generic_name', None) and not item.is_loose:
+        if getattr(item, 'generic_name', None) and not item.is_loose and getattr(item, 'unit_mode', None) != 'BOX':
             desc_para.append(Paragraph(item.generic_name, s_td_sub))
 
-        unit_str = "Loose" if item.is_loose else item.unit_name
-        qty_str = f"<b>{item.loose_quantity} loose</b>" if item.is_loose else f"<b>{item.quantity}</b>"
-        price_str = f"{currency}{item.unit_price:.2f}/tab" if item.is_loose else f"{currency}{item.unit_price:.2f}"
+        if getattr(item, 'unit_mode', None) == 'BOX':
+            unit_str = "Box"
+            qty_val = int(item.quantity) if item.quantity == int(item.quantity) else item.quantity
+            qty_str = f"<b>{qty_val} box</b>"
+            price_str = f"{currency}{item.unit_price:.2f}/box"
+        elif item.is_loose:
+            unit_str = "Loose"
+            qty_str = f"<b>{item.loose_quantity} loose</b>"
+            price_str = f"{currency}{item.unit_price:.2f}/tab"
+        else:
+            unit_str = item.unit_name
+            qty_val = int(item.quantity) if item.quantity == int(item.quantity) else item.quantity
+            qty_str = f"<b>{qty_val}</b>"
+            price_str = f"{currency}{item.unit_price:.2f}"
 
         table_data.append([
             Paragraph(str(idx), s_td_center),
             desc_para,
             Paragraph(unit_str, s_td_center),
-            Paragraph(item.batch_number or "-", s_td_center),
             Paragraph(exp_str, s_td_center),
             Paragraph(qty_str, s_td_center),
             Paragraph(price_str, s_td_right),
@@ -342,12 +365,12 @@ def generate_invoice_pdf_reportlab(invoice) -> bytes:
     for b_idx in range(blank_count):
         table_data.append([
             Paragraph(str(len(items) + b_idx + 1), ParagraphStyle('Blk', parent=s_td_center, textColor=colors.HexColor('#CBD5E1'))),
-            "", "", "", "", "", "", ""
+            "", "", "", "", "", ""
         ])
 
     footer_row = [
         Paragraph(f"<b>TOTAL ITEMS:</b> {len(items)} &nbsp;|&nbsp; <b>TOTAL QUANTITY:</b> {total_qty} units", s_td_bold),
-        "", "", "", "",
+        "", "", "",
         Paragraph(f"<b>{total_qty}</b>", s_td_center),
         Paragraph("<b>GROSS TOTAL:</b>", s_th_right),
         Paragraph(f"<b>{currency}{invoice.subtotal:.2f}</b>", s_td_right_bold),
@@ -364,7 +387,7 @@ def generate_invoice_pdf_reportlab(invoice) -> bytes:
         ('LEFTPADDING', (0, 0), (-1, -1), 1.5 * mm),
         ('RIGHTPADDING', (0, 0), (-1, -1), 1.5 * mm),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('SPAN', (0, -1), (4, -1)),
+        ('SPAN', (0, -1), (3, -1)),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#F8FAFC')),
         ('LINEABOVE', (0, -1), (-1, -1), 0.75, colors.HexColor('#CBD5E1')),
     ]

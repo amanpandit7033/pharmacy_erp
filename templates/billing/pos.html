@@ -478,13 +478,15 @@
         } else {
             searchResults.innerHTML = scoredResults.slice(0, 10).map(({ batch: b, isTypoMatch }) => {
                 const pSize = parseInt(b.pack_size || 1, 10);
+                const spBox = parseInt(b.strips_per_box || 1, 10);
                 return `
                 <div onclick="addToCart(${b.id})" class="p-3.5 hover:bg-blue-50/60 cursor-pointer flex justify-between items-center transition border-b border-slate-100/60 last:border-0">
                     <div>
                         <div class="font-bold text-slate-900 text-xs flex items-center space-x-1.5 flex-wrap">
                             <span>${escapeHtml(b.medicine_name)}</span>
                             <span class="text-slate-400 font-normal">(${escapeHtml(b.unit)})</span>
-                            ${pSize > 1 ? `<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">Pack of ${pSize}</span>` : ''}
+                            ${spBox > 1 ? `<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Box of ${spBox}s</span>` : ''}
+                            ${pSize > 1 ? `<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">${pSize} tabs/strip</span>` : ''}
                             ${isTypoMatch ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">Typo match</span>' : ''}
                         </div>
                         <div class="text-[11px] text-slate-500 mt-0.5">
@@ -493,9 +495,12 @@
                         </div>
                     </div>
                     <div class="text-right shrink-0 ml-3">
-                        <div class="font-bold text-[#283891] text-xs">${currency}${b.selling_price} <span class="text-[10px] text-slate-400 font-normal">/pack</span></div>
+                        ${spBox > 1 ? `<div class="font-bold text-purple-800 text-xs">${currency}${b.box_price} <span class="text-[10px] text-slate-400 font-normal">/box</span></div>` : ''}
+                        <div class="font-bold text-[#283891] text-xs">${currency}${b.selling_price} <span class="text-[10px] text-slate-400 font-normal">/${spBox > 1 ? 'strip' : 'pack'}</span></div>
                         ${pSize > 1 ? `<div class="text-[10px] text-indigo-700 font-semibold">${currency}${b.loose_price} /tab</div>` : ''}
-                        <div class="text-[10px] text-slate-400 font-medium">Stock: ${b.available_qty} ${pSize > 1 ? 'packs' : 'units'}</div>
+                        <div class="text-[10px] text-slate-500 font-medium mt-0.5">
+                            ${spBox > 1 ? `Stock: <b>${b.boxes_available}</b> boxes (${b.available_qty} strips / ${Math.round(b.available_qty * pSize)} tabs)` : `Stock: ${b.available_qty} ${pSize > 1 ? `strips (${Math.round(b.available_qty * pSize)} tabs)` : 'units'}`}
+                        </div>
                     </div>
                 </div>
             `;
@@ -527,10 +532,19 @@
         const uid = 'b_' + batch.id;
         const existing = cart.find(item => item.uid === uid);
         const pSize = parseInt(batch.pack_size || 1, 10);
+        const spBox = parseInt(batch.strips_per_box || 1, 10);
+        const boxPrice = parseFloat(batch.box_price) || (parseFloat(batch.selling_price) * spBox);
         const loosePrice = parseFloat(batch.loose_price) || (parseFloat(batch.selling_price) / pSize);
 
         if (existing) {
-            if (existing.is_loose) {
+            if (existing.unit_mode === 'BOX') {
+                const maxBoxes = Math.floor(batch.available_qty / spBox);
+                if (existing.quantity < maxBoxes) {
+                    existing.quantity += 1;
+                } else {
+                    alert(`Cannot exceed available box stock of ${maxBoxes} boxes.`);
+                }
+            } else if (existing.unit_mode === 'LOOSE' || existing.is_loose) {
                 const maxLoose = Math.floor(batch.available_qty * pSize);
                 if (existing.quantity < maxLoose) {
                     existing.quantity += 1;
@@ -542,7 +556,7 @@
                 if (existing.quantity < batch.available_qty) {
                     existing.quantity += 1;
                 } else {
-                    alert(`Cannot exceed available stock of ${batch.available_qty} packs.`);
+                    alert(`Cannot exceed available stock of ${batch.available_qty} ${spBox > 1 ? 'strips' : 'packs'}.`);
                 }
             }
         } else {
@@ -554,7 +568,10 @@
                 batch_number: batch.batch_number,
                 expiry_date: batch.expiry_date,
                 unit: batch.unit,
+                strips_per_box: spBox,
                 pack_size: pSize,
+                unit_mode: 'STRIP',
+                box_price: boxPrice,
                 unit_price_pack: parseFloat(batch.selling_price),
                 loose_price: loosePrice,
                 is_loose: false,
@@ -607,20 +624,37 @@
         }, 50);
     }
 
-    function setLooseMode(uid, isLoose) {
+    function setItemUnitMode(uid, mode) {
         const item = cart.find(i => i.uid === uid);
         if (!item || item.is_manual) return;
-        item.is_loose = isLoose;
-        if (isLoose) {
+        item.unit_mode = mode;
+        const spb = item.strips_per_box || 1;
+        const ps = item.pack_size || 1;
+
+        if (mode === 'BOX') {
+            item.is_loose = false;
+            item.loose_quantity = 0;
+            item.unit_price = item.box_price;
+            const maxBoxes = Math.floor(item.available_qty / spb) || 1;
+            item.quantity = Math.max(1, Math.min(maxBoxes, 1));
+        } else if (mode === 'LOOSE') {
+            item.is_loose = true;
             item.unit_price = item.loose_price;
-            item.quantity = Math.max(1, Math.min(item.pack_size, item.quantity));
+            const maxLoose = Math.floor(item.available_qty * ps);
+            item.quantity = Math.max(1, Math.min(maxLoose, ps));
             item.loose_quantity = item.quantity;
         } else {
-            item.unit_price = item.unit_price_pack;
-            item.quantity = Math.max(1, Math.min(item.available_qty, Math.floor(item.quantity / item.pack_size) || 1));
+            item.unit_mode = 'STRIP';
+            item.is_loose = false;
             item.loose_quantity = 0;
+            item.unit_price = item.unit_price_pack;
+            item.quantity = Math.max(1, Math.min(item.available_qty, 1));
         }
         renderCart();
+    }
+
+    function setLooseMode(uid, isLoose) {
+        setItemUnitMode(uid, isLoose ? 'LOOSE' : 'STRIP');
     }
 
     function handleItemDiscountInput(uid, rawVal) {
@@ -650,7 +684,13 @@
             return;
         }
         if (!item.is_manual) {
-            if (item.is_loose) {
+            if (item.unit_mode === 'BOX') {
+                const maxBoxes = Math.floor(item.available_qty / (item.strips_per_box || 1));
+                if (newQty > maxBoxes) {
+                    alert(`Maximum available stock is ${maxBoxes} full boxes.`);
+                    return;
+                }
+            } else if (item.unit_mode === 'LOOSE' || item.is_loose) {
                 const maxLoose = Math.floor(item.available_qty * item.pack_size);
                 if (newQty > maxLoose) {
                     alert(`Maximum available stock is ${maxLoose} loose units.`);
@@ -658,13 +698,13 @@
                 }
             } else {
                 if (newQty > item.available_qty) {
-                    alert(`Maximum available stock is ${item.available_qty} packs.`);
+                    alert(`Maximum available stock is ${item.available_qty} strips.`);
                     return;
                 }
             }
         }
         item.quantity = newQty;
-        if (item.is_loose) item.loose_quantity = newQty;
+        if (item.unit_mode === 'LOOSE' || item.is_loose) item.loose_quantity = newQty;
         renderCart();
     }
 
@@ -772,22 +812,22 @@
                 if (item.is_manual) {
                     return `
                         <tr data-uid="${item.uid}" class="hover:bg-blue-50/20 bg-blue-50/10 transition">
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-2.5">
                                 <div class="space-y-1">
                                     <input type="text"
                                            value="${escapeHtml(item.medicine_name)}"
                                            placeholder="e.g. Fever Medicine, OTC..."
                                            oninput="updateManualName('${item.uid}', this.value)"
-                                           class="manual-name-input w-full max-w-[200px] px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-400">
+                                           class="manual-name-input w-full max-w-[200px] px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-400">
                                     <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">Manual Entry</span>
                                 </div>
                             </td>
-                            <td class="px-3 py-3 font-mono text-[11px] text-slate-500">
+                            <td class="px-3 py-2.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 border border-slate-200/80">
                                     Direct / OTC
                                 </span>
                             </td>
-                            <td class="px-3 py-3 text-right">
+                            <td class="px-3 py-2.5 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center justify-end">
                                     <span class="text-xs font-mono font-bold text-slate-400 mr-1">${currency}</span>
                                     <input type="number"
@@ -796,34 +836,34 @@
                                            value="${item.unit_price > 0 ? item.unit_price : ''}"
                                            placeholder="0.00"
                                            oninput="updateManualPrice('${item.uid}', this.value)"
-                                           class="manual-price w-20 px-2 py-1.5 text-right font-mono font-bold text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-300">
+                                           class="manual-price w-20 px-2 py-1 text-right font-mono font-bold text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-300">
                                 </div>
                             </td>
-                            <td class="px-3 py-3 text-center">
-                                <div class="inline-flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                                    <button type="button" onclick="updateQtyByUid('${item.uid}', -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">-</button>
+                            <td class="px-3 py-2.5 text-center">
+                                <div class="inline-flex items-center space-x-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                                    <button type="button" onclick="updateQtyByUid('${item.uid}', -1)" class="w-6 h-6 rounded-md bg-white hover:bg-slate-200 text-slate-700 font-bold leading-none transition cursor-pointer flex items-center justify-center text-xs shadow-2xs">-</button>
                                     <input type="number" min="1" value="${item.quantity}" oninput="updateManualQty('${item.uid}', this.value)" class="w-8 text-center font-bold text-xs text-slate-800 bg-transparent border-0 outline-none p-0 font-mono">
-                                    <button type="button" onclick="updateQtyByUid('${item.uid}', 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">+</button>
+                                    <button type="button" onclick="updateQtyByUid('${item.uid}', 1)" class="w-6 h-6 rounded-md bg-white hover:bg-slate-200 text-slate-700 font-bold leading-none transition cursor-pointer flex items-center justify-center text-xs shadow-2xs">+</button>
                                 </div>
                             </td>
-                            <td class="px-3 py-3 text-center">
+                            <td class="px-3 py-2.5 text-center">
                                 <input type="text"
                                        value="${item.discount_raw_input !== undefined ? item.discount_raw_input : (item.discount_value > 0 ? (item.discount_type === 'PERCENT' ? item.discount_value + '%' : item.discount_value) : '')}"
                                        placeholder="0 or 10%"
                                        oninput="handleItemDiscountInput('${item.uid}', this.value)"
-                                       class="w-20 px-2 py-1.5 text-center font-mono font-bold text-xs bg-white border border-slate-200/90 rounded-xl text-slate-900 focus:border-[#283891] focus:ring-2 focus:ring-[#283891]/10 outline-none transition placeholder-slate-400">
-                                <span class="line-item-disc text-[10px] font-bold text-emerald-700 block mt-1" style="${lineDisc > 0 ? '' : 'display:none;'}">
+                                       class="w-20 px-2 py-1 text-center font-mono font-bold text-xs bg-slate-50 focus:bg-white border border-slate-200 rounded-lg text-slate-900 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-400">
+                                <span class="line-item-disc text-[10px] font-bold text-emerald-700 block mt-0.5" style="${lineDisc > 0 ? '' : 'display:none;'}">
                                     -${currency}${lineDisc.toFixed(2)}${item.discount_type === 'PERCENT' && item.discount_value > 0 ? ` (${item.discount_value}%)` : ''}
                                 </span>
                             </td>
-                            <td class="px-3 py-3 text-right font-mono text-slate-500 text-xs">
+                            <td class="px-3 py-2.5 text-right font-mono text-slate-500 text-xs whitespace-nowrap">
                                 <span class="line-tax">${currency}${lineTax.toFixed(2)}</span>
                             </td>
-                            <td class="px-3 py-3 text-right font-mono font-bold text-slate-900 text-xs">
+                            <td class="px-3 py-2.5 text-right font-mono font-bold text-slate-900 text-xs whitespace-nowrap">
                                 <span class="line-total text-[#283891]">${currency}${lineTotal.toFixed(2)}</span>
                             </td>
-                            <td class="px-3 py-3 text-center">
-                                <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
+                            <td class="px-3 py-2.5 text-center">
+                                <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                     </svg>
@@ -833,55 +873,96 @@
                     `;
                 }
 
+                const spBox = parseInt(item.strips_per_box || 1, 10);
                 return `
                     <tr data-uid="${item.uid}" class="hover:bg-slate-50/60 transition">
-                        <td class="px-4 py-3">
+                        <td class="px-4 py-2.5">
                             <div class="font-bold text-slate-900 text-xs leading-snug">${escapeHtml(item.medicine_name)}</div>
-                            ${pSize > 1 ? `
-                                <div class="mt-1 inline-flex items-center p-0.5 rounded-lg bg-slate-100 border border-slate-200/80 text-[10px] space-x-1">
-                                    <button type="button" onclick="setLooseMode('${item.uid}', false)" class="px-2 py-0.5 rounded-md font-bold transition ${!item.is_loose ? 'bg-[#283891] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'}">
-                                        Full Pack (${pSize}s)
-                                    </button>
-                                    <button type="button" onclick="setLooseMode('${item.uid}', true)" class="px-2 py-0.5 rounded-md font-bold transition ${item.is_loose ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'}">
-                                        Loose (${currency}${item.loose_price}/tab)
-                                    </button>
+                            ${spBox > 1 ? `
+                                <div class="inline-flex items-center space-x-1 text-[10px] text-slate-400 font-medium mt-0.5">
+                                    <span class="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono font-semibold">${spBox}s/box &bull; ${pSize}t/strip</span>
                                 </div>
-                            ` : ''}
+                            ` : (pSize > 1 ? `
+                                <div class="inline-flex items-center space-x-1 text-[10px] text-slate-400 font-medium mt-0.5">
+                                    <span class="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono font-semibold">${pSize} tabs/pack</span>
+                                </div>
+                            ` : '')}
                         </td>
-                        <td class="px-3 py-3 font-mono text-[11px] text-slate-600">
-                            <div>${escapeHtml(item.batch_number)}</div>
-                            <span class="text-[10px] text-slate-400">Exp: ${item.expiry_date}</span>
+                        <td class="px-3 py-2.5 font-mono text-[11px] text-slate-600 whitespace-nowrap">
+                            <div class="font-bold text-slate-800">${escapeHtml(item.batch_number)}</div>
+                            <span class="text-[10px] text-slate-400 font-sans">Exp: ${escapeHtml(item.expiry_date)}</span>
                         </td>
-                        <td class="px-3 py-3 text-right font-mono text-slate-700 text-xs">
-                            <div>${currency}${item.unit_price.toFixed(2)}</div>
-                            <span class="text-[9px] text-slate-400">${item.is_loose ? '/tab' : '/pack'}</span>
+                        <td class="px-3 py-2.5 text-right font-mono text-slate-800 text-xs whitespace-nowrap">
+                            <div class="font-bold">${currency}${item.unit_price.toFixed(2)}</div>
+                            <span class="text-[10px] text-slate-400 font-sans">
+                                ${item.unit_mode === 'BOX' ? '/box' : (item.unit_mode === 'LOOSE' ? '/tab' : (spBox > 1 ? '/strip' : '/pack'))}
+                            </span>
                         </td>
-                        <td class="px-3 py-3 text-center">
-                            <div class="inline-flex items-center space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                                <button type="button" onclick="updateQtyByUid('${item.uid}', -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">-</button>
-                                <span class="w-7 text-center font-bold text-xs text-slate-800 font-mono">${item.quantity}</span>
-                                <button type="button" onclick="updateQtyByUid('${item.uid}', 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm hover:bg-slate-100 text-slate-700 font-bold leading-none transition cursor-pointer">+</button>
+                        <td class="px-3 py-2.5 text-center">
+                            <div class="inline-flex items-center space-x-1.5">
+                                <!-- Compact Stepper -->
+                                <div class="inline-flex items-center space-x-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                                    <button type="button" onclick="updateQtyByUid('${item.uid}', -1)" class="w-6 h-6 rounded-md bg-white hover:bg-slate-200 text-slate-700 font-bold leading-none transition cursor-pointer flex items-center justify-center text-xs shadow-2xs">-</button>
+                                    <span class="w-7 text-center font-bold text-xs text-slate-900 font-mono">${item.quantity}</span>
+                                    <button type="button" onclick="updateQtyByUid('${item.uid}', 1)" class="w-6 h-6 rounded-md bg-white hover:bg-slate-200 text-slate-700 font-bold leading-none transition cursor-pointer flex items-center justify-center text-xs shadow-2xs">+</button>
+                                </div>
+
+                                <!-- Sleek Segmented Mode Selector -->
+                                ${spBox > 1 ? `
+                                    <div class="inline-flex p-0.5 rounded-lg bg-slate-100 border border-slate-200 text-[10px] space-x-0.5">
+                                        <button type="button" onclick="setItemUnitMode('${item.uid}', 'BOX')" title="Full Box (${spBox} strips)" class="px-2 py-1 rounded-md font-bold transition cursor-pointer ${item.unit_mode === 'BOX' ? 'bg-[#283891] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'}">
+                                            Box
+                                        </button>
+                                        <button type="button" onclick="setItemUnitMode('${item.uid}', 'STRIP')" title="Single Strip (${pSize} tabs)" class="px-2 py-1 rounded-md font-bold transition cursor-pointer ${item.unit_mode === 'STRIP' ? 'bg-[#283891] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'}">
+                                            Strip
+                                        </button>
+                                        <button type="button" onclick="setItemUnitMode('${item.uid}', 'LOOSE')" title="Loose Tablets (${currency}${item.loose_price}/tab)" class="px-2 py-1 rounded-md font-bold transition cursor-pointer ${item.unit_mode === 'LOOSE' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'}">
+                                            Loose
+                                        </button>
+                                    </div>
+                                ` : (pSize > 1 ? `
+                                    <div class="inline-flex p-0.5 rounded-lg bg-slate-100 border border-slate-200 text-[10px] space-x-0.5">
+                                        <button type="button" onclick="setItemUnitMode('${item.uid}', 'STRIP')" title="Full Pack (${pSize} units)" class="px-2 py-1 rounded-md font-bold transition cursor-pointer ${item.unit_mode !== 'LOOSE' ? 'bg-[#283891] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'}">
+                                            Pack
+                                        </button>
+                                        <button type="button" onclick="setItemUnitMode('${item.uid}', 'LOOSE')" title="Loose Units" class="px-2 py-1 rounded-md font-bold transition cursor-pointer ${item.unit_mode === 'LOOSE' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'}">
+                                            Loose
+                                        </button>
+                                    </div>
+                                ` : '')}
                             </div>
-                            ${item.is_loose ? `<span class="text-[9px] font-bold text-indigo-700 block mt-0.5">${item.quantity} tab${item.quantity > 1 ? 's' : ''} (${(item.quantity / pSize).toFixed(2)} pk)</span>` : `<span class="text-[9px] text-slate-400 block mt-0.5">${item.quantity} pk</span>`}
+
+                            <!-- Neat 1-line conversion summary -->
+                            ${spBox > 1 ? `
+                                <div class="text-[10px] text-slate-400 font-mono mt-0.5 whitespace-nowrap">
+                                    ${item.unit_mode === 'BOX' ?
+                                        `= ${item.quantity * spBox} strips • ${item.quantity * spBox * pSize} tabs` :
+                                        (item.unit_mode === 'LOOSE' ?
+                                            `= ${(item.quantity / pSize).toFixed(2)} strip (${item.quantity} tabs)` :
+                                            `= ${(item.quantity / spBox).toFixed(2)} box • ${item.quantity * pSize} tabs`
+                                        )
+                                    }
+                                </div>
+                            ` : (pSize > 1 && item.unit_mode === 'LOOSE' ? `<div class="text-[10px] text-slate-400 font-mono mt-0.5">= ${(item.quantity / pSize).toFixed(2)} pack</div>` : '')}
                         </td>
-                        <td class="px-3 py-3 text-center">
+                        <td class="px-3 py-2.5 text-center">
                             <input type="text"
                                    value="${item.discount_raw_input !== undefined ? item.discount_raw_input : (item.discount_value > 0 ? (item.discount_type === 'PERCENT' ? item.discount_value + '%' : item.discount_value) : '')}"
                                    placeholder="0 or 10%"
                                    oninput="handleItemDiscountInput('${item.uid}', this.value)"
-                                   class="w-20 px-2 py-1.5 text-center font-mono font-bold text-xs bg-white border border-slate-200/90 rounded-xl text-slate-900 focus:border-[#283891] focus:ring-2 focus:ring-[#283891]/10 outline-none transition placeholder-slate-400">
-                            <span class="line-item-disc text-[10px] font-bold text-emerald-700 block mt-1" style="${lineDisc > 0 ? '' : 'display:none;'}">
+                                   class="w-20 px-2 py-1 text-center font-mono font-bold text-xs bg-slate-50 focus:bg-white border border-slate-200 rounded-lg text-slate-900 focus:border-[#283891] focus:ring-1 focus:ring-blue-100 outline-none transition placeholder-slate-400">
+                            <span class="line-item-disc text-[10px] font-bold text-emerald-700 block mt-0.5" style="${lineDisc > 0 ? '' : 'display:none;'}">
                                 -${currency}${lineDisc.toFixed(2)}${item.discount_type === 'PERCENT' && item.discount_value > 0 ? ` (${item.discount_value}%)` : ''}
                             </span>
                         </td>
-                        <td class="px-3 py-3 text-right font-mono text-slate-500 text-xs">
+                        <td class="px-3 py-2.5 text-right font-mono text-slate-500 text-xs whitespace-nowrap">
                             <span class="line-tax">${currency}${lineTax.toFixed(2)}</span>
                         </td>
-                        <td class="px-3 py-3 text-right font-mono font-bold text-slate-900 text-xs">
+                        <td class="px-3 py-2.5 text-right font-mono font-bold text-slate-900 text-xs whitespace-nowrap">
                             <span class="line-total text-[#283891]">${currency}${lineTotal.toFixed(2)}</span>
                         </td>
-                        <td class="px-3 py-3 text-center">
-                            <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
+                        <td class="px-3 py-2.5 text-center">
+                            <button type="button" onclick="removeFromCartByUid('${item.uid}')" class="text-rose-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove item">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
@@ -1061,6 +1142,8 @@
             quantity: i.quantity,
             unit_price: i.unit_price,
             tax_percentage: i.tax_percentage || 0,
+            unit_mode: i.unit_mode || (i.is_loose ? 'LOOSE' : 'STRIP'),
+            strips_per_box: i.strips_per_box || 1,
             is_loose: Boolean(i.is_loose),
             pack_size: i.pack_size || 1,
             loose_quantity: i.is_loose ? (i.quantity || 1) : 0,

@@ -25,7 +25,8 @@ class MedicineForm(forms.ModelForm):
     class Meta:
         model = Medicine
         fields = [
-            'name', 'generic_name', 'category', 'manufacturer', 'unit', 'pack_size',
+            'name', 'generic_name', 'category', 'manufacturer', 'unit',
+            'strips_per_box', 'pack_size',
             'sku', 'rack_location', 'min_stock_level', 'is_prescription_required', 'description'
         ]
         widgets = {
@@ -34,7 +35,8 @@ class MedicineForm(forms.ModelForm):
             'category': forms.Select(attrs={'class': INPUT_CLASSES}),
             'manufacturer': forms.Select(attrs={'class': INPUT_CLASSES}),
             'unit': forms.Select(attrs={'class': INPUT_CLASSES}),
-            'pack_size': forms.NumberInput(attrs={'class': INPUT_CLASSES, 'min': '1', 'placeholder': 'e.g. 10 (tablets per strip) or 1'}),
+            'strips_per_box': forms.NumberInput(attrs={'class': INPUT_CLASSES, 'min': '1', 'placeholder': 'e.g. 5 (strips per box) or 1'}),
+            'pack_size': forms.NumberInput(attrs={'class': INPUT_CLASSES, 'min': '1', 'placeholder': 'e.g. 4 (tablets per strip) or 10'}),
             'sku': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'rack_location': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. Shelf A-3'}),
             'min_stock_level': forms.NumberInput(attrs={'class': INPUT_CLASSES}),

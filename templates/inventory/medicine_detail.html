@@ -90,6 +90,18 @@
                 <p class="text-2xl font-extrabold {% if medicine.is_low_stock %}text-amber-600{% else %}text-emerald-600{% endif %} tracking-tight">
                     {{ medicine.total_stock }} <span class="text-xs font-bold text-slate-500">{{ medicine.unit.short_name }}</span>
                 </p>
+                {% if medicine.strips_per_box > 1 %}
+                <p class="text-xs font-bold text-indigo-600 font-mono mt-1">
+                    = {{ medicine.total_boxes }} boxes = {{ medicine.total_stock }} strips = {{ medicine.total_loose_units }} tablets
+                </p>
+                <p class="text-[10px] text-slate-400 font-medium">
+                    (Packaging: {{ medicine.strips_per_box }} strips/box &bull; {{ medicine.pack_size }} tablets/strip)
+                </p>
+                {% elif medicine.pack_size > 1 %}
+                <p class="text-xs font-bold text-indigo-600 font-mono mt-0.5">
+                    = {{ medicine.total_loose_units }} total tablets ({{ medicine.pack_size }}/pack)
+                </p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -158,8 +170,21 @@
                         </td>
                         <td class="py-3.5 px-4 text-center">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide {% if batch.quantity == 0 %}bg-rose-50 text-rose-600 border border-rose-200/60{% else %}bg-slate-100 text-slate-800 border border-slate-200{% endif %}">
-                                {{ batch.quantity }}
+                                {% if medicine.strips_per_box > 1 %}
+                                    {{ batch.box_count }} boxes
+                                {% else %}
+                                    {{ batch.quantity }} {{ medicine.unit.short_name }}
+                                {% endif %}
                             </span>
+                            {% if medicine.strips_per_box > 1 and batch.quantity > 0 %}
+                            <div class="text-[10px] text-indigo-700 font-bold font-mono mt-0.5">
+                                {{ batch.quantity }} strips ({{ batch.loose_units }} tabs)
+                            </div>
+                            {% elif medicine.pack_size > 1 and batch.quantity > 0 %}
+                            <div class="text-[10px] text-indigo-700 font-bold font-mono mt-0.5">
+                                ({{ batch.loose_units }} tabs)
+                            </div>
+                            {% endif %}
                         </td>
                         <td class="py-3.5 px-4 text-center whitespace-nowrap">
                             {% if batch.status == 'ACTIVE' %}

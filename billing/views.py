@@ -40,6 +40,7 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
         batch_list = []
         for b in batches:
             p_size = b.medicine.pack_size or 1
+            spb = getattr(b.medicine, 'strips_per_box', 1) or 1
             batch_list.append({
                 'id': b.id,
                 'medicine_name': b.medicine.name,
@@ -49,11 +50,14 @@ class POSView(TenantAccessMixin, RoleRequiredMixin, TemplateView):
                 'batch_number': b.batch_number,
                 'expiry_date': b.expiry_date.strftime('%Y-%m-%d'),
                 'selling_price': str(b.selling_price),
+                'box_price': str(round(Decimal(str(b.selling_price)) * Decimal(spb), 2)),
                 'loose_price': str(round(Decimal(str(b.selling_price)) / Decimal(p_size), 2)),
+                'strips_per_box': spb,
                 'pack_size': p_size,
                 'mrp': str(b.mrp),
                 'tax_percentage': str(b.tax_percentage),
                 'available_qty': float(b.quantity),
+                'boxes_available': float(round(float(b.quantity) / spb, 2)),
             })
 
         context['batches_json'] = json.dumps(batch_list)
@@ -299,6 +303,7 @@ class InvoiceEditView(TenantAccessMixin, RoleRequiredMixin, View):
         for b in batches:
             held_qty = items_by_batch.get(b.id, Decimal('0.00'))
             p_size = b.medicine.pack_size or 1
+            spb = getattr(b.medicine, 'strips_per_box', 1) or 1
             batch_list.append({
                 'id': b.id,
                 'medicine_name': b.medicine.name,
@@ -308,11 +313,14 @@ class InvoiceEditView(TenantAccessMixin, RoleRequiredMixin, View):
                 'batch_number': b.batch_number,
                 'expiry_date': b.expiry_date.strftime('%Y-%m-%d'),
                 'selling_price': str(b.selling_price),
+                'box_price': str(round(Decimal(str(b.selling_price)) * Decimal(spb), 2)),
                 'loose_price': str(round(Decimal(str(b.selling_price)) / Decimal(p_size), 2)),
+                'strips_per_box': spb,
                 'pack_size': p_size,
                 'mrp': str(b.mrp),
                 'tax_percentage': str(b.tax_percentage),
                 'available_qty': float(b.quantity + held_qty),
+                'boxes_available': float(round(float(b.quantity + held_qty) / spb, 2)),
             })
 
         # Pre-populate cart items from existing invoice items

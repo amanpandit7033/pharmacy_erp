@@ -251,12 +251,27 @@
                         </td>
                         <td class="py-3.5 px-4 text-center">
                             {% with stock=med.total_qty %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide
-                                {% if stock == 0 %}bg-rose-50 text-rose-600 border border-rose-200/60
-                                {% elif stock <= med.min_stock_level %}bg-amber-50 text-amber-700 border border-amber-200/60
-                                {% else %}bg-emerald-50 text-emerald-700 border border-emerald-200/60{% endif %}">
-                                {{ stock }} {{ med.unit.short_name }}
-                            </span>
+                            <div class="inline-flex flex-col items-center">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide
+                                    {% if stock == 0 %}bg-rose-50 text-rose-600 border border-rose-200/60
+                                    {% elif stock <= med.min_stock_level %}bg-amber-50 text-amber-700 border border-amber-200/60
+                                    {% else %}bg-emerald-50 text-emerald-700 border border-emerald-200/60{% endif %}">
+                                    {% if med.strips_per_box > 1 %}
+                                        {{ med.total_boxes }} boxes
+                                    {% else %}
+                                        {{ stock }} {{ med.unit.short_name }}
+                                    {% endif %}
+                                </span>
+                                {% if med.strips_per_box > 1 and stock > 0 %}
+                                <span class="text-[10px] text-indigo-700 font-bold mt-1 font-mono">
+                                    {{ stock }} strips ({{ med.total_loose_units }} tabs)
+                                </span>
+                                {% elif med.pack_size > 1 and stock > 0 %}
+                                <span class="text-[10px] text-indigo-700 font-bold mt-1 font-mono">
+                                    ({{ med.total_loose_units }} tabs)
+                                </span>
+                                {% endif %}
+                            </div>
                             {% endwith %}
                         </td>
                         <td class="py-3.5 px-4 text-right">
