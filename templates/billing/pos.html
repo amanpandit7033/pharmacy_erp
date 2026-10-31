@@ -281,6 +281,8 @@
                         </button>
                     </div>
                 </form>
+                <!-- Arcade Coin Sound on New Bill Save -->
+                <audio id="arcadeCoinSound" src="{% static 'sounds/insert-coin-arcade-machine.mp3' %}" preload="auto"></audio>
             </div>
         </div>
     </div>
@@ -1153,7 +1155,54 @@
         }));
 
         itemsJsonInput.value = JSON.stringify(payload);
-        document.getElementById('posForm').submit();
+
+        // Visual feedback on save button to prevent double-submissions
+        const submitBtn = document.getElementById('submitBillBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+            submitBtn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Saving Bill...</span>
+            `;
+        }
+
+        const isNewBill = !{{ is_edit_mode|yesno:"true,false" }};
+        const coinAudio = document.getElementById('arcadeCoinSound');
+        let formSubmitted = false;
+
+        function doSubmit() {
+            if (!formSubmitted) {
+                formSubmitted = true;
+                document.getElementById('posForm').submit();
+            }
+        }
+
+        if (isNewBill && coinAudio) {
+            try {
+                coinAudio.currentTime = 0;
+                const playPromise = coinAudio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Allow sound to play for 450ms before initiating form submit / page transition
+                        setTimeout(doSubmit, 450);
+                    }).catch(() => {
+                        doSubmit();
+                    });
+                } else {
+                    setTimeout(doSubmit, 450);
+                }
+            } catch (e) {
+                doSubmit();
+            }
+            // Fallback timeout to ensure form submits even if audio playback gets blocked or stalled
+            setTimeout(doSubmit, 900);
+        } else {
+            doSubmit();
+        }
     }
 
     // UPI QR Code Dynamic Logic
