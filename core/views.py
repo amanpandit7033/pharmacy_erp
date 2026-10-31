@@ -280,6 +280,14 @@ class PlatformSettingsView(RoleRequiredMixin, View):
         if waba_lang:
             settings_obj.waba_language = waba_lang
 
+        # WhatsApp Multi-Device Gateway Settings
+        gateway_url = request.POST.get('whatsapp_gateway_url', '').strip()
+        if gateway_url:
+            settings_obj.whatsapp_gateway_url = gateway_url.rstrip('/')
+        new_gw_key = request.POST.get('whatsapp_gateway_api_key', '')
+        if new_gw_key:
+            settings_obj.whatsapp_gateway_api_key = new_gw_key.strip()
+
         settings_obj.save()
         messages.success(request, f"Platform settings and configurations updated successfully.")
         return redirect('core:platform_settings')

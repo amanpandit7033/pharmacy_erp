@@ -221,6 +221,20 @@ class PlatformSetting(TimeStampedModel):
         help_text="Default template language code (e.g., en_US, en, hi)."
     )
 
+    # Multi-Device WhatsApp Gateway (Store Number QR Scan & Direct Dispatch)
+    whatsapp_gateway_url = models.CharField(
+        max_length=255,
+        blank=True,
+        default='http://127.0.0.1:3000',
+        help_text="WhatsApp Gateway base IP/URL (e.g., https://api.azmobia.com or http://127.0.0.1:3000)."
+    )
+    whatsapp_gateway_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text="Master API Key / Access Token for the WhatsApp Multi-Device Gateway."
+    )
+
     class Meta:
         verbose_name = 'Platform Setting'
         verbose_name_plural = 'Platform Settings'

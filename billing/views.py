@@ -1,3 +1,7 @@
+from datetime import datetime, date
+from django.db.models.functions import Coalesce
+from django.core.paginator import Paginator
+from stores.models import Store
 import json
 from decimal import Decimal
 from django.views.generic import ListView, DetailView, TemplateView, CreateView, UpdateView
@@ -602,4 +606,109 @@ class InvoiceWhatsAppSendView(TenantAccessMixin, RoleRequiredMixin, View):
         else:
             messages.warning(request, message)
         return redirect('billing:invoice_detail', pk=pk)
+
+class PlatformAllBillsView(RoleRequiredMixin, TemplateView):
+    """
+    Platform Super Admin view displaying all invoices generated across all pharmacy stores.
+    Includes store-wise filter, date range filter (defaults to today), search, status filter,
+    and mandatory pagination.
+    """
+    template_name = 'billing/platform_all_bills.html'
+    allowed_roles = [User.Role.SUPER_ADMIN]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        request = self.request
+
+        store_id = request.GET.get('store', '').strip()
+        from_date_str = request.GET.get('from_date', '').strip()
+        to_date_str = request.GET.get('to_date', '').strip()
+        q = request.GET.get('q', '').strip()
+        status = request.GET.get('status', '').strip()
+
+        today = timezone.localdate()
+        from_date = None
+        to_date = None
+
+        if from_date_str:
+            try:
+                from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                from_date = None
+
+        if to_date_str:
+            try:
+                to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                to_date = None
+
+        # By default, show today's bills if no filters specified
+        has_filtered = bool(store_id or from_date_str or to_date_str or q or status)
+        if not from_date and not to_date and not has_filtered:
+            from_date = today
+            to_date = today
+
+        qs = Invoice.all_objects.select_related('store', 'created_by').order_by('-created_at')
+
+        if from_date:
+            qs = qs.filter(created_at__date__gte=from_date)
+        if to_date:
+            qs = qs.filter(created_at__date__lte=to_date)
+
+        if store_id:
+            try:
+                qs = qs.filter(store_id=int(store_id))
+            except ValueError:
+                pass
+
+        if q:
+            qs = qs.filter(
+                Q(invoice_number__icontains=q) |
+                Q(customer_name__icontains=q) |
+                Q(customer_phone__icontains=q) |
+                Q(doctor_name__icontains=q) |
+                Q(store__name__icontains=q) |
+                Q(store__code__icontains=q)
+            )
+
+        if status:
+            qs = qs.filter(status=status)
+
+        summary = qs.aggregate(
+            total_sales=Coalesce(Sum('total_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            total_count=Count('id'),
+            active_bills=Count('id', filter=~Q(status=Invoice.Status.CANCELLED)),
+            total_paid=Coalesce(Sum('paid_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            total_due=Coalesce(Sum('due_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            cash_amount=Coalesce(Sum('paid_amount', filter=Q(payment_method=Invoice.PaymentMethod.CASH) & ~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            digital_amount=Coalesce(Sum('paid_amount', filter=Q(payment_method__in=[Invoice.PaymentMethod.UPI, Invoice.PaymentMethod.CARD]) & ~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            cancelled_count=Count('id', filter=Q(status=Invoice.Status.CANCELLED)),
+        )
+
+        paginator = Paginator(qs, 25)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        all_stores = Store.all_objects.filter(is_active=True).order_by('name').only('id', 'name', 'code', 'city')
+
+        get_params = request.GET.copy()
+        if 'page' in get_params:
+            del get_params['page']
+        pagination_querystring = get_params.urlencode()
+
+        context.update({
+            'page_obj': page_obj,
+            'summary': summary,
+            'all_stores': all_stores,
+            'selected_store_id': store_id,
+            'from_date': from_date.strftime('%Y-%m-%d') if from_date else '',
+            'to_date': to_date.strftime('%Y-%m-%d') if to_date else '',
+            'q': q,
+            'selected_status': status,
+            'status_choices': Invoice.Status.choices,
+            'pagination_querystring': pagination_querystring,
+            'today': today,
+            'total_invoices_count': paginator.count,
+        })
+        return context
 

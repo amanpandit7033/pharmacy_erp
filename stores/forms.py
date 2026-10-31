@@ -47,7 +47,7 @@ class StoreForm(forms.ModelForm):
             'name', 'code', 'logo', 'license_number', 'gst_number',
             'phone', 'email', 'address', 'city', 'state', 'pincode', 'currency',
             'upi_id', 'upi_payee_name', 'is_active',
-            'whatsapp_service_type', 'whatsapp_api_key'
+            'whatsapp_service_type', 'whatsapp_api_key', 'has_custom_whatsapp_scan'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
@@ -66,6 +66,7 @@ class StoreForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': CHECKBOX_CLASSES}),
             'whatsapp_service_type': forms.Select(attrs={'class': INPUT_CLASSES, 'id': 'whatsappServiceTypeSelect'}),
             'whatsapp_api_key': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Enter Client WABA Bearer API Key', 'id': 'whatsappApiKeyInput'}),
+            'has_custom_whatsapp_scan': forms.CheckboxInput(attrs={'class': CHECKBOX_CLASSES, 'id': 'hasCustomWhatsappScanToggle'}),
         }
 
     def clean(self):

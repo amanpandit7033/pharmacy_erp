@@ -1,8 +1,10 @@
 from decimal import Decimal
-from datetime import timedelta
+from datetime import datetime, date, timedelta
 from django.views.generic import TemplateView
 from django.utils import timezone
 from django.db.models import Sum, Count, F, Q
+from django.db.models.functions import Coalesce, TruncDate
+from django.core.paginator import Paginator
 
 from accounts.models import User
 from stores.models import Store
@@ -680,4 +682,127 @@ class AnalyticsReportView(RoleRequiredMixin, TemplateView):
             'chart_data': chart_data,
             'days_data': days_data,
         })
+        return context
+
+class LiveStatusView(RoleRequiredMixin, TemplateView):
+    """
+    Platform Super Admin Live Status Ledger:
+    Aggregates per-medical-store, per-day live transaction counts:
+    - Active Bill Count
+    - Total Sales Amount
+    - Cash Collected
+    - Digital (UPI / Card) Collected
+    - Due / Credit Amount
+    - Cancelled Bills Count
+    Supports store filtering, date range filtering, and pagination.
+    """
+    template_name = 'dashboard/live_status.html'
+    allowed_roles = [User.Role.SUPER_ADMIN]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        request = self.request
+
+        # 1. Parse Filter Inputs
+        store_id = request.GET.get('store', '').strip()
+        from_date_str = request.GET.get('from_date', '').strip()
+        to_date_str = request.GET.get('to_date', '').strip()
+        q = request.GET.get('q', '').strip()
+
+        today = timezone.localdate()
+        from_date = None
+        to_date = None
+
+        if from_date_str:
+            try:
+                from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                from_date = None
+
+        if to_date_str:
+            try:
+                to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                to_date = None
+
+        # Default: if no filters specified, load from the 1st of the current month to today
+        has_filtered = bool(store_id or from_date_str or to_date_str or q)
+        if not from_date and not to_date and not has_filtered:
+            from_date = today
+            to_date = today
+
+        # 2. Base Queryset using Approach A (Live dynamic aggregation on Invoice)
+        base_qs = Invoice.all_objects.select_related('store').annotate(
+            day_date=TruncDate('created_at')
+        )
+
+        if from_date:
+            base_qs = base_qs.filter(day_date__gte=from_date)
+        if to_date:
+            base_qs = base_qs.filter(day_date__lte=to_date)
+
+        if store_id:
+            try:
+                base_qs = base_qs.filter(store_id=int(store_id))
+            except ValueError:
+                pass
+
+        if q:
+            base_qs = base_qs.filter(
+                Q(store__name__icontains=q) |
+                Q(store__code__icontains=q) |
+                Q(store__city__icontains=q)
+            )
+
+        # 3. Overall Top KPI Cards Summary across the filtered slice
+        summary = base_qs.aggregate(
+            overall_sales=Coalesce(Sum('total_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            overall_bills=Count('id', filter=~Q(status=Invoice.Status.CANCELLED)),
+            overall_paid=Coalesce(Sum('paid_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            overall_due=Coalesce(Sum('due_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            overall_cash=Coalesce(Sum('paid_amount', filter=Q(payment_method=Invoice.PaymentMethod.CASH) & ~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            overall_digital=Coalesce(Sum('paid_amount', filter=Q(payment_method__in=[Invoice.PaymentMethod.UPI, Invoice.PaymentMethod.CARD]) & ~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            overall_cancelled=Count('id', filter=Q(status=Invoice.Status.CANCELLED)),
+        )
+
+        # 4. Group by Day Date + Store
+        rows_qs = base_qs.values(
+            'day_date', 'store__id', 'store__name', 'store__code', 'store__city', 'store__state'
+        ).annotate(
+            bill_count=Count('id', filter=~Q(status=Invoice.Status.CANCELLED)),
+            total_sales=Coalesce(Sum('total_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            total_paid=Coalesce(Sum('paid_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            total_due=Coalesce(Sum('due_amount', filter=~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            cash_amount=Coalesce(Sum('paid_amount', filter=Q(payment_method=Invoice.PaymentMethod.CASH) & ~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            digital_amount=Coalesce(Sum('paid_amount', filter=Q(payment_method__in=[Invoice.PaymentMethod.UPI, Invoice.PaymentMethod.CARD]) & ~Q(status=Invoice.Status.CANCELLED)), Decimal('0.00')),
+            cancelled_count=Count('id', filter=Q(status=Invoice.Status.CANCELLED)),
+        ).order_by('-day_date', 'store__name')
+
+        # 5. Pagination (25 rows per page)
+        paginator = Paginator(rows_qs, 25)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        # 6. Active Stores for Filter Dropdown
+        all_stores = Store.all_objects.filter(is_active=True).order_by('name').only('id', 'name', 'code', 'city')
+
+        # Clean querystring for pagination links (preserves search/date filters)
+        get_params = request.GET.copy()
+        if 'page' in get_params:
+            del get_params['page']
+        pagination_querystring = get_params.urlencode()
+
+        context.update({
+            'page_obj': page_obj,
+            'summary': summary,
+            'all_stores': all_stores,
+            'selected_store_id': store_id,
+            'from_date': from_date.strftime('%Y-%m-%d') if from_date else '',
+            'to_date': to_date.strftime('%Y-%m-%d') if to_date else '',
+            'q': q,
+            'pagination_querystring': pagination_querystring,
+            'today': today,
+            'total_rows_count': paginator.count,
+        })
+        return context
 

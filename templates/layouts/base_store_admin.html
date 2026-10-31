@@ -249,6 +249,23 @@
                     <div class="h-px bg-slate-100 flex-1"></div>
                 </div>
 
+                {% if request.user.store.has_custom_whatsapp_scan %}
+                <!-- WhatsApp Invoice Manager -->
+                <a href="{% url 'stores:whatsapp_manager' %}" title="WhatsApp Invoice Manager" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'whatsapp/manager' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if 'whatsapp/manager' in request.path %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-emerald-600 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">WhatsApp Manager</span>
+                    </div>
+                    {% if request.user.store.whatsapp_phone_connected %}
+                    <span class="sidebar-text w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {% endif %}
+                </a>
+                {% endif %}
+
                 <!-- Store Settings -->
                 <a href="{% url 'stores:settings' %}" title="Store Settings" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all {% if 'stores/settings' in request.path %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
                     <div class="flex items-center space-x-2.5">
@@ -261,6 +278,26 @@
                         <span class="sidebar-text">Store Settings</span>
                     </div>
                 </a>
+            
+                <!-- Install PWA App Button -->
+                <div class="pt-2 px-0.5">
+                    <button type="button" onclick="triggerPWAInstall()" class="pwa-install-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98] group cursor-pointer" style="background: linear-gradient(135deg, #059669 0%, #047857 100%) !important; color: #ffffff !important; border: 1px solid #10b981;" title="Download & Install Web App">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform" style="background: rgba(255, 255, 255, 0.2);">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                            </div>
+                            <div class="text-left sidebar-text min-w-0">
+                                <span class="block text-xs font-bold leading-tight text-white truncate">Install App</span>
+                                <span class="block text-[10px] text-emerald-100 leading-tight">Desktop / Mobile PWA</span>
+                            </div>
+                        </div>
+                        <span class="sidebar-text text-[9px] font-extrabold uppercase px-2 py-0.5 rounded text-white flex-shrink-0" style="background: rgba(255, 255, 255, 0.25);">
+                            PWA
+                        </span>
+                    </button>
+                </div>
             </nav>
         </div>
 

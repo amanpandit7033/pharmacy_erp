@@ -125,6 +125,34 @@
                         P&amp;L
                     </span>
                 </a>
+                <!-- Live Status (Daily Multi-Store Ledger) -->
+                <a href="{% url 'dashboard:live_status' %}" title="Live Status" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all {% if request.resolver_match.url_name == 'live_status' %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if request.resolver_match.url_name == 'live_status' %}bg-emerald-600 text-white shadow-xs{% else %}bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Live Status</span>
+                    </div>
+                    <span class="sidebar-text flex h-2 w-2 relative">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                </a>
+
+                
+                <!-- Store Invoices / All Bills -->
+                <a href="{% url 'billing:platform_all_bills' %}" title="All Store Bills" class="sidebar-link group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all {% if request.resolver_match.url_name == 'platform_all_bills' %}bg-[#edf0fc] text-[#283891] font-bold shadow-2xs before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#283891] before:rounded-r-full{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 {% if request.resolver_match.url_name == 'platform_all_bills' %}bg-[#283891] text-white shadow-xs{% else %}bg-slate-100/80 text-slate-500 group-hover:bg-[#edf0fc] group-hover:text-[#283891]{% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text">Store Bills</span>
+                    </div>
+                </a>
 
                 <!-- SECTION: Tenants -->
                 <div class="sidebar-text pt-4 pb-1 px-2.5 flex items-center space-x-2">
@@ -224,6 +252,26 @@
                         <span class="sidebar-text">Platform Settings</span>
                     </div>
                 </a>
+            
+                <!-- Install PWA App Button -->
+                <div class="pt-2 px-0.5">
+                    <button type="button" onclick="triggerPWAInstall()" class="pwa-install-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98] group cursor-pointer" style="background: linear-gradient(135deg, #059669 0%, #047857 100%) !important; color: #ffffff !important; border: 1px solid #10b981;" title="Download & Install Web App">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform" style="background: rgba(255, 255, 255, 0.2);">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                            </div>
+                            <div class="text-left sidebar-text min-w-0">
+                                <span class="block text-xs font-bold leading-tight text-white truncate">Install App</span>
+                                <span class="block text-[10px] text-emerald-100 leading-tight">Desktop / Mobile PWA</span>
+                            </div>
+                        </div>
+                        <span class="sidebar-text text-[9px] font-extrabold uppercase px-2 py-0.5 rounded text-white flex-shrink-0" style="background: rgba(255, 255, 255, 0.25);">
+                            PWA
+                        </span>
+                    </button>
+                </div>
             </nav>
         </div>
 

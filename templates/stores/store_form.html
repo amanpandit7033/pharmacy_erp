@@ -139,7 +139,7 @@
                 </div>
             </div>
 
-            <!-- Section: WhatsApp Cloud API Integration (Digital Invoices) -->
+            <!-- Section: WhatsApp Invoice Gateway Settings -->
             <div class="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/70 space-y-4">
                 <div class="flex items-center space-x-2.5 pb-3 border-b border-emerald-200/60">
                     <div class="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
@@ -148,34 +148,45 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">WhatsApp Invoice Gateway (waba.azmobia.com)</h3>
-                        <p class="text-[11px] text-slate-500">Select whether this pharmacy uses the platform's default API key or client's own key.</p>
+                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">WhatsApp Invoice Gateway</h3>
+                        <p class="text-[11px] text-slate-500">Select one sending mode for this store's automated patient invoices.</p>
                     </div>
                 </div>
 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-800 mb-2">WhatsApp Sending Mode</label>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="block text-xs font-bold text-slate-800 mb-2">WhatsApp Sending Mode (Choose One)</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <!-- Option 1: Platform Default WABA -->
                             <label class="relative flex items-start p-3.5 rounded-xl border border-slate-200/90 bg-white cursor-pointer hover:border-emerald-500 transition shadow-2xs">
                                 <input type="radio" name="whatsapp_service_type" value="default" {% if not form.whatsapp_service_type.value or form.whatsapp_service_type.value == 'default' %}checked{% endif %} onchange="toggleWhatsappApiKeyField()" class="w-4 h-4 text-emerald-600 border-slate-300 focus:ring-emerald-500 mt-0.5">
                                 <div class="ml-3">
                                     <span class="block text-xs font-bold text-slate-900">Platform Default</span>
-                                    <span class="block text-[11px] text-slate-500 mt-0.5">Uses central master API key saved in Platform Settings.</span>
+                                    <span class="block text-[11px] text-slate-500 mt-0.5">Central Meta WABA template gateway configured in Admin Settings.</span>
                                 </div>
                             </label>
 
+                            <!-- Option 2: Client's Own API Key -->
                             <label class="relative flex items-start p-3.5 rounded-xl border border-slate-200/90 bg-white cursor-pointer hover:border-emerald-500 transition shadow-2xs">
                                 <input type="radio" name="whatsapp_service_type" value="own" {% if form.whatsapp_service_type.value == 'own' %}checked{% endif %} onchange="toggleWhatsappApiKeyField()" class="w-4 h-4 text-emerald-600 border-slate-300 focus:ring-emerald-500 mt-0.5">
                                 <div class="ml-3">
                                     <span class="block text-xs font-bold text-slate-900">Client's Own API Key</span>
-                                    <span class="block text-[11px] text-slate-500 mt-0.5">Custom Bearer API key configured specifically for this store.</span>
+                                    <span class="block text-[11px] text-slate-500 mt-0.5">Custom Meta Bearer token entered specifically for this pharmacy.</span>
+                                </div>
+                            </label>
+
+                            <!-- Option 3: Store Scan Own Number (QR Gateway) -->
+                            <label class="relative flex items-start p-3.5 rounded-xl border border-slate-200/90 bg-white cursor-pointer hover:border-emerald-500 transition shadow-2xs">
+                                <input type="radio" name="whatsapp_service_type" value="scan" {% if form.whatsapp_service_type.value == 'scan' %}checked{% endif %} onchange="toggleWhatsappApiKeyField()" class="w-4 h-4 text-emerald-600 border-slate-300 focus:ring-emerald-500 mt-0.5">
+                                <div class="ml-3">
+                                    <span class="block text-xs font-bold text-slate-900">Store Scan Own Number</span>
+                                    <span class="block text-[11px] text-slate-500 mt-0.5">Store admin links their own WhatsApp via QR in Store Settings.</span>
                                 </div>
                             </label>
                         </div>
                     </div>
 
-                    <!-- Client Own API Key Input (conditionally visible) -->
+                    <!-- Client Own API Key Input (conditionally visible only for 'own') -->
                     <div id="whatsappApiKeyContainer" class="{% if form.whatsapp_service_type.value != 'own' %}hidden{% endif %} transition-all pt-1">
                         <label for="{{ form.whatsapp_api_key.id_for_label }}" class="block text-xs font-bold text-slate-800 mb-1.5">
                             Client's Custom WABA Bearer API Key <span class="text-rose-500">*</span>

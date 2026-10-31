@@ -2,6 +2,57 @@
 
 {% block title %}Platform & Branding Settings - {{ platform_settings.brand_name|default:'Azmed' }}{% endblock %}
 
+{% block extra_head %}
+<style>
+/* Modern tactile toggle switch */
+.platform-toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+.platform-toggle-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    pointer-events: none;
+}
+.platform-toggle-track {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+.platform-toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background-color: #ffffff;
+    border-radius: 9999px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.platform-toggle-switch input:checked + .platform-toggle-track {
+    background-color: #059669; /* emerald-600 */
+}
+.platform-toggle-switch input:checked + .platform-toggle-track.track-blue {
+    background-color: #283891;
+}
+.platform-toggle-switch input:checked + .platform-toggle-track .platform-toggle-knob {
+    transform: translateX(20px);
+}
+</style>
+{% endblock %}
+
+
 {% block content %}
 <div class="space-y-6 max-w-7xl mx-auto pb-16">
     <!-- Top Bar: Breadcrumb, Title & Quick Save Header -->
@@ -272,9 +323,11 @@
                             </div>
                             <p class="text-[11px] text-slate-500">Renders copyright notice and support contact line at the bottom of the login page.</p>
                         </div>
-                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-4">
-                            <input type="checkbox" name="show_login_footer" id="showFooterToggle" value="1" {% if settings.show_login_footer %}checked{% endif %} class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#283891]"></div>
+                        <label class="platform-toggle-switch flex-shrink-0 ml-4">
+                            <input type="checkbox" name="show_login_footer" id="showFooterToggle" value="1" {% if settings.show_login_footer %}checked{% endif %}>
+                            <div class="platform-toggle-track track-blue">
+                                <span class="platform-toggle-knob"></span>
+                            </div>
                         </label>
                     </div>
 
@@ -352,9 +405,11 @@
                             <span id="smtpStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {% if settings.smtp_is_enabled %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-600{% endif %}">
                                 {% if settings.smtp_is_enabled %}Active{% else %}Disabled{% endif %}
                             </span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="smtp_is_enabled" id="smtpEnableToggle" value="1" {% if settings.smtp_is_enabled %}checked{% endif %} class="sr-only peer">
-                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#283891]"></div>
+                            <label class="platform-toggle-switch flex-shrink-0">
+                                <input type="checkbox" name="smtp_is_enabled" id="smtpEnableToggle" value="1" {% if settings.smtp_is_enabled %}checked{% endif %}>
+                                <div class="platform-toggle-track track-blue">
+                                    <span class="platform-toggle-knob"></span>
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -537,10 +592,12 @@
                         </div>
 
                         <!-- Master Enable/Disable Toggle -->
-                        <label class="relative inline-flex items-center cursor-pointer select-none">
-                            <input type="checkbox" name="waba_is_enabled" value="1" {% if settings.waba_is_enabled %}checked{% endif %} class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                            <span class="ml-2 text-xs font-bold text-slate-700">WABA Enabled</span>
+                        <label class="platform-toggle-switch flex-shrink-0">
+                            <input type="checkbox" name="waba_is_enabled" value="1" {% if settings.waba_is_enabled %}checked{% endif %}>
+                            <div class="platform-toggle-track">
+                                <span class="platform-toggle-knob"></span>
+                            </div>
+                            <span class="ml-2.5 text-xs font-bold text-slate-700">WABA Enabled</span>
                         </label>
                     </div>
 
@@ -611,20 +668,63 @@
                             <span class="text-[11px] text-slate-400 mt-1 block">Language code (e.g. en_US, en, hi).</span>
                         </div>
                     </div>
+
+                    <!-- Sub-section: Store Own WhatsApp Number Gateway Settings -->
+                    <div class="pt-6 border-t border-slate-200/90 space-y-4">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5 border border-emerald-200/60 shadow-2xs">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900 tracking-tight">Multi-Device QR Gateway (Store Own Number Scanning)</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Configure central gateway IP/URL and Master API Key for stores permitted to scan their own WhatsApp numbers.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                            <div>
+                                <label for="whatsappGatewayUrlInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                                    Gateway Base URL / IP
+                                </label>
+                                <input type="text"
+                                       name="whatsapp_gateway_url"
+                                       id="whatsappGatewayUrlInput"
+                                       value="{{ settings.whatsapp_gateway_url|default:'' }}"
+                                       placeholder="e.g. http://127.0.0.1:3000 or https://api.azmobia.com"
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white font-mono placeholder-slate-400">
+                                <span class="text-[11px] text-slate-400 mt-1 block">Base URL where the WhatsApp Gateway service is hosted.</span>
+                            </div>
+
+                            <div>
+                                <label for="whatsappGatewayApiKeyInput" class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                                    Gateway Master API Key
+                                </label>
+                                <input type="password"
+                                       name="whatsapp_gateway_api_key"
+                                       id="whatsappGatewayApiKeyInput"
+                                       value="{{ settings.whatsapp_gateway_api_key|default:'' }}"
+                                       placeholder="Enter Master Access Token / API Key"
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200/90 focus:border-[#283891] focus:ring-4 focus:ring-blue-50 text-sm font-medium text-slate-800 outline-none transition bg-[#f8fafc] focus:bg-white font-mono placeholder-slate-400">
+                                <span class="text-[11px] text-slate-400 mt-1 block">Same Master API key used by all QR scanned instances.</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Bottom Save & Action Card -->
-                <div class="p-4 sm:p-5 rounded-[20px] bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-                    <div class="flex items-center space-x-2 text-xs text-slate-500">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        <span>Changes apply immediately across all logged-in users and guest sessions.</span>
+                <div class="p-4 sm:p-5 rounded-[20px] bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-xs overflow-hidden">
+                    <div class="flex items-center space-x-2 text-xs text-slate-500 flex-1 min-w-0">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                        <span class="leading-normal">Changes apply immediately across all logged-in users and guest sessions.</span>
                     </div>
-                    <div class="flex items-center space-x-2.5 w-full sm:w-auto">
+                    <div class="flex items-center space-x-2 flex-shrink-0 w-full sm:w-auto justify-end">
                         <button type="button" onclick="location.reload();" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold transition">
                             Discard
                         </button>
-                        <button type="submit" class="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold transition shadow-sm shadow-blue-500/20 cursor-pointer">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="submit" class="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-[#283891] hover:bg-[#1f2d7a] text-white text-xs font-bold transition shadow-sm shadow-blue-500/20 cursor-pointer whitespace-nowrap">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
                             <span>Save Platform Settings</span>

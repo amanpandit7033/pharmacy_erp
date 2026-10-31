@@ -185,6 +185,26 @@
                         <span class="sidebar-text">Expiring Medicines</span>
                     </div>
                 </a>
+            
+                <!-- Install PWA App Button -->
+                <div class="pt-2 px-0.5">
+                    <button type="button" onclick="triggerPWAInstall()" class="pwa-install-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98] group cursor-pointer" style="background: linear-gradient(135deg, #059669 0%, #047857 100%) !important; color: #ffffff !important; border: 1px solid #10b981;" title="Download & Install Web App">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform" style="background: rgba(255, 255, 255, 0.2);">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                            </div>
+                            <div class="text-left sidebar-text min-w-0">
+                                <span class="block text-xs font-bold leading-tight text-white truncate">Install App</span>
+                                <span class="block text-[10px] text-emerald-100 leading-tight">Desktop / Mobile PWA</span>
+                            </div>
+                        </div>
+                        <span class="sidebar-text text-[9px] font-extrabold uppercase px-2 py-0.5 rounded text-white flex-shrink-0" style="background: rgba(255, 255, 255, 0.25);">
+                            PWA
+                        </span>
+                    </button>
+                </div>
             </nav>
         </div>
 

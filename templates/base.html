@@ -65,6 +65,50 @@
                 });
             }
         })();
+
+        // Global PWA Installation Event Handler
+        let deferredPWAInstallPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPWAInstallPrompt = e;
+            console.log('[PWA] Native installation prompt ready');
+        });
+
+        window.triggerPWAInstall = async function() {
+            if (deferredPWAInstallPrompt) {
+                deferredPWAInstallPrompt.prompt();
+                const choice = await deferredPWAInstallPrompt.userChoice;
+                if (choice && choice.outcome === 'accepted') {
+                    console.log('[PWA] User accepted install');
+                    deferredPWAInstallPrompt = null;
+                }
+            } else {
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+                if (isStandalone) {
+                    alert("Application is already installed and running in Desktop App mode!");
+                } else {
+                    alert("To install this app on your device:\n\n1. In Chrome / Edge (PC/Mac): Look for the 'Install' icon (⬇️ or 💻) in your browser address bar on the right and click Install.\n2. On Android (Chrome): Tap the menu (⋮) > 'Install app' or 'Add to Home screen'.\n3. On iPhone / iPad (Safari): Tap the Share button (⬆️) > 'Add to Home Screen'.");
+                }
+            }
+        };
+
+        window.addEventListener('appinstalled', () => {
+            deferredPWAInstallPrompt = null;
+            document.querySelectorAll('.pwa-install-btn').forEach(btn => {
+                btn.classList.add('opacity-85');
+                btn.innerHTML = `
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <div class="text-left sidebar-text min-w-0">
+                            <span class="block text-xs font-bold leading-tight">App Installed</span>
+                            <span class="block text-[10px] text-emerald-100/90 leading-tight">Standalone Mode</span>
+                        </div>
+                    </div>
+                `;
+            });
+        });
     </script>
 </body>
 </html>

@@ -25,6 +25,7 @@ class Store(TimeStampedModel, SoftDeleteModel):
     class WhatsAppGatewayType(models.TextChoices):
         DEFAULT = 'default', 'Platform Default'
         OWN = 'own', "Client's Own API Key"
+        SCAN = 'scan', 'Store Scan Own Number (QR)'
 
     whatsapp_service_type = models.CharField(
         max_length=20,
@@ -39,12 +40,35 @@ class Store(TimeStampedModel, SoftDeleteModel):
         help_text="Client's custom WABA API Key (used when mode is Client's Own)"
     )
 
+    # Permission & Connection State for Store Scanning Own WhatsApp Number
+    has_custom_whatsapp_scan = models.BooleanField(
+        default=False,
+        help_text="Permission: Allow store to scan and link their own WhatsApp number to dispatch bills."
+    )
+    whatsapp_instance_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Unique Gateway instance ID generated when this store scans the QR code."
+    )
+    whatsapp_phone_connected = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Paired WhatsApp phone number returned by Gateway socket status."
+    )
+
     def get_whatsapp_api_key(self):
         """Returns the appropriate WhatsApp API key based on sending type."""
         if self.whatsapp_service_type == self.WhatsAppGatewayType.OWN and self.whatsapp_api_key:
             return self.whatsapp_api_key.strip()
         from core.models import PlatformSetting
         return PlatformSetting.get_settings().waba_api_key.strip()
+
+    def save(self, *args, **kwargs):
+        # Keep has_custom_whatsapp_scan in sync with whatsapp_service_type
+        self.has_custom_whatsapp_scan = (self.whatsapp_service_type == self.WhatsAppGatewayType.SCAN)
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ['-created_at']
