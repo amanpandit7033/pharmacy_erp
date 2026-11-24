@@ -389,9 +389,10 @@ self.addEventListener('push', (event) => {
             body: payload.body || 'A new bill was just created by staff.',
             icon: payload.icon || '/static/images/icon-192.png',
             badge: payload.badge || '/static/images/badge-72.png',
-            tag: payload.tag || 'pharmacy-bill',
+            tag: payload.tag || ('bill-' + Date.now()),
             renotify: true,
-            vibrate: payload.vibrate || [100, 50, 100, 50, 200],
+            requireInteraction: true,
+            vibrate: payload.vibrate || [200, 100, 200, 100, 200],
             data: payload.data || {}
         };
         event.waitUntil(self.registration.showNotification(title, options));
@@ -399,8 +400,9 @@ self.addEventListener('push', (event) => {
         event.waitUntil(
             self.registration.showNotification('💰 New Sale Generated!', {
                 body: event.data.text(),
-                tag: 'pharmacy-bill',
-                renotify: true
+                tag: 'bill-' + Date.now(),
+                renotify: true,
+                requireInteraction: true
             })
         );
     }
@@ -502,6 +504,54 @@ class PushUnsubscribeView(View):
             return JsonResponse({'status': 'unsubscribed'})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+
+
+class PushTestView(View):
+    """
+    Direct endpoint for users to test sending a push notification to their own device.
+    Verifies that lock-screen webpush works end-to-end.
+    """
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Authentication required'}, status=401)
+        
+        from core.models import PushSubscription
+        from core.webpush import send_web_push
+
+        subs = PushSubscription.objects.filter(user=request.user, is_active=True)
+        if not subs.exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': f"No active device registered for '{request.user.username}'. Please tap 'Turn On Alerts' or the bell icon first."
+            }, status=400)
+
+        sent_count = 0
+        errors = []
+        for s in subs:
+            try:
+                ok = send_web_push(s, {
+                    'title': '💰 Lock Screen Test Alert!',
+                    'body': 'This is a test notification from Azmed Pharmacy ERP. Your phone is receiving lock-screen sale alerts!',
+                    'icon': '/static/images/icon-192.png',
+                    'badge': '/static/images/badge-72.png',
+                    'tag': f'test-{s.id}',
+                    'vibrate': [200, 100, 200, 100, 200],
+                    'data': {'url': '/dashboard/store-admin/'}
+                })
+                if ok:
+                    sent_count += 1
+                else:
+                    errors.append(f"Failed to push to endpoint {s.endpoint[:30]}...")
+            except Exception as ex:
+                errors.append(str(ex))
+
+        return JsonResponse({
+            'status': 'success' if sent_count > 0 else 'failed',
+            'sent_count': sent_count,
+            'total_devices': subs.count(),
+            'message': f"Dispatched test alert to {sent_count} active device(s). Check your phone lock screen!",
+            'errors': errors
+        })
 
 
 class LiveNotificationEventsView(View):

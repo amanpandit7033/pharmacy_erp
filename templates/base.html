@@ -57,7 +57,7 @@
             }
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                    navigator.serviceWorker.register("{% url 'pwa_sw' %}?v=clean", { scope: '/' })
+                    navigator.serviceWorker.register("{% url 'pwa_sw' %}?v=20261124_push", { scope: '/' })
                         .then(function(reg) {
                             reg.update();
                         })

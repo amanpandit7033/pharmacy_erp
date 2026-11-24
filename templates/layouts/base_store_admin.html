@@ -568,12 +568,24 @@
             return;
         }
         if (Notification.permission === 'granted') {
-            showSaleToast({
-                staff_name: 'Status',
-                invoice_number: 'ACTIVE',
-                amount: 'Alerts Active',
-                url: '#'
-            }, true);
+            const confirmed = confirm("✅ Sale alerts are active on this phone!\n\nWould you like to send a test notification to test your lock screen right now?\n(Tap OK, then lock your phone to check)");
+            if (confirmed) {
+                fetch("{% url 'core:push_test' %}")
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            showSaleToast({
+                                staff_name: 'Test Alert',
+                                invoice_number: 'SENT',
+                                amount: 'Check Lock Screen',
+                                url: '#'
+                            }, true);
+                        } else {
+                            alert("⚠️ " + (data.message || 'Error sending test push'));
+                        }
+                    })
+                    .catch(e => alert("Could not send test push: " + e.message));
+            }
             return;
         }
         enablePushNotifications(false);

@@ -76,10 +76,15 @@ def send_web_push(subscription, payload_dict):
     }
 
     try:
+        vapid_obj = Vapid.from_pem(keys['private_key'].encode('utf-8'))
+    except Exception:
+        vapid_obj = Vapid.from_string(private_key=keys['private_key'])
+
+    try:
         webpush(
             subscription_info=subscription_info,
             data=json.dumps(payload_dict),
-            vapid_private_key=keys['private_key'],
+            vapid_private_key=vapid_obj,
             vapid_claims=vapid_claims,
             timeout=8
         )

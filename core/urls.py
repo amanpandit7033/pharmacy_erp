@@ -10,6 +10,7 @@ urlpatterns = [
     path('push/vapid-key/', views.VapidPublicKeyView.as_view(), name='push_vapid_key'),
     path('push/subscribe/', views.PushSubscribeView.as_view(), name='push_subscribe'),
     path('push/unsubscribe/', views.PushUnsubscribeView.as_view(), name='push_unsubscribe'),
+    path('push/test/', views.PushTestView.as_view(), name='push_test'),
     path('notifications/live/', views.LiveNotificationEventsView.as_view(), name='notifications_live'),
 ]
 
