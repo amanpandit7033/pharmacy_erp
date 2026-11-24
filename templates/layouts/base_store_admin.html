@@ -450,6 +450,16 @@
         } catch (e) {}
     })();
 
+    function arrayBufferToBase64(buffer) {
+        if (!buffer) return '';
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
     // Helper: Convert base64 VAPID key to Uint8Array
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -503,26 +513,35 @@
     async function enablePushNotifications(silent = false) {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
             if (!silent) alert("Web Push notifications are not supported by this browser.");
-            return;
+            return false;
         }
 
         try {
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') {
                 if (!silent) alert("Notification permission was not granted. Please allow notifications in your browser settings.");
-                return;
+                return false;
             }
 
             const reg = await navigator.serviceWorker.ready;
             const keyRes = await fetch("{% url 'core:push_vapid_key' %}");
             const keyData = await keyRes.json();
             if (!keyData.publicKey) {
-                console.error("VAPID public key unavailable");
-                return;
+                throw new Error("VAPID public key unavailable from server");
             }
 
             const convertedKey = urlBase64ToUint8Array(keyData.publicKey);
             let sub = await reg.pushManager.getSubscription();
+            
+            // Cleanly unsubscribe if existing subscription lacks keys or has mismatched key
+            if (sub) {
+                const subJson = sub.toJSON();
+                if (!subJson.keys || !subJson.keys.p256dh || !subJson.keys.auth) {
+                    await sub.unsubscribe().catch(() => {});
+                    sub = null;
+                }
+            }
+
             if (!sub) {
                 sub = await reg.pushManager.subscribe({
                     userVisibleOnly: true,
@@ -530,35 +549,45 @@
                 });
             }
 
+            // Extract p256dh and auth keys safely across all browser versions
             const subJson = sub.toJSON();
-            await fetch("{% url 'core:push_subscribe' %}", {
+            const p256dh = (subJson.keys && subJson.keys.p256dh) ? subJson.keys.p256dh : (sub.getKey ? arrayBufferToBase64(sub.getKey('p256dh')) : '');
+            const auth = (subJson.keys && subJson.keys.auth) ? subJson.keys.auth : (sub.getKey ? arrayBufferToBase64(sub.getKey('auth')) : '');
+
+            const payload = {
+                endpoint: sub.endpoint,
+                keys: {
+                    p256dh: p256dh,
+                    auth: auth
+                }
+            };
+
+            const subscribeResp = await fetch("{% url 'core:push_subscribe' %}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCsrfToken()
                 },
-                body: JSON.stringify(subJson)
+                body: JSON.stringify(payload)
             });
+
+            if (!subscribeResp.ok) {
+                const errData = await subscribeResp.json().catch(() => ({}));
+                throw new Error(errData.error || `Server registration failed with HTTP ${subscribeResp.status}`);
+            }
 
             document.getElementById('pushNotificationBanner')?.classList.add('hidden');
             document.getElementById('pushBellDot')?.classList.remove('hidden');
-
-            if (!silent) {
-                showSaleToast({
-                    staff_name: 'System',
-                    invoice_number: 'READY',
-                    amount: 'Alerts Active',
-                    url: '#'
-                }, true);
-            }
+            return true;
 
         } catch (err) {
             console.error("Failed to enable push notifications:", err);
             if (!silent) alert("Could not enable notifications: " + err.message);
+            return false;
         }
     }
 
-    function togglePushNotifications() {
+    async function togglePushNotifications() {
         if (!('Notification' in window)) {
             alert("Web notifications are not supported in this browser.");
             return;
@@ -567,8 +596,11 @@
             alert("⚠️ Notifications are blocked in your browser settings.\n\nTo enable sale alerts on this phone:\n1. Tap the lock/tune icon 🔒 in your browser address bar\n2. Tap 'Permissions' > 'Notifications'\n3. Set to 'Allow', then refresh this page.");
             return;
         }
-        if (Notification.permission === 'granted') {
-            const confirmed = confirm("✅ Sale alerts are active on this phone!\n\nWould you like to send a test notification to test your lock screen right now?\n(Tap OK, then lock your phone to check)");
+
+        // Register / sync this device to the server
+        const success = await enablePushNotifications(false);
+        if (success) {
+            const confirmed = confirm("✅ Device registered for instant sale alerts!\n\nWould you like to send a test alert to your phone right now?\n(Tap OK, then lock your phone to check the lock screen)");
             if (confirmed) {
                 fetch("{% url 'core:push_test' %}")
                     .then(r => r.json())
@@ -586,9 +618,7 @@
                     })
                     .catch(e => alert("Could not send test push: " + e.message));
             }
-            return;
         }
-        enablePushNotifications(false);
     }
 
     function dismissPushBanner() {
