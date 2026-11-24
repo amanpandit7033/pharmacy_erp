@@ -389,18 +389,30 @@ self.addEventListener('push', (event) => {
             body: payload.body || 'A new bill was just created by staff.',
             icon: payload.icon || '/static/images/icon-192.png',
             badge: payload.badge || '/static/images/badge-72.png',
+            sound: '/static/sounds/insert-coin-arcade-machine.mp3',
             tag: payload.tag || ('bill-' + Date.now()),
             renotify: true,
             requireInteraction: true,
             vibrate: payload.vibrate || [200, 100, 200, 100, 200],
             data: payload.data || {}
         };
-        event.waitUntil(self.registration.showNotification(title, options));
+        
+        const notifyWindows = clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (let i = 0; i < clientList.length; i++) {
+                clientList[i].postMessage({ type: 'PLAY_COIN_SOUND', payload: payload });
+            }
+        });
+
+        event.waitUntil(Promise.all([
+            self.registration.showNotification(title, options),
+            notifyWindows
+        ]));
     } catch (err) {
         event.waitUntil(
             self.registration.showNotification('💰 New Sale Generated!', {
                 body: event.data.text(),
                 tag: 'bill-' + Date.now(),
+                sound: '/static/sounds/insert-coin-arcade-machine.mp3',
                 renotify: true,
                 requireInteraction: true
             })

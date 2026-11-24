@@ -400,6 +400,9 @@
                     <button type="button" onclick="enablePushNotifications()" class="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-extrabold rounded-xl shadow-xs transition flex items-center space-x-1 cursor-pointer">
                         <span>Turn On Alerts</span>
                     </button>
+                    <a href="{% static 'sounds/insert-coin-arcade-machine.mp3' %}" download="insert-coin-arcade-machine.mp3" class="px-3 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white font-bold rounded-xl text-xs transition flex items-center space-x-1 cursor-pointer" title="Download arcade coin ringtone to phone">
+                        <span>🎵 Download Coin Sound</span>
+                    </a>
                     <button type="button" onclick="dismissPushBanner()" class="text-white/60 hover:text-white px-2 py-1 text-sm font-bold" title="Dismiss">
                         ✕
                     </button>
@@ -508,6 +511,19 @@
     }
     document.addEventListener('touchstart', primeMobileAudio, { once: true });
     document.addEventListener('click', primeMobileAudio, { once: true });
+
+    // Listen for Service Worker push messages (plays sound when app is minimized or in background tab)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'PLAY_COIN_SOUND') {
+                const sound = document.getElementById('adminLiveCoinSound');
+                if (sound) {
+                    sound.currentTime = 0;
+                    sound.play().catch(e => console.log('SW message sound play:', e));
+                }
+            }
+        });
+    }
 
     // WebPush Subscription Logic
     async function enablePushNotifications(silent = false) {
