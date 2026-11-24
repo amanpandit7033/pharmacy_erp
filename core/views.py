@@ -365,12 +365,12 @@ class PWAManifestView(View):
 
 class PWAServiceWorkerView(View):
     """
-    Serves a clean sw.js for PWA installation without network interception.
-    Does not tamper with fetch events, guaranteeing zero CSS, CDN, or logout issues.
+    Serves sw.js with PWA installation support and Web Push notifications.
+    Triggers lock screen notification, vibration, and background chimes.
     """
     def get(self, request, *args, **kwargs):
         from django.http import HttpResponse
-        sw_code = """// Pharmacy ERP Lightweight Service Worker
+        sw_code = """// Pharmacy ERP Lightweight Service Worker with Web Push
 self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
@@ -378,10 +378,174 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(self.clients.claim());
 });
+
+// Push notification listener (triggers on lock screen or when phone is in pocket)
+self.addEventListener('push', (event) => {
+    if (!event.data) return;
+    try {
+        const payload = event.data.json();
+        const title = payload.title || '💰 New Sale Generated!';
+        const options = {
+            body: payload.body || 'A new bill was just created by staff.',
+            icon: payload.icon || '/static/images/icon-192.png',
+            badge: payload.badge || '/static/images/badge-72.png',
+            tag: payload.tag || 'pharmacy-bill',
+            renotify: true,
+            vibrate: payload.vibrate || [100, 50, 100, 50, 200],
+            data: payload.data || {}
+        };
+        event.waitUntil(self.registration.showNotification(title, options));
+    } catch (err) {
+        event.waitUntil(
+            self.registration.showNotification('💰 New Sale Generated!', {
+                body: event.data.text(),
+                tag: 'pharmacy-bill',
+                renotify: true
+            })
+        );
+    }
+});
+
+// Notification click listener: focuses open tab or opens invoice directly
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const invoiceUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/billing/bills/';
+    
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                if (client.url.includes(invoiceUrl) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(invoiceUrl);
+            }
+        })
+    );
+});
 """
         response = HttpResponse(sw_code, content_type='application/javascript')
         response['Service-Worker-Allowed'] = '/'
         response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         return response
+
+
+class VapidPublicKeyView(View):
+    """
+    Returns the VAPID WebPush public key for frontend Service Worker subscription.
+    """
+    def get(self, request, *args, **kwargs):
+        from core.webpush import get_or_create_vapid_keys
+        keys = get_or_create_vapid_keys()
+        return JsonResponse({'publicKey': keys['public_key']})
+
+
+class PushSubscribeView(View):
+    """
+    Saves or updates browser Web Push subscription for authenticated users.
+    """
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Authentication required'}, status=401)
+        
+        try:
+            import json
+            data = json.loads(request.body)
+            endpoint = data.get('endpoint')
+            keys = data.get('keys', {})
+            p256dh = keys.get('p256dh')
+            auth = keys.get('auth')
+
+            if not endpoint or not p256dh or not auth:
+                return JsonResponse({'error': 'Invalid subscription payload'}, status=400)
+
+            user_agent = request.META.get('HTTP_USER_AGENT', '')[:490]
+            store = getattr(request.user, 'store', None)
+
+            PushSubscription.objects.update_or_create(
+                endpoint=endpoint,
+                defaults={
+                    'user': request.user,
+                    'store': store,
+                    'p256dh': p256dh,
+                    'auth': auth,
+                    'user_agent': user_agent,
+                    'is_active': True
+                }
+            )
+            return JsonResponse({'status': 'subscribed'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+class PushUnsubscribeView(View):
+    """
+    Deactivates Web Push subscription for given endpoint.
+    """
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Authentication required'}, status=401)
+        try:
+            import json
+            data = json.loads(request.body)
+            endpoint = data.get('endpoint')
+            if endpoint:
+                PushSubscription.objects.filter(endpoint=endpoint, user=request.user).update(is_active=False)
+            return JsonResponse({'status': 'unsubscribed'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+class LiveNotificationEventsView(View):
+    """
+    Lightweight in-app polling endpoint for Store Admins.
+    Detects new bills created by staff in real time and returns them so
+    the open PWA dashboard can play the arcade coin audio and display a visual toast.
+    """
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or request.user.role != 'STORE_ADMIN':
+            return JsonResponse({'events': []})
+
+        store = getattr(request.user, 'store', None)
+        if not store:
+            return JsonResponse({'events': []})
+
+        since_id = request.GET.get('since_id')
+        from billing.models import Invoice
+
+        qs = Invoice.objects.filter(
+            store=store,
+            created_by__role='STAFF'
+        ).exclude(created_by=request.user).order_by('-id')
+
+        if since_id and str(since_id).isdigit():
+            qs = qs.filter(id__gt=int(since_id))[:10]
+        else:
+            # Initial poll upon opening page: sync latest ID without firing historical alerts
+            latest = qs.first()
+            return JsonResponse({
+                'events': [],
+                'latest_id': latest.id if latest else 0
+            })
+
+        events = []
+        for inv in reversed(list(qs)):
+            staff_name = inv.created_by.get_full_name() or inv.created_by.username
+            events.append({
+                'id': inv.id,
+                'invoice_number': inv.invoice_number,
+                'amount': f"{inv.store.currency}{inv.total_amount:.2f}",
+                'staff_name': staff_name,
+                'url': f"/billing/invoices/{inv.id}/",
+                'created_at': inv.created_at.strftime('%I:%M %p')
+            })
+
+        latest_id = qs[0].id if qs else (int(since_id) if since_id and str(since_id).isdigit() else 0)
+        return JsonResponse({
+            'events': events,
+            'latest_id': latest_id
+        })
 
 

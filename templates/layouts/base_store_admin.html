@@ -347,12 +347,12 @@
 
             <!-- Right Controls: Theme Toggle, Notifications, User Profile -->
             <div class="flex items-center space-x-3 sm:space-x-4">
-                <!-- Notifications -->
-                <button type="button" class="relative w-8 h-8 rounded-xl border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition" title="Notifications">
+                <!-- Real-time Bill Alerts & Web Push Toggle -->
+                <button type="button" id="headerPushBellBtn" onclick="togglePushNotifications()" class="relative w-8 h-8 rounded-xl border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-[#283891] hover:bg-blue-50 transition cursor-pointer" title="Enable phone sound alerts on new sales">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                     </svg>
-                    <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#283891] ring-2 ring-white"></span>
+                    <span id="pushBellDot" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white hidden" title="Phone alerts active"></span>
                 </button>
 
                 <!-- User Profile Pill -->
@@ -381,8 +381,37 @@
         </header>
 
         <!-- Page Body -->
-        <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto relative">
+            <!-- Push Alert Opt-In Banner for Mobile / Desktop -->
+            <div id="pushNotificationBanner" class="hidden mb-5 p-3.5 bg-gradient-to-r from-[#182260] via-[#1f2d7a] to-[#283891] text-white rounded-2xl shadow-md border border-blue-400/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <strong class="font-extrabold text-white text-xs block">Enable Instant Phone Sale Alerts:</strong>
+                        <span class="text-blue-100 text-[11px] block">Receive real-time sound notifications on your phone whenever staff cuts a new bill (even if phone is locked).</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 self-end sm:self-auto flex-shrink-0">
+                    <button type="button" onclick="enablePushNotifications()" class="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-extrabold rounded-xl shadow-xs transition flex items-center space-x-1 cursor-pointer">
+                        <span>Turn On Alerts</span>
+                    </button>
+                    <button type="button" onclick="dismissPushBanner()" class="text-white/60 hover:text-white px-2 py-1 text-sm font-bold" title="Dismiss">
+                        ✕
+                    </button>
+                </div>
+            </div>
+
             {% block content %}{% endblock %}
+
+            <!-- Live Bill Arcade Coin Sound for Store Owner -->
+            <audio id="adminLiveCoinSound" src="{% static 'sounds/insert-coin-arcade-machine.mp3' %}" preload="auto"></audio>
+
+            <!-- Floating Real-Time Sale Toast Container -->
+            <div id="liveSaleToastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full px-4"></div>
         </main>
     </div>
 </div>
@@ -419,5 +448,206 @@
             }
         } catch (e) {}
     })();
+
+    // Helper: Convert base64 VAPID key to Uint8Array
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // WebPush Subscription Logic
+    async function enablePushNotifications() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            alert("Web Push notifications are not supported by this browser.");
+            return;
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert("Notification permission was denied. Please allow notifications in your browser settings to receive sale alerts.");
+                return;
+            }
+
+            const reg = await navigator.serviceWorker.ready;
+            const keyRes = await fetch("{% url 'core:push_vapid_key' %}");
+            const keyData = await keyRes.json();
+            if (!keyData.publicKey) {
+                console.error("VAPID public key unavailable");
+                return;
+            }
+
+            const convertedKey = urlBase64ToUint8Array(keyData.publicKey);
+            let sub = await reg.pushManager.getSubscription();
+            if (!sub) {
+                sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedKey
+                });
+            }
+
+            const subJson = sub.toJSON();
+            await fetch("{% url 'core:push_subscribe' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(subJson)
+            });
+
+            document.getElementById('pushNotificationBanner')?.classList.add('hidden');
+            document.getElementById('pushBellDot')?.classList.remove('hidden');
+            localStorage.setItem('azmed_push_dismissed', '1');
+
+            // Quick audio verification test
+            const sound = document.getElementById('adminLiveCoinSound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log('Audio test:', e));
+            }
+
+            showSaleToast({
+                staff_name: 'System',
+                invoice_number: 'READY',
+                amount: 'Alerts Active',
+                url: '#'
+            }, true);
+
+        } catch (err) {
+            console.error("Failed to enable push notifications:", err);
+            alert("Could not enable notifications: " + err.message);
+        }
+    }
+
+    function togglePushNotifications() {
+        if (Notification.permission === 'granted') {
+            alert("✅ Sale alerts are active on this device! Whenever staff generates a bill, your phone will chime and notify you.");
+        } else {
+            enablePushNotifications();
+        }
+    }
+
+    function dismissPushBanner() {
+        document.getElementById('pushNotificationBanner')?.classList.add('hidden');
+        localStorage.setItem('azmed_push_dismissed', '1');
+    }
+
+    // Check notification status on load
+    document.addEventListener('DOMContentLoaded', () => {
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+                document.getElementById('pushBellDot')?.classList.remove('hidden');
+                // Ensure subscription is synced to backend
+                navigator.serviceWorker.ready.then(async (reg) => {
+                    const sub = await reg.pushManager.getSubscription();
+                    if (!sub) {
+                        enablePushNotifications();
+                    }
+                }).catch(() => {});
+            } else if (Notification.permission === 'default' && !localStorage.getItem('azmed_push_dismissed')) {
+                document.getElementById('pushNotificationBanner')?.classList.remove('hidden');
+            }
+        }
+        initLiveSalePoller();
+    });
+
+    // Real-Time In-App Live Poller for New Bills (Arcade Coin Sound + Visual Toast)
+    let lastSeenInvoiceId = null;
+    function initLiveSalePoller() {
+        const sound = document.getElementById('adminLiveCoinSound');
+        if (sound) sound.load();
+
+        async function poll() {
+            try {
+                const url = "{% url 'core:notifications_live' %}" + (lastSeenInvoiceId ? `?since_id=${lastSeenInvoiceId}` : '');
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.latest_id) {
+                        if (lastSeenInvoiceId !== null && data.events && data.events.length > 0) {
+                            data.events.forEach(ev => {
+                                // Play arcade coin sound
+                                if (sound) {
+                                    sound.currentTime = 0;
+                                    sound.play().catch(e => console.log('Autoplay sound note:', e));
+                                }
+                                if ('vibrate' in navigator) {
+                                    navigator.vibrate([100, 50, 100, 50, 200]);
+                                }
+                                showSaleToast(ev);
+                            });
+                        }
+                        lastSeenInvoiceId = data.latest_id;
+                    }
+                }
+            } catch (e) {
+                // Ignore transient network errors
+            } finally {
+                setTimeout(poll, 5000);
+            }
+        }
+        poll();
+    }
+
+    function showSaleToast(ev, isTest = false) {
+        const container = document.getElementById('liveSaleToastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = "pointer-events-auto bg-slate-900 text-white rounded-2xl p-4 shadow-2xl border border-emerald-500/30 flex items-start space-x-3 transform transition-all duration-300 translate-y-2 opacity-0";
+        
+        toast.innerHTML = `
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-500/20 text-lg">
+                💰
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">New Bill Generated</span>
+                    <button type="button" class="text-slate-400 hover:text-white text-xs font-bold ml-2" onclick="this.closest('.pointer-events-auto').remove()">✕</button>
+                </div>
+                <h4 class="text-sm font-extrabold text-white mt-0.5 truncate">${ev.amount}</h4>
+                <p class="text-[11px] text-slate-300 mt-0.5 leading-snug">
+                    ${isTest ? 'Notifications & sound active!' : `Billed by <strong class="text-white">${ev.staff_name}</strong> (#${ev.invoice_number})`}
+                </p>
+                ${!isTest ? `<a href="${ev.url}" class="inline-flex items-center text-[11px] font-bold text-emerald-400 hover:text-emerald-300 mt-2 space-x-1">
+                    <span>View Bill Details &rarr;</span>
+                </a>` : ''}
+            </div>
+        `;
+
+        container.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-2', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => toast.remove(), 350);
+        }, 7000);
+    }
 </script>
 {% endblock %}

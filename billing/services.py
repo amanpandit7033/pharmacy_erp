@@ -273,6 +273,13 @@ def create_invoice(store, user, data):
             created_by=user
         )
 
+    # Web Push Notification to Store Admin (runs on transaction commit asynchronously)
+    try:
+        from core.webpush import notify_store_admin_new_bill
+        transaction.on_commit(lambda: notify_store_admin_new_bill(invoice))
+    except Exception as e:
+        logger.warning(f"Could not register web push commit hook: {e}")
+
     return invoice
 
 

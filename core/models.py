@@ -235,6 +235,22 @@ class PlatformSetting(TimeStampedModel):
         help_text="Master API Key / Access Token for the WhatsApp Multi-Device Gateway."
     )
 
+    # Web Push / VAPID Keys
+    vapid_public_key = models.TextField(
+        blank=True,
+        default='',
+        help_text="VAPID WebPush Public Key for browser push notification subscription."
+    )
+    vapid_private_key = models.TextField(
+        blank=True,
+        default='',
+        help_text="VAPID WebPush Private Key (PEM/raw) for signing web push payloads."
+    )
+    vapid_admin_email = models.EmailField(
+        default='admin@azmed.com',
+        help_text="Subject email for VAPID claims."
+    )
+
     class Meta:
         verbose_name = 'Platform Setting'
         verbose_name_plural = 'Platform Settings'
@@ -255,3 +271,34 @@ class PlatformSetting(TimeStampedModel):
             )
         return obj
 
+
+
+class PushSubscription(TimeStampedModel):
+    user = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='push_subscriptions'
+    )
+    store = models.ForeignKey(
+        'stores.Store',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='push_subscriptions'
+    )
+    endpoint = models.TextField(unique=True)
+    p256dh = models.CharField(max_length=255)
+    auth = models.CharField(max_length=255)
+    user_agent = models.CharField(max_length=500, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Push Subscription'
+        verbose_name_plural = 'Push Subscriptions'
+        indexes = [
+            models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['store', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f"PushSubscription: {self.user.username} ({self.store.name if self.store else 'No Store'})"
