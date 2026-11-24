@@ -9,7 +9,7 @@ from accounts.models import User
 from stores.models import Store
 from inventory.models import Medicine, MasterMedicine, Category, Unit
 from billing.models import Invoice
-from core.models import PlatformSetting
+from core.models import PlatformSetting, PushSubscription
 from core.mixins import RoleRequiredMixin
 
 
