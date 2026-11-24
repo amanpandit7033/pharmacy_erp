@@ -112,7 +112,7 @@ def notify_store_admin_new_bill(invoice):
             # Query all active push subscriptions for Store Admins of this store (exclude creator)
             subscriptions = PushSubscription.objects.filter(
                 store=invoice.store,
-                user__role='STORE_ADMIN',
+                user__role__in=['store_admin', 'super_admin'],
                 is_active=True
             ).exclude(user=invoice.created_by).select_related('user', 'store')
 

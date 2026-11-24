@@ -501,11 +501,11 @@ class PushUnsubscribeView(View):
 class LiveNotificationEventsView(View):
     """
     Lightweight in-app polling endpoint for Store Admins.
-    Detects new bills created by staff in real time and returns them so
+    Detects new bills created in real time and returns them so
     the open PWA dashboard can play the arcade coin audio and display a visual toast.
     """
     def get(self, request, *args, **kwargs):
-        if not request.user.is_authenticated or request.user.role != 'STORE_ADMIN':
+        if not request.user.is_authenticated or request.user.role not in ['store_admin', 'super_admin']:
             return JsonResponse({'events': []})
 
         store = getattr(request.user, 'store', None)
@@ -515,9 +515,9 @@ class LiveNotificationEventsView(View):
         since_id = request.GET.get('since_id')
         from billing.models import Invoice
 
+        # Detect any new invoice created in this store by someone other than the current user
         qs = Invoice.objects.filter(
-            store=store,
-            created_by__role='STAFF'
+            store=store
         ).exclude(created_by=request.user).order_by('-id')
 
         if since_id and str(since_id).isdigit():

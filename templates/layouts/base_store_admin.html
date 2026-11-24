@@ -542,16 +542,19 @@
     }
 
     function togglePushNotifications() {
-        if (Notification.permission === 'granted') {
-            alert("✅ Sale alerts are active on this device! Whenever staff generates a bill, your phone will chime and notify you.");
-        } else {
-            enablePushNotifications();
+        if (!('Notification' in window)) {
+            alert("Web notifications are not supported in this browser.");
+            return;
         }
+        if (Notification.permission === 'denied') {
+            alert("⚠️ Notifications are blocked in your browser settings.\n\nTo enable sale alerts on this phone:\n1. Tap the lock/tune icon 🔒 in your browser address bar\n2. Tap 'Permissions' > 'Notifications'\n3. Set to 'Allow', then refresh this page.");
+            return;
+        }
+        enablePushNotifications();
     }
 
     function dismissPushBanner() {
         document.getElementById('pushNotificationBanner')?.classList.add('hidden');
-        localStorage.setItem('azmed_push_dismissed', '1');
     }
 
     // Check notification status on load
@@ -559,14 +562,24 @@
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
                 document.getElementById('pushBellDot')?.classList.remove('hidden');
-                // Ensure subscription is synced to backend
+                // Ensure subscription is synced to backend database
                 navigator.serviceWorker.ready.then(async (reg) => {
-                    const sub = await reg.pushManager.getSubscription();
+                    let sub = await reg.pushManager.getSubscription();
                     if (!sub) {
                         enablePushNotifications();
+                    } else {
+                        const subJson = sub.toJSON();
+                        await fetch("{% url 'core:push_subscribe' %}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify(subJson)
+                        });
                     }
                 }).catch(() => {});
-            } else if (Notification.permission === 'default' && !localStorage.getItem('azmed_push_dismissed')) {
+            } else if (Notification.permission === 'default') {
                 document.getElementById('pushNotificationBanner')?.classList.remove('hidden');
             }
         }
