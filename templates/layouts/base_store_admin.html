@@ -477,17 +477,39 @@
         return cookieValue;
     }
 
+    function getCsrfToken() {
+        const input = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (input && input.value) return input.value;
+        return getCookie('csrftoken') || '';
+    }
+
+    // Prime audio on first touch/click for mobile browsers (removes autoplay block)
+    window._audioPrimed = false;
+    function primeMobileAudio() {
+        if (window._audioPrimed) return;
+        const sound = document.getElementById('adminLiveCoinSound');
+        if (sound) {
+            sound.play().then(() => {
+                sound.pause();
+                sound.currentTime = 0;
+                window._audioPrimed = true;
+            }).catch(() => {});
+        }
+    }
+    document.addEventListener('touchstart', primeMobileAudio, { once: true });
+    document.addEventListener('click', primeMobileAudio, { once: true });
+
     // WebPush Subscription Logic
-    async function enablePushNotifications() {
+    async function enablePushNotifications(silent = false) {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            alert("Web Push notifications are not supported by this browser.");
+            if (!silent) alert("Web Push notifications are not supported by this browser.");
             return;
         }
 
         try {
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') {
-                alert("Notification permission was denied. Please allow notifications in your browser settings to receive sale alerts.");
+                if (!silent) alert("Notification permission was not granted. Please allow notifications in your browser settings.");
                 return;
             }
 
@@ -513,32 +535,26 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': getCsrfToken()
                 },
                 body: JSON.stringify(subJson)
             });
 
             document.getElementById('pushNotificationBanner')?.classList.add('hidden');
             document.getElementById('pushBellDot')?.classList.remove('hidden');
-            localStorage.setItem('azmed_push_dismissed', '1');
 
-            // Quick audio verification test
-            const sound = document.getElementById('adminLiveCoinSound');
-            if (sound) {
-                sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio test:', e));
+            if (!silent) {
+                showSaleToast({
+                    staff_name: 'System',
+                    invoice_number: 'READY',
+                    amount: 'Alerts Active',
+                    url: '#'
+                }, true);
             }
-
-            showSaleToast({
-                staff_name: 'System',
-                invoice_number: 'READY',
-                amount: 'Alerts Active',
-                url: '#'
-            }, true);
 
         } catch (err) {
             console.error("Failed to enable push notifications:", err);
-            alert("Could not enable notifications: " + err.message);
+            if (!silent) alert("Could not enable notifications: " + err.message);
         }
     }
 
@@ -551,7 +567,16 @@
             alert("⚠️ Notifications are blocked in your browser settings.\n\nTo enable sale alerts on this phone:\n1. Tap the lock/tune icon 🔒 in your browser address bar\n2. Tap 'Permissions' > 'Notifications'\n3. Set to 'Allow', then refresh this page.");
             return;
         }
-        enablePushNotifications();
+        if (Notification.permission === 'granted') {
+            showSaleToast({
+                staff_name: 'Status',
+                invoice_number: 'ACTIVE',
+                amount: 'Alerts Active',
+                url: '#'
+            }, true);
+            return;
+        }
+        enablePushNotifications(false);
     }
 
     function dismissPushBanner() {
@@ -567,14 +592,14 @@
                 navigator.serviceWorker.ready.then(async (reg) => {
                     let sub = await reg.pushManager.getSubscription();
                     if (!sub) {
-                        enablePushNotifications();
+                        enablePushNotifications(true);
                     } else {
                         const subJson = sub.toJSON();
                         await fetch("{% url 'core:push_subscribe' %}", {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRFToken': getCookie('csrftoken')
+                                'X-CSRFToken': getCsrfToken()
                             },
                             body: JSON.stringify(subJson)
                         });

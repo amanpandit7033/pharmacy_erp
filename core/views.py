@@ -442,6 +442,11 @@ class VapidPublicKeyView(View):
         return JsonResponse({'publicKey': keys['public_key']})
 
 
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
+
+@method_decorator(csrf_exempt, name='dispatch')
 class PushSubscribeView(View):
     """
     Saves or updates browser Web Push subscription for authenticated users.
@@ -480,6 +485,7 @@ class PushSubscribeView(View):
             return JsonResponse({'error': str(e)}, status=400)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PushUnsubscribeView(View):
     """
     Deactivates Web Push subscription for given endpoint.
